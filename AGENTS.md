@@ -56,12 +56,22 @@ target: typescript
 
 # Orders
 
-Prose. Anything that is not a `##` heading, a `-` field or an indented statement
-is documentation, and it is encouraged — it survives into the generated code as
-comments.
-
 ## <kind> <Name>
+<clause>
+<clause>
+
+Prose, which is encouraged — it survives into the generated code as comments.
+
+- field: Type, constraints
 ```
+
+**Position decides meaning.** The lines directly under a heading, with no blank
+line, are clauses: `identified by`, `contains`, `emits`, `uses`, `implements`,
+`using`, `topic`, `config:`, and so on. Prose starts after the first blank line.
+
+A line in the clause zone whose first word is not a clause the language knows is
+`AIL1006`, not documentation. `primaryKey id` is an error; it does not silently
+become a comment while the identity falls back to convention.
 
 Declaration kinds: `enum` `value object` `entity` `aggregate` `dto` `command`
 `event` `error` `query` `port` `adapter` `service` `handler` `endpoint`
@@ -358,6 +368,7 @@ asserts. Assertions: `then x.field is value` · `then it fails with Error` ·
 | a service holding domain rules | move them to the aggregate's `invariant` |
 | `sort by note.title` | sort by a number, timestamp or date |
 | setting the flag before the field it requires | set the field first |
+| `primaryKey id`, `key id` | `identified by id` |
 
 ---
 
