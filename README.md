@@ -219,21 +219,26 @@ writes a reviewable `.ai-spec/` directory rather than code.
 
 Working end to end, and early.
 
-The three worked examples compile to all five languages and all four platforms,
-and the compiler itself has 243 tests.
+The worked examples compile to all five languages and all four platforms, and the
+compiler itself has 243 tests.
 
-Verified against a real toolchain:
+Whether the emitted project then satisfies its own toolchain is a separate
+question, so CI builds every one of them with the real compiler on every push:
 
 | Target | Command | Result |
 | --- | --- | --- |
 | TypeScript | `tsc --noEmit` | passes |
-| Java | `mvn compile` | passes, 59 classes |
+| Java | `mvn compile` | passes |
 | Python | `python -m compileall` | passes |
-| Go | `go build ./...` | not run — no toolchain here |
-| Rust | `cargo check` | not run — no toolchain here |
+| Go | `go build ./...` | passes |
+| Rust | `cargo check` | **experimental — does not compile** |
 
-The two unverified backends generate output shaped like the three that pass; treat
-them as unproven until someone runs their compiler.
+Rust is the honest exception. The emitter treats ownership as if it were not
+there: it moves a value and then reads it, and writes `&mut self` methods that
+move out of their own fields. Fixing it means teaching the backend to borrow,
+which is real work and not yet done. It runs in CI as an allowed failure so the
+gap stays measured rather than forgotten. **Do not pick Rust for anything real
+yet.** The other four are built and verified on every commit.
 
 Known gaps, in the order they matter:
 

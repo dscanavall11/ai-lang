@@ -73,6 +73,7 @@ export const typescriptGenerator: CodeGenerator = {
         sharedErrors(),
         sharedValidation(),
         sharedEventPublisher(),
+        sharedSqlClient(),
         mainFile(context),
         readme(context),
         dotEnvExample(context),
@@ -377,17 +378,11 @@ function adaptersFile(module: IRModule, index: ModuleIndex) {
 
   emitQueryMatchers(writer, index);
 
-  if (index.adapters.some((a) => a.technology === 'sql')) {
-    writer.line('/** The minimum a SQL driver must offer. `pg.Pool` satisfies it as-is. */');
-    writer.line('export interface SqlClient {');
-    writer.block(() => writer.line('query<T>(sql: string, values?: unknown[]): Promise<{ rows: T[] }>;'));
-    writer.line('}');
-  }
   return assemble(
     self,
     module,
     index,
-    { enums: true, valueObjects: true, model: true, messages: true, errors: true, ports: true },
+    { enums: true, valueObjects: true, model: true, messages: true, errors: true, ports: true, sqlClient: true },
     writer,
   );
 }
@@ -873,6 +868,22 @@ function sharedEventPublisher() {
 }
 
 /**
+ * One contract for every SQL adapter in the project.
+ *
+ * It used to be emitted into each module's adapters file, which is fine until a
+ * second module needs SQL: the composition root then imports two `SqlClient`
+ * types and TypeScript rejects the duplicate.
+ */
+function sharedSqlClient() {
+  const writer = banner();
+  writer.line('/** The minimum a SQL driver must offer. `pg.Pool` satisfies it as-is. */');
+  writer.line('export interface SqlClient {');
+  writer.block(() => writer.line('query<T>(sql: string, values?: unknown[]): Promise<{ rows: T[] }>;'));
+  writer.line('}');
+  return file(layout.sharedPath('sql-client'), writer.toString());
+}
+
+/**
  * The composition root, wired for real.
  *
  * Every adapter the source declares is constructed here and injected into the
@@ -889,12 +900,12 @@ function mainFile(context: GenerationContext) {
   writer.line("import express from 'express';");
   writer.line("import { domainErrorHandler } from './shared/errors.js';");
   writer.line("import { ConsoleEventPublisher } from './shared/event-publisher.js';");
+  if (needsSql) writer.line("import type { SqlClient } from './shared/sql-client.js';");
   for (const module of context.project.modules) {
     const index = indexModule(module);
     const directory = kebabCase(module.name);
     if (index.adapters.length > 0) {
       const names = index.adapters.map((a) => pascalCase(a.name));
-      if (index.adapters.some((a) => a.technology === 'sql')) names.push('type SqlClient');
       writer.line(`import { ${names.join(', ')} } from './infrastructure/${directory}/adapters.js';`);
     }
     if (index.services.length > 0) {
@@ -1169,6 +1180,7 @@ interface ImportFlags {
   services?: boolean;
   validation?: boolean;
   eventPublisher?: boolean;
+  sqlClient?: boolean;
 }
 
 /**
@@ -1212,6 +1224,7 @@ function renderImports(self: string, module: IRModule, index: ModuleIndex, flags
   if (flags.services) add(index.services.map((d) => pascalCase(d.name)), [], layout.path('application', module, 'services'));
   if (flags.validation) add(['ConstraintViolation', 'InvariantViolation'], [], layout.sharedPath('validation'));
   if (flags.eventPublisher) add([], ['EventPublisher'], layout.sharedPath('event-publisher'));
+  if (flags.sqlClient) add([], ['SqlClient'], layout.sharedPath('sql-client'));
 
   // `new id` lowers to randomUUID, which needs the standard library.
   if (uses('randomUUID')) lines.unshift("import { randomUUID } from 'node:crypto';");
