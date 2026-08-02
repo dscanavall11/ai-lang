@@ -198,6 +198,9 @@ describe('reported syntax errors', () => {
     ['an endpoint with no handler', '## endpoint GET /things\nresponds 200\n', 'AIL1027'],
     ['an endpoint with no responses', '## endpoint GET /things\nhandled by S.run\n', 'AIL1029'],
     ['an aggregate with no identity', '## aggregate Thing\n- label: text\n', 'AIL1003'],
+    // A misspelled clause used to be read as prose, so the aggregate silently
+    // fell back to the `id` convention and nothing was reported.
+    ['a misspelled clause', '## aggregate Thing\nprimaryKey id\n\n- id: uuid\n', 'AIL1006'],
     ['an unknown declaration keyword', '## widget Thing\n- x: text\n', 'AIL1612'],
     ['an unknown infrastructure setting', '## infrastructure\nteleport 9\n', 'AIL1508'],
     ['an unknown deployment target', '## infrastructure\ndeploy to mainframe\n', 'AIL1507'],
