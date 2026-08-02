@@ -99,6 +99,17 @@ Syntax and semantics changes need more than a patch:
    `docs/decisions.md`: what was decided, what it rules out, what would make us
    revisit it.
 
+## Branching
+
+Work lands on `develop` through a pull request; `main` is what is released.
+Both are protected, so neither takes a direct push. See
+[docs/branching.md](docs/branching.md) for the full flow.
+
+```bash
+git switch develop && git pull
+git switch -c feature/<name>
+```
+
 ## Before you open a PR
 
 ```bash

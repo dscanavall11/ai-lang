@@ -209,6 +209,7 @@ writes a reviewable `.ai-spec/` directory rather than code.
 | `packages/cli` | The `ail` command |
 
 - [CRUD tutorial](docs/crud-tutorial.md)
+- [Branching](docs/branching.md)
 - [Language reference](docs/language-reference.md)
 - [Worked example](examples/orders/orders.ail)
 
