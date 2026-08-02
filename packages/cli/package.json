@@ -1,0 +1,20 @@
+{
+  "name": "@ai-lang/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ail": "./dist/bin.js"
+  },
+  "exports": { ".": "./dist/index.js" },
+  "dependencies": {
+    "@ai-lang/analyzer": "0.1.0",
+    "@ai-lang/architect": "0.1.0",
+    "@ai-lang/codegen": "0.1.0",
+    "@ai-lang/core": "0.1.0",
+    "@ai-lang/iac": "0.1.0",
+    "@ai-lang/parser": "0.1.0"
+  }
+}

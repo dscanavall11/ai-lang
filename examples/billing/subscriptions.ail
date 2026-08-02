@@ -1,0 +1,197 @@
+---
+module: subscriptions
+context: Billing
+target: go
+---
+
+# Subscriptions
+
+A customer holds one subscription per plan. A subscription renews on a cycle, and
+a renewal that cannot be charged suspends it until someone intervenes.
+
+## glossary
+- Cycle: the period a single payment covers.
+- Dunning: the retry process that runs after a failed charge.
+
+## enum SubscriptionState
+- Trialing
+- Active
+- PastDue
+- Suspended
+- Cancelled
+
+## enum Cadence
+- Monthly
+- Yearly
+
+## value object Amount
+- cents: integer, required, min 0
+- currency: text, required, length 3
+
+## value object Cycle
+- startsAt: timestamp, required
+- endsAt: timestamp, required
+
+## aggregate Subscription
+identified by id
+emits SubscriptionRenewed
+emits SubscriptionSuspended
+
+The consistency boundary for one customer's commitment to one plan.
+
+- id: uuid, required
+- customerId: uuid, required
+- planId: uuid, required
+- state: SubscriptionState, required, default Trialing
+- cadence: Cadence, required, default Monthly
+- price: Amount, required
+- currentCycle: Cycle, required
+- failedCharges: integer, required, default 0
+
+invariant "a suspended subscription has at least one failed charge":
+  state is not Suspended or failedCharges is at least 1
+
+invariant "a cycle ends after it starts":
+  currentCycle.endsAt is greater than currentCycle.startsAt
+
+operation record failure () -> nothing:
+  set failedCharges to failedCharges plus 1
+  when failedCharges is at least 3:
+    set state to Suspended
+
+operation accept payment (nextCycle: Cycle) -> nothing:
+  set failedCharges to 0
+  set state to Active
+  set currentCycle to nextCycle
+
+## command RenewSubscription targets Subscription
+- subscriptionId: uuid, required
+
+## event SubscriptionRenewed from Subscription
+topic subscription-renewed
+
+- subscriptionId: uuid, required
+- customerId: uuid, required
+- amount: Amount, required
+- renewedAt: timestamp, required
+
+## event SubscriptionSuspended from Subscription
+topic subscription-suspended
+
+- subscriptionId: uuid, required
+- customerId: uuid, required
+- failedCharges: integer, required
+
+## error SubscriptionNotFound (checked, status 404)
+message: "no subscription exists with id {subscriptionId}"
+
+- subscriptionId: uuid, required
+
+## error SubscriptionCancelled (checked, status 409)
+message: "subscription {subscriptionId} was cancelled and cannot renew"
+
+- subscriptionId: uuid, required
+
+## error ChargeDeclined (checked, status 402)
+message: "the card was declined for subscription {subscriptionId}"
+
+- subscriptionId: uuid, required
+
+## dto SubscriptionView projects Subscription
+- subscriptionId: uuid, required
+- planId: uuid, required
+- state: SubscriptionState, required
+- cadence: Cadence, required
+- price: Amount, required
+- renewsAt: timestamp, required
+
+## port SubscriptionRepository (outbound)
+
+- find subscription by id (id: uuid) -> Subscription or SubscriptionNotFound
+- save subscription (subscription: Subscription) -> nothing
+- list subscriptions due (before: timestamp) -> list of Subscription
+
+## port PaymentGateway (outbound)
+
+- charge card (customerId: uuid, amount: Amount) -> nothing or ChargeDeclined
+
+## port Clock (outbound)
+
+- next cycle (from: Cycle, cadence: Cadence) -> Cycle
+
+## port RenewalUseCase (inbound)
+
+- renew subscription (command: RenewSubscription) -> SubscriptionRenewed or SubscriptionNotFound, SubscriptionCancelled, ChargeDeclined
+- read subscription (id: uuid) -> SubscriptionView or SubscriptionNotFound
+
+## adapter PostgresSubscriptionRepository implements SubscriptionRepository using sql
+config:
+  table = subscriptions
+
+## adapter StripePaymentGateway implements PaymentGateway using http-client
+config:
+  endpoint = https://api.stripe.com/v1/charges
+
+## adapter SystemClock implements Clock using in-memory
+
+## service RenewalService
+uses SubscriptionRepository
+uses PaymentGateway
+uses Clock
+implements RenewalUseCase
+
+Charges a due subscription and moves it into its next cycle. A declined charge
+counts against the subscription rather than failing silently.
+
+operation renew subscription (command: RenewSubscription) -> SubscriptionRenewed or SubscriptionNotFound, SubscriptionCancelled, ChargeDeclined:
+  let subscription be find subscription by id with id = command.subscriptionId
+  when subscription.state is Cancelled:
+    fail with SubscriptionCancelled using subscriptionId = command.subscriptionId
+  perform charge card with customerId = subscription.customerId, amount = subscription.price
+  let nextCycle be next cycle with from = subscription.currentCycle, cadence = subscription.cadence
+  perform accept payment with subscription = subscription, nextCycle = nextCycle
+  perform save subscription with subscription = subscription
+  let renewedAt be now
+  publish SubscriptionRenewed with subscriptionId = subscription.id, customerId = subscription.customerId, amount = subscription.price, renewedAt = renewedAt
+  return SubscriptionRenewed with subscriptionId = subscription.id, customerId = subscription.customerId, amount = subscription.price, renewedAt = renewedAt
+
+operation read subscription (id: uuid) -> SubscriptionView or SubscriptionNotFound:
+  let subscription be find subscription by id with id = id
+  return SubscriptionView with subscriptionId = subscription.id, planId = subscription.planId, state = subscription.state, cadence = subscription.cadence, price = subscription.price, renewsAt = subscription.currentCycle.endsAt
+
+## endpoint GET /subscriptions/{id}
+handled by RenewalService.read subscription
+auth bearer
+responds 200 with SubscriptionView
+responds 404 when SubscriptionNotFound
+
+## endpoint POST /subscriptions/{subscriptionId}/renew
+handled by RenewalService.renew subscription
+request RenewSubscription
+auth bearer
+responds 200 with SubscriptionRenewed
+responds 404 when SubscriptionNotFound
+responds 409 when SubscriptionCancelled
+responds 402 when ChargeDeclined
+
+## handler DunningSweep
+schedule 0 3 * * *
+uses SubscriptionRepository
+
+Runs nightly and marks every subscription whose cycle has already ended.
+
+do:
+  let cutoff be now
+  let due be list subscriptions due with before = cutoff
+  for each subscription in due:
+    perform record failure with subscription = subscription
+    perform save subscription with subscription = subscription
+
+## infrastructure
+port 8082
+database billingdb using postgres version 16 storage 100 multi az
+broker events using kafka topics subscription-renewed, subscription-suspended
+secrets STRIPE_API_KEY, DB_PASSWORD
+environment LOG_LEVEL = info
+scaling min 2 max 6 cpu 65
+deploy to docker, kubernetes, terraform, aws-lambda

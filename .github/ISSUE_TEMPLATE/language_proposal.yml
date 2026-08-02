@@ -1,0 +1,77 @@
+name: Language proposal
+description: Add or change syntax, a type, a statement, or a semantic rule
+labels: [language]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The language is deliberately small. Every construct added is one more
+        thing five backends must lower and every reader must learn, so the bar
+        is: **something real cannot be expressed today**.
+
+  - type: textarea
+    id: cannot
+    attributes:
+      label: What you cannot express today
+      description: Show the `.ail` you tried to write and what the compiler said.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would write instead
+      description: The exact surface syntax you are proposing.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How you are working around it now
+      description: If there is no workaround, say so — that strengthens the case.
+    validations:
+      required: true
+
+  - type: textarea
+    id: lowering
+    attributes:
+      label: How it lowers into each target
+      description: |
+        Sketch the output for as many of Java, TypeScript, Python, Go and Rust
+        as you can. A construct that lowers cleanly into three and awkwardly
+        into two usually needs a different shape.
+      value: |
+        - Java:
+        - TypeScript:
+        - Python:
+        - Go:
+        - Rust:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What it touches
+      multiple: true
+      options:
+        - Surface syntax only
+        - The type system
+        - Statements or expressions
+        - A DDD or architecture rule
+        - The IR schema
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Before submitting
+      options:
+        - label: I read the [language reference](../../docs/language-reference.md) and this is not already expressible.
+          required: true
+        - label: I read [what the language deliberately does not have](../../docs/language-reference.md#8-what-the-language-deliberately-does-not-have).
+          required: true

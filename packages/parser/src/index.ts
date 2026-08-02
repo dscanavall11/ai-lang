@@ -1,0 +1,15 @@
+export { SourceFile, LineCursor, type Line } from './source.js';
+export { tokenize, TokenCursor, type Token, type TokenKind } from './tokens.js';
+export { ParseReporter } from './reporter.js';
+export { parseType } from './type-parser.js';
+export { parseExpression, parseArguments } from './expression-parser.js';
+export { parseStatements } from './statement-parser.js';
+export { parseFieldLine, parseOperationSignature, splitTopLevel, subCursor, toIdentifier } from './field-parser.js';
+export { splitSections, readBody, type Section, type SectionBody } from './section.js';
+export { parseFrontmatter, type Frontmatter } from './frontmatter.js';
+export { parseInfrastructure } from './infrastructure-parser.js';
+export { DeclarationRegistry, type DeclarationParser } from './declarations/registry.js';
+export { dataShapeParsers } from './declarations/data-shapes.js';
+export { behaviourParsers } from './declarations/behaviour.js';
+export { queryParser } from './declarations/query.js';
+export { parseModule, defaultDeclarationRegistry, type ParseOptions, type ParseResult } from './module-parser.js';

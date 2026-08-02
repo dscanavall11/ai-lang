@@ -1,0 +1,63 @@
+---
+module: catalog
+context: Catalogue
+target: java
+---
+
+# Product Catalogue
+
+Products and the prices Sales quotes them at. This context is upstream of Sales,
+which reaches it through an anti-corruption layer.
+
+## value object Price
+- amount: decimal, required, min 0
+- currency: text, required, length 3
+
+## aggregate Product
+identified by id
+
+- id: uuid, required
+- sku: text, required, unique, min length 3
+- name: text, required, max length 200
+- price: Price, required
+- active: boolean, required, default true
+
+invariant "an inactive product cannot be sold at zero price":
+  active is false or price.amount is greater than 0
+
+operation deactivate () -> nothing:
+  set active to false
+
+## error ProductNotFound (checked, status 404)
+message: "no product exists with id {productId}"
+
+- productId: uuid, required
+
+## port ProductRepository (outbound)
+using sql
+config:
+  table = products
+
+- find product by id (id: uuid) -> Product or ProductNotFound
+- save product (product: Product) -> nothing
+
+## port CatalogueQueries (inbound)
+- read product (id: uuid) -> Product or ProductNotFound
+
+## service CatalogueService
+uses ProductRepository
+implements CatalogueQueries
+
+operation read product (id: uuid) -> Product or ProductNotFound:
+  let product be find product by id with id = id
+  return product
+
+## endpoint GET /products/{id}
+handled by CatalogueService.read product
+responds 200 with Product
+responds 404 when ProductNotFound
+
+## infrastructure
+port 8081
+database catalogdb using postgres version 16
+deploy to docker, kubernetes

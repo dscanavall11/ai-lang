@@ -1,0 +1,14 @@
+{
+  "name": "@ai-lang/architect",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": "./dist/index.js" },
+  "dependencies": {
+    "@ai-lang/core": "0.1.0",
+    "@ai-lang/parser": "0.1.0",
+    "@ai-lang/analyzer": "0.1.0"
+  }
+}

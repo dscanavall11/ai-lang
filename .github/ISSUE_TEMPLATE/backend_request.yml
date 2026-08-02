@@ -1,0 +1,69 @@
+name: New backend
+description: Support another language or deployment platform
+labels: [backend]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Backends are the cheapest place to contribute: they plug into a registry
+        and change nothing that already exists. Read
+        `packages/codegen/src/targets/typescript/` first — it is the reference.
+
+  - type: input
+    id: target
+    attributes:
+      label: Target
+      placeholder: Kotlin + Ktor, or Pulumi, or Azure Container Apps
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Language backend (CodeGenerator)
+        - Deployment platform (InfrastructureGenerator)
+    validations:
+      required: true
+
+  - type: input
+    id: framework
+    attributes:
+      label: Framework or toolchain it targets
+      placeholder: Ktor 3, Gradle
+    validations:
+      required: true
+
+  - type: input
+    id: verify
+    attributes:
+      label: Command that proves the generated project builds
+      description: This becomes a CI job. Without one, the backend cannot be merged.
+      placeholder: ./gradlew compileKotlin
+    validations:
+      required: true
+
+  - type: textarea
+    id: mapping
+    attributes:
+      label: How the IR maps onto it
+      value: |
+        - value object →
+        - entity / aggregate →
+        - checked error →
+        - unchecked error →
+        - port →
+        - adapter →
+        - service →
+        - endpoint →
+        - handler →
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: offer
+    attributes:
+      label: Are you offering to write it?
+      options:
+        - label: Yes, I plan to open the PR.

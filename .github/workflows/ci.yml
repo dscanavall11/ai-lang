@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compiler:
+    name: Compiler (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Type-check every package
+        run: npm run build
+      - name: Test
+        run: npm test
+      - name: Check the worked examples
+        run: node packages/cli/dist/bin.js check examples
+
+  # The real proof: the emitted projects have to satisfy their own toolchains.
+  # A backend that generates plausible-looking code that does not compile is
+  # worse than no backend, so each one is built here with the real compiler.
+  generated:
+    name: Generated ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: typescript
+            verify: npm install --no-audit --no-fund && npx tsc --noEmit
+          - target: java
+            verify: mvn -q -B compile
+          - target: python
+            verify: python -m compileall -q app
+          - target: go
+            verify: go build ./...
+          - target: rust
+            verify: cargo check --quiet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - if: matrix.target == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - if: matrix.target == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - if: matrix.target == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - if: matrix.target == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+
+      - run: npm ci
+      - run: npm run build
+      - name: Compile the examples
+        run: node packages/cli/dist/bin.js build examples --target ${{ matrix.target }} --out out
+      - name: Build the generated project
+        working-directory: out/${{ matrix.target }}
+        run: ${{ matrix.verify }}
+
+  infrastructure:
+    name: Generated infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: hashicorp/setup-terraform@v3
+      - uses: azure/setup-helm@v4
+
+      - run: npm ci
+      - run: npm run build
+      - name: Generate every platform
+        run: node packages/cli/dist/bin.js deploy examples --target all --out out
+
+      - name: docker compose config
+        run: docker compose -f out/docker/docker-compose.yml config --quiet
+      - name: helm lint
+        run: for chart in out/kubernetes/charts/*/; do helm lint "$chart"; done
+      - name: terraform validate
+        working-directory: out/terraform
+        run: terraform init -backend=false && terraform validate
+
+  architect:
+    name: Architect round-trip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Draft sources from requirements
+        run: node packages/cli/dist/bin.js architect examples/requirements/library.md --out drafted
+      - name: The drafts must satisfy the compiler that wrote them
+        run: node packages/cli/dist/bin.js check drafted/src

@@ -1,0 +1,73 @@
+name: Bug report
+description: The compiler did the wrong thing
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A failing `.ail` file is a better bug report than any description of it.
+        The smallest one that still reproduces is ideal.
+
+  - type: textarea
+    id: source
+    attributes:
+      label: The .ail source that reproduces it
+      render: markdown
+      placeholder: |
+        ---
+        module: repro
+        context: Repro
+        ---
+
+        ## aggregate Thing
+        identified by id
+        - id: uuid, required
+    validations:
+      required: true
+
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: ail build repro.ail --target java
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Paste the diagnostics or the generated code, whichever is wrong.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where it went wrong
+      options:
+        - Parsing — valid source was rejected, or invalid source was accepted
+        - Analysis — a rule fired when it should not, or did not fire when it should
+        - Code generation — the emitted project is wrong or does not compile
+        - Infrastructure — the emitted Docker/Kubernetes/Terraform/AWS is wrong
+        - Architect — the drafted spec or sources are wrong
+        - CLI — a command or flag misbehaves
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `ail --version`, or the commit you built from.
+    validations:
+      required: true

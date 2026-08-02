@@ -1,0 +1,7 @@
+# The compiler compares generated output byte for byte, so line endings are
+# normalised in the repository and checked out as LF everywhere.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

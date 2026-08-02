@@ -1,0 +1,146 @@
+---
+module: tasks
+context: Tasks
+target: typescript
+---
+
+# Tasks
+
+A plain CRUD service, written the way AI-Lang wants CRUD written: the five
+operations, the rules that make them refuse bad input, and nothing else.
+
+## enum TaskState
+- Open
+- Done
+
+## aggregate Task
+identified by id
+
+- id: uuid, required
+- title: text, required, min length 1, max length 200
+- notes: text, optional
+- state: TaskState, required, default Open
+- dueOn: date, optional
+- createdAt: timestamp, required
+
+invariant "a task always has a title":
+  title is not empty
+
+operation rename (title: text) -> nothing:
+  set title to title
+
+operation complete () -> nothing:
+  set state to Done
+
+## command CreateTask
+- title: text, required, min length 1, max length 200
+- notes: text, optional
+- dueOn: date, optional
+
+## command UpdateTask
+- taskId: uuid, required
+- title: text, required, min length 1, max length 200
+- notes: text, optional
+- dueOn: date, optional
+
+## error TaskNotFound (checked, status 404)
+message: "no task exists with id {taskId}"
+
+- taskId: uuid, required
+
+## query TaskSearch over Task
+
+One criterion per filter, instead of one repository method per combination of
+them. An absent optional drops its criterion, so this covers every subset.
+
+- state: TaskState, optional
+- titleContains: text, optional
+- dueBefore: date, optional
+
+match task.state is state
+match task.title contains titleContains
+match task.dueOn is at most dueBefore
+
+sort by task.createdAt descending
+limit 100
+
+## port TaskRepository (outbound)
+using in-memory
+
+- find task by id (id: uuid) -> Task or TaskNotFound
+- list tasks () -> list of Task
+- search tasks (criteria: TaskSearch) -> list of Task
+- save task (task: Task) -> nothing
+- delete task by id (id: uuid) -> nothing
+
+## port TaskUseCases (inbound)
+
+- create task (command: CreateTask) -> Task
+- read task (id: uuid) -> Task or TaskNotFound
+- list all tasks () -> list of Task
+- find tasks (criteria: TaskSearch) -> list of Task
+- update task (command: UpdateTask) -> Task or TaskNotFound
+- delete task (id: uuid) -> nothing or TaskNotFound
+
+## service TaskService
+uses TaskRepository
+implements TaskUseCases
+
+The five operations. Each one either does its job or says exactly why it could not.
+
+operation create task (command: CreateTask) -> Task:
+  let task be a new Task with id = new id, title = command.title, notes = command.notes, dueOn = command.dueOn, createdAt = now
+  perform save task with task = task
+  return task
+
+operation read task (id: uuid) -> Task or TaskNotFound:
+  let task be find task by id with id = id
+  return task
+
+operation list all tasks () -> list of Task:
+  return list tasks
+
+operation find tasks (criteria: TaskSearch) -> list of Task:
+  return search tasks with criteria = criteria
+
+operation update task (command: UpdateTask) -> Task or TaskNotFound:
+  let task be find task by id with id = command.taskId
+  set task.title to command.title
+  set task.notes to command.notes
+  set task.dueOn to command.dueOn
+  perform save task with task = task
+  return task
+
+operation delete task (id: uuid) -> nothing or TaskNotFound:
+  let task be find task by id with id = id
+  perform delete task by id with id = id
+
+## endpoint POST /tasks
+handled by TaskService.create task
+request CreateTask
+responds 201 with Task
+
+## endpoint GET /tasks
+handled by TaskService.list all tasks
+responds 200 with list of Task
+
+## endpoint GET /tasks/{id}
+handled by TaskService.read task
+responds 200 with Task
+responds 404 when TaskNotFound
+
+## endpoint PUT /tasks/{taskId}
+handled by TaskService.update task
+request UpdateTask
+responds 200 with Task
+responds 404 when TaskNotFound
+
+## endpoint DELETE /tasks/{id}
+handled by TaskService.delete task
+responds 204
+responds 404 when TaskNotFound
+
+## infrastructure
+port 8080
+database tasksdb using postgres version 16
+deploy to docker

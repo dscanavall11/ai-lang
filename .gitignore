@@ -1,0 +1,24 @@
+# Build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Compiler output
+out/
+drafted/
+.ai-build/
+
+# Local tooling state
+.omo/
+.codegraph
+.claude/
+
+# Environment
+.env
+.env.local
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

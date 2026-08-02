@@ -1,0 +1,26 @@
+---
+module: broken
+context: Broken
+---
+
+# A design the compiler rejects
+
+One aggregate embedding another turns two consistency boundaries into one.
+
+## aggregate Customer
+identified by id
+
+- id: uuid, required
+- name: text, required
+
+invariant "a customer always has a name":
+  name is not empty
+
+## aggregate Order
+identified by id
+
+- id: uuid, required
+- customer: Customer, required
+
+invariant "an order always names its customer":
+  id is not empty

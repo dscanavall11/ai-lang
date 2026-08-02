@@ -1,0 +1,183 @@
+---
+module: orders
+context: Sales
+target: java
+imports:
+  - catalog via anti-corruption-layer
+---
+
+# Order Management
+
+A customer builds an order out of catalogue items, places it, and pays for it.
+An order can only be placed once, and only while it still holds at least one item.
+
+## glossary
+- Order: a customer's intent to buy a set of items at agreed prices.
+- Placement: the moment an order stops being editable and enters fulfilment.
+
+## enum OrderStatus
+- Draft
+- Placed
+- Paid
+- Cancelled
+
+## value object Money
+
+An amount in a single currency. Amounts never mix currencies inside one order.
+
+- amount: decimal, required, min 0
+- currency: text, required, length 3        // ISO 4217 code
+
+## entity OrderItem
+identified by id
+belongs to Order
+
+- id: uuid, required
+- productId: uuid, required
+- quantity: integer, required, min 1
+- unitPrice: Money, required
+
+invariant "an item always has a positive quantity":
+  quantity is greater than 0
+
+## aggregate Order
+identified by id
+contains OrderItem
+emits OrderPlaced
+
+The consistency boundary for everything that can change while an order is being built.
+
+- id: uuid, required
+- customerId: uuid, required
+- items: list of OrderItem, required
+- status: OrderStatus, required, default Draft
+- placedAt: timestamp, optional
+- total: Money, derived
+
+invariant "an order must hold at least one item":
+  items is not empty
+
+operation compute total () -> Money:
+  when items is empty then fail with EmptyOrderTotal
+  return Money with amount = sum of items by quantity times unitPrice.amount, currency = "EUR"
+
+## command PlaceOrder targets Order
+- orderId: uuid, required
+- customerId: uuid, required
+
+## event OrderPlaced from Order
+topic order-placed
+
+- orderId: uuid, required
+- customerId: uuid, required
+- total: Money, required
+- placedAt: timestamp, required
+
+## error OrderNotFound (checked, status 404)
+message: "no order exists with id {orderId}"
+
+- orderId: uuid, required
+
+## error OrderAlreadyPlaced (checked, status 409)
+message: "order {orderId} was already placed"
+
+- orderId: uuid, required
+
+## error EmptyOrder (checked, status 422)
+message: "order {orderId} has no items"
+
+- orderId: uuid, required
+
+## error EmptyOrderTotal (unchecked)
+
+Raised when the total of an empty order is requested. The service checks for an
+empty order first, so reaching this means a caller skipped that check.
+
+message: "cannot total an order with no items"
+
+## port OrderRepository (outbound)
+using sql
+config:
+  table = orders
+  schema = sales
+
+- find order by id (id: uuid) -> Order or OrderNotFound
+- save order (order: Order) -> nothing
+- list orders for customer (customerId: uuid) -> list of Order
+
+## port CustomerNotifier (outbound)
+
+- notify customer of placement (customerId: uuid, orderId: uuid) -> nothing
+
+## port PlaceOrderUseCase (inbound)
+
+- place order (command: PlaceOrder) -> OrderPlaced or OrderNotFound, OrderAlreadyPlaced, EmptyOrder
+- summarise order (id: uuid) -> OrderSummary or OrderNotFound
+
+## dto OrderSummary projects Order
+- orderId: uuid, required
+- status: OrderStatus, required
+- itemCount: integer, required
+- total: Money, optional
+
+## adapter EmailCustomerNotifier implements CustomerNotifier using http-client
+config:
+  endpoint = https://notifications.internal/send
+
+## service PlaceOrderService
+uses OrderRepository
+implements PlaceOrderUseCase
+
+Places a draft order: validates it, freezes it, and announces the placement.
+
+operation place order (command: PlaceOrder) -> OrderPlaced or OrderNotFound, OrderAlreadyPlaced, EmptyOrder:
+  let order be find order by id with id = command.orderId
+  when order.status is not Draft:
+    fail with OrderAlreadyPlaced using orderId = command.orderId
+  when order.items is empty:
+    fail with EmptyOrder using orderId = command.orderId
+  let total be compute total with order = order
+  let placedAt be now
+  set order.status to Placed
+  set order.placedAt to placedAt
+  set order.total to total
+  perform save order with order = order
+  publish OrderPlaced with orderId = order.id, customerId = order.customerId, total = total, placedAt = placedAt
+  return OrderPlaced with orderId = order.id, customerId = order.customerId, total = total, placedAt = placedAt
+
+operation summarise order (id: uuid) -> OrderSummary or OrderNotFound:
+  let order be find order by id with id = id
+  return OrderSummary from order with itemCount = count of order.items
+
+## endpoint GET /orders/{id}
+handled by PlaceOrderService.summarise order
+auth bearer
+responds 200 with OrderSummary
+responds 404 when OrderNotFound
+
+## endpoint POST /orders/{orderId}/place
+handled by PlaceOrderService.place order
+request PlaceOrder
+auth bearer
+responds 200 with OrderPlaced
+responds 404 when OrderNotFound
+responds 409 when OrderAlreadyPlaced
+responds 422 when EmptyOrder
+
+## handler NotifyOnPlacement on OrderPlaced
+uses CustomerNotifier
+retries 5
+delivery at-least-once
+
+do:
+  perform notify customer of placement with customerId = event.customerId, orderId = event.orderId
+
+## infrastructure
+port 8080
+database ordersdb using postgres version 16 storage 50
+broker events using kafka topics order-placed
+cache sessions using redis
+secrets DB_PASSWORD, KAFKA_PASSWORD
+environment LOG_LEVEL = info, REGION = eu-west-1
+scaling min 2 max 10 cpu 70
+deploy to docker, kubernetes, terraform

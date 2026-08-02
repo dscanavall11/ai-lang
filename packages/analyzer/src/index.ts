@@ -1,0 +1,10 @@
+export { analyze, defaultPasses, type AnalyzeOptions, type AnalysisResult } from './analyze.js';
+export { type AnalysisContext, type SemanticPass, Scope, suggest, withSuggestion } from './context.js';
+export { TypeChecker } from './type-checker.js';
+export { symbolPass } from './passes/symbols.js';
+export { typePass } from './passes/types.js';
+export { dddPass } from './passes/ddd.js';
+export { errorFlowPass } from './passes/error-flow.js';
+export { architecturePass } from './passes/architecture.js';
+export { simplicityPass } from './passes/simplicity.js';
+export { walkStatements, walkExpressions, walkExpression, typesReferencedBy, typesOfDeclaration, bodies } from './walk.js';
