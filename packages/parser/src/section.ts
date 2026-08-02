@@ -191,6 +191,27 @@ export function readBody(section: Section): SectionBody {
 }
 
 /**
+ * Lines that look like clauses but name no verb the language knows.
+ *
+ * A clause sits directly under the heading; prose starts after a blank line. So
+ * an unindented line in that opening run which is neither a bullet nor a block
+ * header nor a known verb is a misspelled clause, and reading it as prose is
+ * how `primaryKey id` silently became no identity at all — the aggregate then
+ * fell back to the `id` convention and nothing was reported.
+ */
+export function unknownClauses(section: Section): Line[] {
+  const found: Line[] = [];
+  const baseIndent = section.body.find((l) => l.text !== '')?.indent ?? 0;
+  for (const line of section.body) {
+    if (line.text === '') break;
+    if (line.indent !== baseIndent) continue;
+    if (isBullet(line) || line.text.endsWith(':') || isAttributeLine(line.text)) continue;
+    found.push(line);
+  }
+  return found;
+}
+
+/**
  * Attribute lines start with a configuration verb. Anything else is prose, which
  * keeps documentation and configuration visually distinct without extra syntax.
  */

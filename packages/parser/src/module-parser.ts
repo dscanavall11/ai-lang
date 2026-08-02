@@ -15,7 +15,7 @@ import { DeclarationRegistry } from './declarations/registry.js';
 import { parseFrontmatter } from './frontmatter.js';
 import { parseInfrastructure } from './infrastructure-parser.js';
 import { ParseReporter } from './reporter.js';
-import { readBody, splitSections, type Section } from './section.js';
+import { readBody, splitSections, unknownClauses, type Section } from './section.js';
 import { SourceFile } from './source.js';
 
 export const defaultDeclarationRegistry = (): DeclarationRegistry => {
@@ -83,6 +83,17 @@ export function parseModule(path: string, text: string, diagnostics: DiagnosticB
       reporter.error('AIL1613', `${section.keyword} needs a name`, section.span);
       continue;
     }
+    // One rule for every declaration kind. Infrastructure and glossary are left
+    // out: the first reports unknown settings itself, the second is prose.
+    for (const clause of unknownClauses(section)) {
+      reporter.error(
+        'AIL1006',
+        `"${clause.text}" is not a clause of ${section.keyword}`,
+        file.spanOf(clause),
+        'a line directly under the heading configures the declaration; write prose after a blank line',
+      );
+    }
+
     const produced = parser.parse(section, reporter);
     if (Array.isArray(produced)) declarations.push(...produced);
     else if (produced) declarations.push(produced);
