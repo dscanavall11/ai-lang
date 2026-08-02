@@ -1,0 +1,151 @@
+---
+module: notes
+context: Notes
+target: typescript
+---
+
+# Notes
+
+This module exists to keep `AGENTS.md` honest.
+
+It was written using nothing but that guide — no reference, no other example —
+and it touches every construct the guide teaches: an enum, an aggregate with an
+invariant and an operation, a command, an event, a checked error, a projected
+dto, a query, both directions of port, a service, three endpoints, the
+infrastructure block and three scenarios.
+
+CI checks it, runs its scenarios and compiles it to every target. So if the
+guide ever describes syntax the compiler no longer accepts, this file fails
+before anyone is misled by it.
+
+## enum NoteState
+- Draft
+- Published
+
+## aggregate Note
+identified by id
+
+- id: uuid, required
+- title: text, required, min length 1, max length 200
+- body: text, optional
+- state: NoteState, required, default Draft
+- createdAt: timestamp, required
+- publishedAt: timestamp, optional
+
+invariant "a published note has a timestamp":
+  state is not Published or publishedAt is present
+
+operation publish (at: timestamp) -> nothing:
+  set state to Published
+  set publishedAt to at
+
+## command CreateNote
+- title: text, required, min length 1
+- body: text, optional
+
+## event NotePublished from Note
+topic note-published
+
+- noteId: uuid, required
+- publishedAt: timestamp, required
+
+## error NoteNotFound (checked, status 404)
+message: "no note exists with id {noteId}"
+
+- noteId: uuid, required
+
+## dto NoteSummary projects Note
+- id: uuid, required
+- title: text, required
+- state: NoteState, required
+
+## query NoteSearch over Note
+
+- state: NoteState, optional
+- titleContains: text, optional
+
+match note.state is state
+match note.title contains titleContains
+
+sort by note.createdAt descending
+limit 50
+
+## port NoteRepository (outbound)
+using in-memory
+
+- find note by id (id: uuid) -> Note or NoteNotFound
+- search notes (criteria: NoteSearch) -> list of Note
+- save note (note: Note) -> nothing
+
+## port NoteUseCases (inbound)
+
+- create note (command: CreateNote) -> Note
+- summarise note (id: uuid) -> NoteSummary or NoteNotFound
+- publish note (id: uuid) -> NotePublished or NoteNotFound
+- find notes (criteria: NoteSearch) -> list of Note
+
+## service NoteService
+uses NoteRepository
+implements NoteUseCases
+
+Every operation either does its job or says exactly why it could not.
+
+operation create note (command: CreateNote) -> Note:
+  let note be a new Note with id = new id, title = command.title, body = command.body, createdAt = now
+  perform save note with note = note
+  return note
+
+operation summarise note (id: uuid) -> NoteSummary or NoteNotFound:
+  let note be find note by id with id = id
+  return NoteSummary from note
+
+operation publish note (id: uuid) -> NotePublished or NoteNotFound:
+  let note be find note by id with id = id
+  let at be now
+  set note.publishedAt to at
+  set note.state to Published
+  perform save note with note = note
+  publish NotePublished with noteId = note.id, publishedAt = at
+  return NotePublished with noteId = note.id, publishedAt = at
+
+operation find notes (criteria: NoteSearch) -> list of Note:
+  return search notes with criteria = criteria
+
+## endpoint POST /notes
+handled by NoteService.create note
+request CreateNote
+responds 201 with Note
+
+## endpoint GET /notes/{id}
+handled by NoteService.summarise note
+responds 200 with NoteSummary
+responds 404 when NoteNotFound
+
+## endpoint POST /notes/{id}/publish
+handled by NoteService.publish note
+responds 200 with NotePublished
+responds 404 when NoteNotFound
+
+## infrastructure
+port 8080
+database notesdb using postgres version 16
+deploy to docker
+
+## scenario creating a note starts it as a draft
+
+when created be create note with command = CreateNote with title = "First", body = nothing
+then created.title is "First"
+and created.state is Draft
+
+## scenario publishing a note announces it
+
+given note be Note with id = "n-1", title = "First", createdAt = now
+when published be publish note with id = "n-1"
+then published.noteId is "n-1"
+and it publishes NotePublished
+
+## scenario publishing one that is not there
+
+given note be Note with id = "n-1", title = "First", createdAt = now
+when publish note with id = "n-2"
+then it fails with NoteNotFound

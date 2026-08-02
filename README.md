@@ -168,6 +168,26 @@ nothing and reviewing it is a diff, not a re-read.
 
 ---
 
+## Handing it to an AI
+
+[`AGENTS.md`](AGENTS.md) is the whole language in one file, written to be read by
+a model rather than a person: syntax, the rules that decide reviews, the mistakes
+worth naming, and the check-test-build loop it should drive itself with.
+
+Cursor, Claude Code, Codex, Copilot and Antigravity read it from the repository
+root without being asked. For anything else — a chat window, your own agent —
+paste it. It is about 2,000 tokens and complete on its own.
+
+[`llms.txt`](llms.txt) indexes the rest for tools that follow that convention.
+
+The loop is what makes this work. `ail check` reports exact spans and stable
+codes, `ail explain <code>` explains any of them, and `ail test` runs the
+declared scenarios in about a second without generating anything. A model can
+correct itself against a real compiler instead of guessing — which is the
+difference between a language an AI can use and a prompt it can only follow.
+
+---
+
 ## Editor support
 
 A Visual Studio Code extension lives in [`editors/vscode`](editors/vscode):
