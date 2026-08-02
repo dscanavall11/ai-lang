@@ -34,28 +34,35 @@ CI runs on the pull request. Once it is green, merge.
 git switch -c release/0.2.0 develop
 # bump the version, update the status section of the README
 git push -u origin release/0.2.0
-gh pr create --base main --title "release 0.2.0" --fill
+
+gh pr create --base main    --title "release 0.2.0" --fill
+gh pr create --base develop --title "release 0.2.0, back into develop" --fill
 ```
 
-After it lands on `main`, tag it and merge back so `develop` carries the release
-commits:
+Two pull requests, because a release lands on two branches. Merge the `main` one
+first and tag it:
 
 ```bash
 git switch main && git pull
 git tag -a v0.2.0 -m "0.2.0" && git push origin v0.2.0
-git switch develop && git merge --no-ff main && git push
 ```
+
+Then merge the `develop` one. Leaving it unmerged is the classic mistake: the
+version bump lives only on `main` and the next release re-applies it.
 
 ## Fixing a release in a hurry
 
 ```bash
 git switch -c hotfix/0.2.1 main
 # … fix, commit …
-gh pr create --base main --title "hotfix 0.2.1" --fill
+git push -u origin hotfix/0.2.1
+
+gh pr create --base main    --title "hotfix 0.2.1" --fill
+gh pr create --base develop --title "hotfix 0.2.1, into develop" --fill
 ```
 
-Then merge `main` back into `develop`, exactly as after a release. A hotfix that
-never reaches `develop` comes back as a regression in the next version.
+Two pull requests again, for the same reason. A hotfix that never reaches
+`develop` comes back as a regression in the next version.
 
 ## What protection enforces
 
@@ -63,14 +70,16 @@ On both `main` and `develop`:
 
 - no direct pushes — every change arrives through a pull request;
 - no force pushes and no branch deletion;
-- linear history, so the log reads as a sequence rather than a graph;
 - CI must pass before merging.
+
+Merge commits are allowed on purpose. Git Flow needs them: a release reaches two
+branches at once, and rewriting `main` to keep the log linear is not an option.
 
 Admins are included, so the rules apply to the maintainer too. To lift that in an
 emergency:
 
 ```bash
-gh api -X PATCH repos/dscanavall11/ai-lang/branches/main/protection/enforce_admins
+gh api -X DELETE repos/dscanavall11/ai-lang/branches/main/protection/enforce_admins
 ```
 
-Re-enable it with `-X POST` on the same endpoint.
+Restore it with `-X POST` on the same endpoint.
