@@ -168,6 +168,28 @@ nothing and reviewing it is a diff, not a re-read.
 
 ---
 
+## Editor support
+
+A Visual Studio Code extension lives in [`editors/vscode`](editors/vscode):
+highlighting, two-space indentation with guides, folding, and snippets for every
+declaration. It is not on the Marketplace yet — copy the folder into your
+extensions directory, or package it:
+
+```bash
+npx @vscode/vsce package
+```
+
+AI-Lang has almost no punctuation, so colour carries more of the load than in a
+curly-brace language: it is what separates a declaration from the prose beside
+it. The grammar uses standard TextMate scopes, so whatever theme you already run
+will colour it without knowing the language exists.
+
+No language server yet. The compiler already produces diagnostics with exact
+source spans, so that is the obvious next step — see
+[`editors/vscode/README.md`](editors/vscode/README.md).
+
+---
+
 ## How it fits together
 
 ```
@@ -207,6 +229,7 @@ writes a reviewable `.ai-spec/` directory rather than code.
 | `packages/iac` | One generator per deployment platform |
 | `packages/architect` | Requirements → bounded contexts → domain model → draft sources |
 | `packages/cli` | The `ail` command |
+| `editors/vscode` | Grammar, indentation and snippets for Visual Studio Code |
 
 - [CRUD tutorial](docs/crud-tutorial.md)
 - [Branching](docs/branching.md)
