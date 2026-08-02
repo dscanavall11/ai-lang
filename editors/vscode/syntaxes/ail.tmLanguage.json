@@ -1,0 +1,238 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "AI-Lang",
+  "scopeName": "source.ail",
+  "patterns": [
+    { "include": "#frontmatter" },
+    { "include": "#title" },
+    { "include": "#declaration" },
+    { "include": "#field" },
+    { "include": "#operation-signature" },
+    { "include": "#port-operation" },
+    { "include": "#invariant" },
+    { "include": "#endpoint-clause" },
+    { "include": "#scenario-step" },
+    { "include": "#statement" },
+    { "include": "#clause" },
+    { "include": "#string" },
+    { "include": "#number" },
+    { "include": "#constant" },
+    { "include": "#operator" },
+    { "include": "#type" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "frontmatter": {
+      "comment": "The YAML header, which is the only part of the file that is not prose or declaration.",
+      "begin": "\\A---\\s*$",
+      "end": "^---\\s*$",
+      "beginCaptures": { "0": { "name": "punctuation.definition.frontmatter.begin.ail" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.frontmatter.end.ail" } },
+      "name": "meta.embedded.frontmatter.ail",
+      "patterns": [
+        {
+          "match": "^\\s*([A-Za-z][A-Za-z0-9_-]*)\\s*(:)\\s*(.*)$",
+          "captures": {
+            "1": { "name": "entity.name.tag.ail" },
+            "2": { "name": "punctuation.separator.key-value.ail" },
+            "3": { "name": "string.unquoted.frontmatter.ail" }
+          }
+        }
+      ]
+    },
+
+    "title": {
+      "comment": "The module heading. Everything under it that is not a declaration is prose.",
+      "match": "^(#)\\s+(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.ail" },
+        "2": { "name": "markup.heading.ail entity.name.section.ail" }
+      }
+    },
+
+    "declaration": {
+      "comment": "## <kind> <Name> <trailing clause>. The kind is what gives the file its shape.",
+      "match": "^(##)\\s+(aggregate|entity|value[ -]object|enum|enumeration|dto|view|read model|command|domain event|event|error|failure|query|specification|port|interface|adapter|service|use case|usecase|handler|reaction|policy|endpoint|route|infrastructure|infra|glossary|scenario|example)\\b\\s*(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.ail" },
+        "2": { "name": "keyword.other.declaration.ail storage.type.ail" },
+        "3": {
+          "patterns": [
+            { "include": "#http-method" },
+            { "include": "#declaration-modifier" },
+            { "include": "#route-path" },
+            { "include": "#clause" },
+            { "include": "#type" },
+            { "include": "#punctuation" }
+          ]
+        }
+      }
+    },
+
+    "declaration-modifier": {
+      "comment": "(inbound), (outbound), (checked, status 404).",
+      "match": "\\b(inbound|outbound|checked|unchecked|status)\\b",
+      "name": "storage.modifier.ail"
+    },
+
+    "http-method": {
+      "match": "\\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\b",
+      "name": "keyword.other.http-method.ail support.constant.ail"
+    },
+
+    "route-path": {
+      "comment": "/tasks/{id} — the placeholder is the part worth seeing.",
+      "match": "(/[A-Za-z0-9_./-]*)(\\{)([A-Za-z_][A-Za-z0-9_]*)(\\})|(/[A-Za-z0-9_./-]+)",
+      "captures": {
+        "1": { "name": "string.unquoted.route.ail" },
+        "2": { "name": "punctuation.definition.template-expression.begin.ail" },
+        "3": { "name": "variable.parameter.route.ail" },
+        "4": { "name": "punctuation.definition.template-expression.end.ail" },
+        "5": { "name": "string.unquoted.route.ail" }
+      }
+    },
+
+    "field": {
+      "comment": "- name: Type, required, min length 1. Also the bare `- Open` of an enum.",
+      "match": "^(\\s*)(-)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(:)\\s*(.*)$",
+      "captures": {
+        "2": { "name": "punctuation.definition.list.ail" },
+        "3": { "name": "variable.other.member.declaration.ail" },
+        "4": { "name": "punctuation.separator.type.ail" },
+        "5": {
+          "patterns": [
+            { "include": "#constraint" },
+            { "include": "#string" },
+            { "include": "#number" },
+            { "include": "#constant" },
+            { "include": "#type" },
+            { "include": "#punctuation" }
+          ]
+        }
+      }
+    },
+
+    "constraint": {
+      "comment": "The vocabulary that turns a field into a rule.",
+      "match": "\\b(required|optional|unique|default|list of|set of|map of|min length|max length|min|max|pattern|format|precision|scale|between|one of|reference|references|derived|readonly)\\b",
+      "name": "keyword.other.constraint.ail support.function.ail"
+    },
+
+    "port-operation": {
+      "comment": "- find task by id (id: uuid) -> Task or TaskNotFound",
+      "match": "^(\\s*)(-)\\s+([a-z][A-Za-z0-9_ ]*?)\\s*(\\()",
+      "captures": {
+        "2": { "name": "punctuation.definition.list.ail" },
+        "3": { "name": "entity.name.function.ail" },
+        "4": { "name": "punctuation.definition.parameters.begin.ail" }
+      }
+    },
+
+    "operation-signature": {
+      "comment": "operation create task (command: CreateTask) -> Task:",
+      "match": "^(\\s*)(operation)\\s+([a-z][A-Za-z0-9_ ]*?)\\s*(?=\\()",
+      "captures": {
+        "2": { "name": "keyword.declaration.function.ail storage.type.function.ail" },
+        "3": { "name": "entity.name.function.ail" }
+      }
+    },
+
+    "invariant": {
+      "match": "^(\\s*)(invariant|rule|guard)\\b",
+      "captures": { "2": { "name": "keyword.declaration.ail storage.type.ail" } }
+    },
+
+    "endpoint-clause": {
+      "comment": "handled by / request / responds N with T / responds N when Error.",
+      "match": "^(\\s*)(handled by|responds|request|accepts|produces|secured by|rate limit)\\b",
+      "captures": { "2": { "name": "keyword.control.endpoint.ail" } }
+    },
+
+    "scenario-step": {
+      "comment": "given / when / then / and — the Gherkin spine of a scenario.",
+      "match": "^(\\s*)(given|when|then|and)\\b(?=\\s)",
+      "captures": { "2": { "name": "keyword.control.scenario.ail markup.bold" } }
+    },
+
+    "statement": {
+      "comment": "The imperative core of an operation body.",
+      "match": "^(\\s*)(let|set|perform|return|fail with|fail|publish|add|remove|for each|when|otherwise|else|match|sort by|limit|emit)\\b",
+      "captures": { "2": { "name": "keyword.control.ail" } }
+    },
+
+    "clause": {
+      "comment": "Words that bind a declaration to another one.",
+      "match": "\\b(identified by|belongs to|uses|implements|emits|handles|extends|using|over|deploy to|database|version|port|on|to|from|by|of|in|for|as|at most|at least|descending|ascending)\\b",
+      "name": "keyword.other.clause.ail"
+    },
+
+    "operator": {
+      "comment": "AI-Lang spells its operators, which is the whole point.",
+      "match": "\\b(is not|is|are|was|not|and|or|plus|minus|times|divided by|divided|equals|contains|starts with|starts|ends with|ends|matches|with|be|then|carrying|empty|present|absent|greater than|less than|count of|sum of|min of|max of|average of|new id)\\b",
+      "name": "keyword.operator.word.ail"
+    },
+
+    "constant": {
+      "match": "\\b(true|false|yes|no|nothing|null|none|now)\\b",
+      "name": "constant.language.ail"
+    },
+
+    "type": {
+      "comment": "Primitives are lowercase and closed; anything Capitalised is a declared type.",
+      "patterns": [
+        {
+          "match": "\\b(text|integer|decimal|boolean|uuid|timestamp|date|duration|json|bytes|nothing)\\b",
+          "name": "support.type.primitive.ail"
+        },
+        {
+          "match": "\\b([A-Z][A-Za-z0-9_]*)\\b",
+          "name": "entity.name.type.ail"
+        }
+      ]
+    },
+
+    "string": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.ail",
+          "begin": "\"",
+          "end": "\"",
+          "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.ail" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.ail" } },
+          "patterns": [
+            { "match": "\\\\.", "name": "constant.character.escape.ail" },
+            {
+              "comment": "Error messages interpolate their own fields.",
+              "match": "(\\{)([A-Za-z_][A-Za-z0-9_.]*)(\\})",
+              "captures": {
+                "1": { "name": "punctuation.definition.template-expression.begin.ail" },
+                "2": { "name": "variable.other.member.ail" },
+                "3": { "name": "punctuation.definition.template-expression.end.ail" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.ail",
+          "begin": "'",
+          "end": "'",
+          "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.ail" }]
+        }
+      ]
+    },
+
+    "number": {
+      "match": "\\b-?[0-9][0-9_]*(\\.[0-9][0-9_]*)?\\b",
+      "name": "constant.numeric.ail"
+    },
+
+    "punctuation": {
+      "patterns": [
+        { "match": "->|=>", "name": "keyword.operator.arrow.ail" },
+        { "match": "=", "name": "keyword.operator.assignment.ail" },
+        { "match": "[(){}\\[\\]]", "name": "punctuation.section.ail" },
+        { "match": "[,.:]", "name": "punctuation.separator.ail" }
+      ]
+    }
+  }
+}

@@ -168,6 +168,28 @@ nothing and reviewing it is a diff, not a re-read.
 
 ---
 
+## Editor support
+
+A Visual Studio Code extension lives in [`editors/vscode`](editors/vscode):
+highlighting, two-space indentation with guides, folding, and snippets for every
+declaration. It is not on the Marketplace yet — copy the folder into your
+extensions directory, or package it:
+
+```bash
+npx @vscode/vsce package
+```
+
+AI-Lang has almost no punctuation, so colour carries more of the load than in a
+curly-brace language: it is what separates a declaration from the prose beside
+it. The grammar uses standard TextMate scopes, so whatever theme you already run
+will colour it without knowing the language exists.
+
+No language server yet. The compiler already produces diagnostics with exact
+source spans, so that is the obvious next step — see
+[`editors/vscode/README.md`](editors/vscode/README.md).
+
+---
+
 ## How it fits together
 
 ```
@@ -207,6 +229,7 @@ writes a reviewable `.ai-spec/` directory rather than code.
 | `packages/iac` | One generator per deployment platform |
 | `packages/architect` | Requirements → bounded contexts → domain model → draft sources |
 | `packages/cli` | The `ail` command |
+| `editors/vscode` | Grammar, indentation and snippets for Visual Studio Code |
 
 - [CRUD tutorial](docs/crud-tutorial.md)
 - [Branching](docs/branching.md)
@@ -219,21 +242,26 @@ writes a reviewable `.ai-spec/` directory rather than code.
 
 Working end to end, and early.
 
-The three worked examples compile to all five languages and all four platforms,
-and the compiler itself has 243 tests.
+The worked examples compile to all five languages and all four platforms, and the
+compiler itself has 243 tests.
 
-Verified against a real toolchain:
+Whether the emitted project then satisfies its own toolchain is a separate
+question, so CI builds every one of them with the real compiler on every push:
 
 | Target | Command | Result |
 | --- | --- | --- |
 | TypeScript | `tsc --noEmit` | passes |
-| Java | `mvn compile` | passes, 59 classes |
+| Java | `mvn compile` | passes |
 | Python | `python -m compileall` | passes |
-| Go | `go build ./...` | not run — no toolchain here |
-| Rust | `cargo check` | not run — no toolchain here |
+| Go | `go build ./...` | passes |
+| Rust | `cargo check` | **experimental — does not compile** |
 
-The two unverified backends generate output shaped like the three that pass; treat
-them as unproven until someone runs their compiler.
+Rust is the honest exception. The emitter treats ownership as if it were not
+there: it moves a value and then reads it, and writes `&mut self` methods that
+move out of their own fields. Fixing it means teaching the backend to borrow,
+which is real work and not yet done. It runs in CI as an allowed failure so the
+gap stays measured rather than forgotten. **Do not pick Rust for anything real
+yet.** The other four are built and verified on every commit.
 
 Known gaps, in the order they matter:
 

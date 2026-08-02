@@ -1,0 +1,92 @@
+# AI-Lang for Visual Studio Code
+
+Syntax highlighting, indentation and snippets for [AI-Lang](https://github.com/dscanavall11/ai-lang) — a
+programming language written in natural language, which compiles to Java, TypeScript, Python and Go.
+
+## What it colours
+
+AI-Lang has almost no punctuation, so the highlighting carries more weight than
+usual: it is what tells a declaration apart from the prose around it.
+
+| Part of the language | Example | Scope |
+| --- | --- | --- |
+| Declaration kind | `## aggregate Order` | `keyword.other.declaration` |
+| Declared type | `Order`, `TaskNotFound` | `entity.name.type` |
+| Primitive | `text`, `uuid`, `timestamp` | `support.type.primitive` |
+| Field name | `- title: text` | `variable.other.member` |
+| Constraint | `required`, `min length 1` | `keyword.other.constraint` |
+| Spelled operator | `is not`, `contains`, `divided by` | `keyword.operator.word` |
+| Statement | `let`, `perform`, `return`, `fail with` | `keyword.control` |
+| Scenario step | `given`, `when`, `then`, `and` | `keyword.control.scenario` |
+| Constant | `now`, `nothing`, `true` | `constant.language` |
+| Route placeholder | `/tasks/{id}` | `variable.parameter.route` |
+| Message interpolation | `"no task with id {taskId}"` | `variable.other.member` |
+
+Because the scopes are the standard ones, every theme you already use will
+colour AI-Lang without knowing it exists.
+
+## Indentation
+
+An operation body is indented under the `:` that opens it, two spaces, always
+spaces. The extension sets that per language, so a project-wide tab setting does
+not fight it:
+
+```json
+"[ail]": {
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  "editor.detectIndentation": false
+}
+```
+
+Indentation guides are on and whitespace is rendered at boundaries, because in a
+language with this little punctuation the indentation *is* the structure.
+
+## Snippets
+
+Type the prefix and press Tab.
+
+| Prefix | Gives you |
+| --- | --- |
+| `module` | the frontmatter and title a file starts with |
+| `aggregate` | an aggregate with identity and an invariant |
+| `port` | an outbound port carrying its own adapter |
+| `usecases` | an inbound port |
+| `service` | a service wired to both, with its first operation |
+| `query` | a specification with criteria, sort and limit |
+| `endpoint` | one HTTP route bound to one operation |
+| `scenario` | a runnable example for `ail test` |
+| `infrastructure` | port, database and deployment target |
+
+## Installing
+
+Not on the Marketplace yet. To use it now:
+
+```bash
+git clone https://github.com/dscanavall11/ai-lang
+```
+
+Then copy `editors/vscode` into your extensions folder and reload the window:
+
+- Linux / macOS: `~/.vscode/extensions/ai-lang`
+- Windows: `%USERPROFILE%\.vscode\extensions\ai-lang`
+
+Or package it, which is tidier:
+
+```bash
+npx @vscode/vsce package
+```
+
+That writes `ai-lang-0.1.0.vsix`, which installs with **Extensions → … → Install
+from VSIX**.
+
+## What it does not do yet
+
+No diagnostics, no go-to-definition, no completion. The compiler already
+produces precise diagnostics with source spans — `ail check` — so a language
+server is the obvious next step and the one that would change how the language
+feels to write. It is not built yet.
+
+## Licence
+
+Apache-2.0, the same as the compiler.

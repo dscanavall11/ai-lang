@@ -1,0 +1,157 @@
+{
+  "Module frontmatter": {
+    "prefix": "module",
+    "body": [
+      "---",
+      "module: ${1:orders}",
+      "context: ${2:Orders}",
+      "target: ${3|typescript,java,python,go|}",
+      "---",
+      "",
+      "# ${2:Orders}",
+      "",
+      "$0"
+    ],
+    "description": "The header every .ail file starts with"
+  },
+
+  "Aggregate": {
+    "prefix": "aggregate",
+    "body": [
+      "## aggregate ${1:Order}",
+      "identified by id",
+      "",
+      "- id: uuid, required",
+      "- ${2:createdAt}: timestamp, required",
+      "",
+      "invariant \"${3:say what must always be true}\":",
+      "  $0"
+    ],
+    "description": "An aggregate root, with its identity and one invariant"
+  },
+
+  "Entity": {
+    "prefix": "entity",
+    "body": ["## entity ${1:OrderLine}", "identified by id", "", "- id: uuid, required", "- $0"],
+    "description": "An entity with its own identity"
+  },
+
+  "Value object": {
+    "prefix": "value",
+    "body": ["## value object ${1:Money}", "", "- amount: decimal, required", "- $0"],
+    "description": "A value object, compared by its fields"
+  },
+
+  "Command": {
+    "prefix": "command",
+    "body": ["## command ${1:PlaceOrder}", "", "- ${2:customerId}: uuid, required", "- $0"],
+    "description": "An intent to change something"
+  },
+
+  "Event": {
+    "prefix": "event",
+    "body": ["## event ${1:OrderPlaced}", "", "- ${2:orderId}: uuid, required", "- $0"],
+    "description": "Something that already happened"
+  },
+
+  "Checked error": {
+    "prefix": "error",
+    "body": [
+      "## error ${1:OrderNotFound} (checked, status ${2:404})",
+      "message: \"${3:no order exists with id {orderId\\}}\"",
+      "",
+      "- ${4:orderId}: uuid, required",
+      "$0"
+    ],
+    "description": "A failure the caller is expected to handle"
+  },
+
+  "Outbound port with inline adapter": {
+    "prefix": "port",
+    "body": [
+      "## port ${1:OrderRepository} (outbound)",
+      "using ${2|in-memory,sql,http,queue|}",
+      "",
+      "- find ${3:order} by id (id: uuid) -> ${4:Order} or ${4:Order}NotFound",
+      "- save ${3:order} (${3:order}: ${4:Order}) -> nothing",
+      "$0"
+    ],
+    "description": "An outbound port that carries its own adapter"
+  },
+
+  "Inbound port": {
+    "prefix": "usecases",
+    "body": ["## port ${1:OrderUseCases} (inbound)", "", "- ${2:place order} (command: ${3:PlaceOrder}) -> ${4:Order}", "$0"],
+    "description": "The use cases the outside world may call"
+  },
+
+  "Service": {
+    "prefix": "service",
+    "body": [
+      "## service ${1:OrderService}",
+      "uses ${2:OrderRepository}",
+      "implements ${3:OrderUseCases}",
+      "",
+      "operation ${4:place order} (command: ${5:PlaceOrder}) -> ${6:Order}:",
+      "  $0"
+    ],
+    "description": "A service implementing an inbound port"
+  },
+
+  "Operation": {
+    "prefix": "operation",
+    "body": ["operation ${1:do something} (${2:command}: ${3:DoSomething}) -> ${4:Result}:", "  $0"],
+    "description": "One operation of a service or aggregate"
+  },
+
+  "Query": {
+    "prefix": "query",
+    "body": [
+      "## query ${1:OrderSearch} over ${2:Order}",
+      "",
+      "- ${3:state}: ${4:OrderState}, optional",
+      "",
+      "match ${5:order}.${3:state} is ${3:state}",
+      "sort by ${5:order}.createdAt descending",
+      "limit 100",
+      "$0"
+    ],
+    "description": "A specification: one criterion per filter"
+  },
+
+  "Endpoint": {
+    "prefix": "endpoint",
+    "body": [
+      "## endpoint ${1|GET,POST,PUT,PATCH,DELETE|} ${2:/orders}",
+      "handled by ${3:OrderService}.${4:list orders}",
+      "responds ${5:200} with ${6:Order}",
+      "$0"
+    ],
+    "description": "One HTTP route bound to one operation"
+  },
+
+  "Scenario": {
+    "prefix": "scenario",
+    "body": [
+      "## scenario ${1:what this proves}",
+      "",
+      "given ${2:order} be ${3:Order} with id = \"${4:o-1}\"",
+      "when ${5:result} be ${6:read order} with id = \"${4:o-1}\"",
+      "then ${5:result}.${7:id} is \"${4:o-1}\"",
+      "$0"
+    ],
+    "description": "A runnable example, checked by `ail test`"
+  },
+
+  "Infrastructure": {
+    "prefix": "infrastructure",
+    "body": [
+      "## infrastructure",
+      "port ${1:8080}",
+      "database ${2:ordersdb} using ${3|postgres,mysql,mongo|} version ${4:16}",
+      "deploy to ${5|docker,kubernetes,terraform,lambda|}",
+      "$0"
+    ],
+    "description": "What the module needs in order to run"
+  }
+}

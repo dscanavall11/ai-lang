@@ -90,9 +90,91 @@ interface StatementShape {
   discards: boolean;
   /** The assignment target is an optional field, so the value needs its address. */
   pointerTarget: boolean;
+  /** Nothing later in the operation reads this binding, and Go rejects that. */
+  unused: boolean;
 }
 
-const NO_STATEMENT: StatementShape = { fallible: false, discards: false, pointerTarget: false };
+const NO_STATEMENT: StatementShape = { fallible: false, discards: false, pointerTarget: false, unused: false };
+
+/**
+ * Every name the body reads.
+ *
+ * Go refuses to compile a local nobody uses, and AI-Lang has a legitimate reason
+ * to write one: `let task be find task by id` binds a value only so the missing
+ * case can fail. Knowing which names are read lets that binding be discarded
+ * instead of declared.
+ */
+function collectReferences(statements: readonly IRStatement[]): Set<string> {
+  const names = new Set<string>();
+
+  const fromExpression = (expression: IRExpression): void => {
+    switch (expression.kind) {
+      case 'reference':
+        if (expression.path[0]) names.add(expression.path[0]);
+        return;
+      case 'binary':
+        fromExpression(expression.left);
+        fromExpression(expression.right);
+        return;
+      case 'unary':
+        fromExpression(expression.operand);
+        return;
+      case 'call':
+        if (expression.receiver) names.add(expression.receiver);
+        for (const argument of expression.arguments) fromExpression(argument.value);
+        return;
+      case 'construct':
+        if (expression.source?.[0]) names.add(expression.source[0]);
+        for (const argument of expression.arguments) fromExpression(argument.value);
+        return;
+      case 'aggregate':
+        fromExpression(expression.collection);
+        if (expression.of) fromExpression(expression.of);
+        return;
+      case 'list':
+        for (const item of expression.items) fromExpression(item);
+        return;
+      default:
+        return;
+    }
+  };
+
+  const fromStatement = (statement: IRStatement): void => {
+    switch (statement.kind) {
+      case 'let':
+      case 'perform':
+        fromExpression(statement.value);
+        return;
+      case 'set':
+      case 'append':
+      case 'remove':
+        // The head of the target path is read before it is written into.
+        if (statement.kind === 'set' ? statement.target[0] : statement.collection[0]) {
+          names.add((statement.kind === 'set' ? statement.target[0] : statement.collection[0]) as string);
+        }
+        fromExpression(statement.value);
+        return;
+      case 'when':
+        fromExpression(statement.condition);
+        for (const inner of [...statement.then, ...statement.otherwise]) fromStatement(inner);
+        return;
+      case 'for-each':
+        fromExpression(statement.collection);
+        for (const inner of statement.body) fromStatement(inner);
+        return;
+      case 'fail':
+      case 'publish':
+        for (const argument of statement.arguments) fromExpression(argument.value);
+        return;
+      case 'return':
+        if (statement.value) fromExpression(statement.value);
+        return;
+    }
+  };
+
+  for (const statement of statements) fromStatement(statement);
+  return names;
+}
 
 /** Rendered values simple enough for `&value` to be legal Go. */
 const ADDRESSABLE = /^[A-Za-z_][A-Za-z0-9_.]*$/;
@@ -104,6 +186,9 @@ export class GoEmitter extends LanguageEmitter {
   private element = 'float64';
   /** Inside an aggregate projection every leaf is converted to float64. */
   private folding = false;
+  /** Names the operation being lowered reads, and how deep the walk currently is. */
+  private referenced = new Set<string>();
+  private depth = 0;
   /** Types of the locals in scope, so values reaching a pointer field get their address. */
   private readonly locals = new Map<string, IRType>();
   private readonly fields: ReadonlyMap<string, IRType>;
@@ -371,12 +456,27 @@ export class GoEmitter extends LanguageEmitter {
 
   // -- statements -----------------------------------------------------------
 
+  /** The outermost block is the operation body, which is what usage is scanned over. */
+  override emitBlock(writer: CodeWriter, statements: readonly IRStatement[]): void {
+    if (this.depth === 0) this.referenced = collectReferences(statements);
+    this.depth += 1;
+    try {
+      super.emitBlock(writer, statements);
+    } finally {
+      this.depth -= 1;
+    }
+  }
+
   override emitStatement(writer: CodeWriter, statement: IRStatement): void {
     if (statement.kind === 'for-each') this.remember(statement.item, elementType(this.typeOf(statement.collection) ?? NOTHING_TYPE));
     this.statement = {
-      fallible: (statement.kind === 'let' || statement.kind === 'perform') && this.isFallible(statement.value),
+      fallible:
+        (statement.kind === 'let' || statement.kind === 'perform') && this.isFallible(statement.value)
+          ? true
+          : statement.kind === 'return' && statement.value !== null && this.isFallible(statement.value),
       discards: statement.kind === 'perform' && this.yieldsValue(statement.value),
       pointerTarget: statement.kind === 'set' && this.needsAddress(this.pathType(statement.target), statement.value),
+      unused: statement.kind === 'let' && !this.referenced.has(statement.name),
     };
     super.emitStatement(writer, statement);
     if (statement.kind === 'let') this.remember(statement.name, this.typeOf(statement.value));
@@ -384,6 +484,18 @@ export class GoEmitter extends LanguageEmitter {
   }
 
   emitLet(writer: CodeWriter, name: string, value: string): void {
+    // A binding nothing reads is kept for the failure it can raise, so it
+    // becomes the guard itself rather than a local Go would reject.
+    if (this.statement.unused) {
+      if (!this.statement.fallible) {
+        writer.line(`_ = ${value}`);
+        return;
+      }
+      writer.line(`if _, err := ${value}; err != nil {`);
+      writer.block(() => writer.line(`return ${this.errorReturn()}`));
+      writer.line('}');
+      return;
+    }
     if (!this.statement.fallible) {
       writer.line(`${name} := ${value}`);
       return;
@@ -412,6 +524,12 @@ export class GoEmitter extends LanguageEmitter {
     const rendered = value ?? (this.returns.zero === '' ? null : this.returns.zero);
     if (!this.returns.fallible) {
       writer.line(rendered === null ? 'return' : `return ${rendered}`);
+      return;
+    }
+    // A fallible call already yields (value, error). Appending nil would nest a
+    // tuple inside a tuple, which Go rejects outright.
+    if (this.statement.fallible && rendered !== null) {
+      writer.line(`return ${rendered}`);
       return;
     }
     writer.line(rendered === null ? 'return nil' : `return ${rendered}, nil`);

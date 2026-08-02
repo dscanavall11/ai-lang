@@ -7,13 +7,13 @@ import { analyze } from '@ai-lang/analyzer';
 
 const EXAMPLES = ['examples/orders/orders.ail', 'examples/orders/catalog.ail'];
 
-/** The orders example, parsed and analysed. Shared by every backend test. */
-export function ordersProject(): IRProject {
+/** Any set of example sources, parsed and analysed, with errors surfaced as failures. */
+export function projectFrom(paths: readonly string[], projectName: string): IRProject {
   const bag = new DiagnosticBag();
   const sources = new Map<string, string>();
   const modules: IRModule[] = [];
 
-  for (const path of EXAMPLES) {
+  for (const path of paths) {
     const text = readFileSync(fileURLToPath(new URL(`../../../${path}`, import.meta.url)), 'utf8');
     sources.set(path, text);
     const { module } = parseModule(path, text, bag);
@@ -21,9 +21,14 @@ export function ordersProject(): IRProject {
   }
   expect(formatDiagnostics(bag.errors, sources)).toBe('');
 
-  const result = analyze(modules, { projectName: 'orders' });
+  const result = analyze(modules, { projectName });
   expect(formatDiagnostics(result.diagnostics.filter((d) => d.severity === 'error'), sources)).toBe('');
   return result.project;
+}
+
+/** The orders example, parsed and analysed. Shared by every backend test. */
+export function ordersProject(): IRProject {
+  return projectFrom(EXAMPLES, 'orders');
 }
 
 export function fileNamed(files: readonly GeneratedFile[], path: string): GeneratedFile {
