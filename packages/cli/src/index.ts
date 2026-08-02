@@ -9,6 +9,7 @@ import { explainCommand } from './commands/explain.js';
 import { irCommand } from './commands/ir.js';
 import { newCommand } from './commands/new.js';
 import { targetsCommand } from './commands/targets.js';
+import { testCommand } from './commands/test.js';
 import { dim, error, heading, info } from './output.js';
 
 export const VERSION = '0.1.0';
@@ -17,6 +18,7 @@ export const registry = new CommandRegistry()
   .register(newCommand)
   .register(architectCommand)
   .register(checkCommand)
+  .register(testCommand)
   .register(buildCommand)
   .register(deployCommand)
   .register(irCommand)

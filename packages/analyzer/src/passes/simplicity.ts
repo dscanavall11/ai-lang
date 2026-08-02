@@ -104,6 +104,8 @@ function reportUnreachableDeclarations(context: AnalysisContext, referenced: Map
   for (const declaration of context.module.declarations) {
     if (rooted.has(declaration.name)) continue;
     if (declaration.kind === 'error') continue; // The error-flow pass owns those.
+    // A scenario is the thing that reaches in, so nothing reaches it.
+    if (declaration.kind === 'scenario') continue;
     context.diagnostics.warn(
       'ddd',
       'AIL2501',

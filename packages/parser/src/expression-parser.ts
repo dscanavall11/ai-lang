@@ -150,6 +150,20 @@ function parsePrimary(cursor: TokenCursor, reporter: ParseReporter): IRExpressio
     return inner;
   }
 
+  // `[]`, or `[a, b, c]`. The element type comes from where the list is used.
+  if (cursor.atPunct('[')) {
+    cursor.next();
+    const items: IRExpression[] = [];
+    if (!cursor.atPunct(']')) {
+      for (;;) {
+        items.push(parseOr(cursor, reporter));
+        if (!cursor.eatPunct(',')) break;
+      }
+    }
+    if (!cursor.eatPunct(']')) reporter.error('AIL1311', 'unclosed "[" in list', cursor.currentSpan());
+    return { kind: 'list', items, span: cursor.spanOf(token) };
+  }
+
   if (token.kind === 'string') {
     cursor.next();
     return { kind: 'literal', value: token.value, type: TEXT, span: cursor.spanOf(token) };

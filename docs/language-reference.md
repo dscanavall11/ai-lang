@@ -413,7 +413,58 @@ observability tracing on, metrics on, log level info
 
 Only names appear here. A secret's **value** never lives in the source.
 
-### 4.15 `glossary`
+### 4.15 `scenario`
+
+An executable example. `ail test` runs these **against the IR itself** — no code
+is generated, no toolchain is needed, and no tokens are spent.
+
+```
+## scenario placing a draft order
+
+given order be Order with id = "o-1", customerId = "c-1", status = Draft, items = [ ... ]
+when placed be place order with command = PlaceOrder with orderId = "o-1", customerId = "c-1"
+then placed.orderId is "o-1"
+and order.status is Placed
+and it publishes OrderPlaced
+```
+
+The heading is a sentence, not an identifier — it is what the runner prints.
+
+| Step | Meaning |
+| --- | --- |
+| `given <name> be <expression>` | Builds a value and, if it has an identity, seeds it into the store |
+| `and <name> be <expression>` | Another thing to seed |
+| `when [<name> be] <call>` | The one operation under test, bound to `result` unless named |
+| `then <condition>` / `and <condition>` | A condition that must hold afterwards |
+| `then it fails with <Error>` | The operation must raise exactly that error |
+| `then it publishes <Event>` | That event must have been published |
+
+A seeded value is the same object the operation mutates, so `order.status is
+Placed` above asserts on what the service actually wrote.
+
+**What the interpreter provides.** Outbound ports resolve to an in-memory store
+for the phrases a repository is built from — `find … by id`, `save …`,
+`list …`, `delete … by id`, and any operation taking a [`## query`](#49-query).
+Field constraints and invariants run exactly as the generated constructors run
+them, so `then it fails with ConstraintViolation` is a real assertion.
+
+**What makes it trustworthy.** `now` is a fixed instant and `new id` counts from
+one, so the same scenario produces the same values on every run. And a scenario
+the interpreter cannot execute — a port it has no in-memory form for — is
+reported as **inconclusive**, never as a pass:
+
+```
+? SendingMail
+    the interpreter has no in-memory form of "send a letter" on port Mailer — this scenario did not run
+
+1 passed, 0 failed, 1 could not run
+```
+
+`ail test` exits non-zero when anything failed **or** could not run. Reporting
+"0 failures" for work that never happened is the one thing a test runner must
+not do.
+
+### 4.16 `glossary`
 
 ```
 ## glossary

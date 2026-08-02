@@ -202,6 +202,10 @@ export class JavaEmitter extends LanguageEmitter {
     return `new ${pascalCase(typeName)}(${this.shapeArguments(typeName, args)})`;
   }
 
+  listLiteral(items: readonly string[], _elementType: IRType | null): string {
+    return items.length === 0 ? 'java.util.List.of()' : `java.util.List.of(${items.join(', ')})`;
+  }
+
   now(): string {
     return 'java.time.Instant.now()';
   }
@@ -403,6 +407,8 @@ export class JavaEmitter extends LanguageEmitter {
         const resolved = this.index.resolvePhrase(expression.operation)[0];
         return resolved ? unwrap(resolved.operation.returns) : null;
       }
+      case 'list':
+        return expression.elementType ? { kind: 'list', of: expression.elementType } : null;
       case 'aggregate':
         if (expression.fn === 'count') return { kind: 'primitive', name: 'integer' };
         return { kind: 'primitive', name: 'decimal' };

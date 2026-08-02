@@ -52,6 +52,9 @@ export abstract class LanguageEmitter {
   abstract now(): string;
   abstract newId(): string;
 
+  /** A list literal. `elementType` is set by the analyzer when it is known. */
+  abstract listLiteral(items: readonly string[], elementType: IRType | null): string;
+
   /** Aggregate helpers over a collection expression. */
   abstract aggregateFn(fn: 'sum' | 'count' | 'min' | 'max' | 'average', collection: string, projection: string | null, elementVar: string): string;
 
@@ -151,6 +154,11 @@ export abstract class LanguageEmitter {
         return this.call(expression.receiver, expression.operation, expression.arguments);
       case 'construct':
         return this.construct(expression.type, expression.arguments);
+      case 'list':
+        return this.listLiteral(
+          expression.items.map((item) => this.expression(item)),
+          expression.elementType ?? null,
+        );
       case 'aggregate': {
         const element = 'each';
         const collection = this.expression(expression.collection);
@@ -201,6 +209,8 @@ export function prefixReferences(expression: IRExpression, variable: string, roo
         ...expression,
         arguments: expression.arguments.map((a) => ({ ...a, value: prefixReferences(a.value, variable, roots) })),
       };
+    case 'list':
+      return { ...expression, items: expression.items.map((item) => prefixReferences(item, variable, roots)) };
     case 'aggregate':
       return {
         ...expression,

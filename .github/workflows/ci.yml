@@ -34,6 +34,8 @@ jobs:
         run: npm test
       - name: Check the worked examples
         run: node packages/cli/dist/bin.js check examples
+      - name: Run the scenarios the examples declare
+        run: node packages/cli/dist/bin.js test examples/crud
 
   # The real proof: the emitted projects have to satisfy their own toolchains.
   # A backend that generates plausible-looking code that does not compile is

@@ -151,6 +151,12 @@ export type IRExpression =
    */
   | { kind: 'construct'; type: string; source: string[] | null; arguments: IRArgument[]; span?: IRSpan }
   | { kind: 'aggregate'; fn: AggregateFunction; collection: IRExpression; of: IRExpression | null; span?: IRSpan }
+  /**
+   * `elementType` is filled in by the analyzer. Languages that need the element
+   * type to write a literal at all — Go, Java — would otherwise have to re-infer
+   * it, so the check that already knows it records the answer.
+   */
+  | { kind: 'list'; items: IRExpression[]; elementType?: IRType; span?: IRSpan }
   | { kind: 'now'; span?: IRSpan }
   | { kind: 'new-id'; span?: IRSpan };
 
@@ -201,6 +207,12 @@ export const IRExpressionSchema: z.ZodType<IRExpression> = z.lazy(() =>
       fn: AggregateFunctionSchema,
       collection: IRExpressionSchema,
       of: z.union([IRExpressionSchema, z.null()]),
+      span: SourceSpanSchema.optional(),
+    }),
+    z.object({
+      kind: z.literal('list'),
+      items: z.array(IRExpressionSchema),
+      elementType: IRTypeSchema.optional(),
       span: SourceSpanSchema.optional(),
     }),
     z.object({ kind: z.literal('now'), span: SourceSpanSchema.optional() }),
@@ -518,7 +530,33 @@ export const HandlerDeclSchema = z.object({
   retries: z.number().int().min(0).default(3),
 });
 
+/**
+ * An executable example. `ail test` runs these against the IR itself, so a
+ * design can be exercised before a single line of target code exists.
+ */
+export const ScenarioDeclSchema = z.object({
+  kind: z.literal('scenario'),
+  ...declarationBase,
+  /** Aggregates seeded into the in-memory store, in order. */
+  given: z
+    .array(z.object({ binding: identifier, value: IRExpressionSchema, span: SourceSpanSchema.optional() }))
+    .default([]),
+  /** The operation under test, bound to `result` unless named otherwise. */
+  when: z.object({ binding: identifier, call: IRExpressionSchema, span: SourceSpanSchema.optional() }),
+  expectations: z
+    .array(
+      z.discriminatedUnion('kind', [
+        z.object({ kind: z.literal('holds'), condition: IRExpressionSchema, span: SourceSpanSchema.optional() }),
+        z.object({ kind: z.literal('fails'), error: identifier, span: SourceSpanSchema.optional() }),
+        z.object({ kind: z.literal('publishes'), event: identifier, span: SourceSpanSchema.optional() }),
+      ]),
+    )
+    .min(1),
+});
+export type IRScenarioDecl = z.infer<typeof ScenarioDeclSchema>;
+
 export const DeclarationSchema = z.discriminatedUnion('kind', [
+  ScenarioDeclSchema,
   EnumDeclSchema,
   ValueObjectDeclSchema,
   EntityDeclSchema,

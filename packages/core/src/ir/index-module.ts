@@ -23,6 +23,7 @@ import type {
   IROperationSignature,
   IRPortDecl,
   IRQueryDecl,
+  IRScenarioDecl,
   IRServiceDecl,
   IRValueObjectDecl,
 } from './schema.js';
@@ -113,6 +114,9 @@ export class ModuleIndex {
   }
   get handlers(): IRHandlerDecl[] {
     return this.ofKind('handler');
+  }
+  get scenarios(): IRScenarioDecl[] {
+    return this.ofKind('scenario');
   }
 
   /** Declarations that carry fields, i.e. everything a generator turns into a struct. */

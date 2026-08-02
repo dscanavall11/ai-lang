@@ -137,3 +137,24 @@ describe('the deploy command', () => {
     }
   });
 });
+
+describe('the test command', () => {
+  it('runs the scenarios the sources declare', async () => {
+    const { code, out } = await run(['test', 'examples/crud']);
+    expect(code).toBe(0);
+    expect(out).toContain('creating a task');
+    expect(out).toMatch(/\d+ passed/);
+  });
+
+  it('reports when nothing matches the filter', async () => {
+    const { code, err } = await run(['test', 'examples/crud', '--only', 'nothing-like-this']);
+    expect(code).toBe(0);
+    expect(err).toContain('no scenario matches');
+  });
+
+  it('says so rather than passing when a module declares no scenarios', async () => {
+    const { code, err } = await run(['test', 'examples/billing']);
+    expect(code).toBe(0);
+    expect(err).toContain('no scenarios found');
+  });
+});

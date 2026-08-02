@@ -8,3 +8,6 @@ export { errorFlowPass } from './passes/error-flow.js';
 export { architecturePass } from './passes/architecture.js';
 export { simplicityPass } from './passes/simplicity.js';
 export { walkStatements, walkExpressions, walkExpression, typesReferencedBy, typesOfDeclaration, bodies } from './walk.js';
+export { Interpreter, DomainFailure, Unsupported } from './interpreter/runtime.js';
+export { runScenarios, type ScenarioResult, type TestReport, type Outcome } from './interpreter/scenarios.js';
+export { show, equals, isRecord, record, type Value, type RecordValue } from './interpreter/values.js';

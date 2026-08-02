@@ -10,6 +10,7 @@ import {
 import { behaviourParsers } from './declarations/behaviour.js';
 import { dataShapeParsers } from './declarations/data-shapes.js';
 import { queryParser } from './declarations/query.js';
+import { scenarioParser } from './declarations/scenario.js';
 import { DeclarationRegistry } from './declarations/registry.js';
 import { parseFrontmatter } from './frontmatter.js';
 import { parseInfrastructure } from './infrastructure-parser.js';
@@ -19,7 +20,7 @@ import { SourceFile } from './source.js';
 
 export const defaultDeclarationRegistry = (): DeclarationRegistry => {
   const registry = new DeclarationRegistry();
-  for (const parser of [...dataShapeParsers, ...behaviourParsers, queryParser]) registry.register(parser);
+  for (const parser of [...dataShapeParsers, ...behaviourParsers, queryParser, scenarioParser]) registry.register(parser);
   return registry;
 };
 

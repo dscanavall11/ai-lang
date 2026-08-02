@@ -127,6 +127,10 @@ export class TypeScriptEmitter extends LanguageEmitter {
     return `${literal} satisfies ${pascalCase(typeName)}`;
   }
 
+  listLiteral(items: readonly string[], _elementType: IRType | null): string {
+    return `[${items.join(', ')}]`;
+  }
+
   now(): string {
     return 'new Date()';
   }

@@ -144,3 +144,52 @@ responds 404 when TaskNotFound
 port 8080
 database tasksdb using postgres version 16
 deploy to docker
+
+## scenario creating a task
+
+The store starts empty, so this needs no "given".
+
+when created be create task with command = CreateTask with title = "Buy milk", notes = nothing, dueOn = nothing
+then created.title is "Buy milk"
+and created.state is Open
+
+## scenario reading a task back
+
+given task be Task with id = "t-1", title = "Ship it", createdAt = now
+when found be read task with id = "t-1"
+then found.title is "Ship it"
+and found.state is Open
+
+## scenario reading one that is not there
+
+given task be Task with id = "t-1", title = "Ship it", createdAt = now
+when read task with id = "t-2"
+then it fails with TaskNotFound
+
+## scenario a title must not be empty
+
+The constraint on the field is enforced wherever the task is built, so the
+service does not need a check of its own.
+
+when create task with command = CreateTask with title = "", notes = nothing, dueOn = nothing
+then it fails with ConstraintViolation
+
+## scenario deleting one that is not there
+
+given task be Task with id = "t-1", title = "Ship it", createdAt = now
+when delete task with id = "t-2"
+then it fails with TaskNotFound
+
+## scenario updating changes the title
+
+given task be Task with id = "t-1", title = "Ship it", createdAt = now
+when updated be update task with command = UpdateTask with taskId = "t-1", title = "Ship it twice", notes = nothing, dueOn = nothing
+then updated.title is "Ship it twice"
+and task.title is "Ship it twice"
+
+## scenario searching by state
+
+given first be Task with id = "t-1", title = "Open one", createdAt = now
+and second be Task with id = "t-2", title = "Done one", state = Done, createdAt = now
+when found be find tasks with criteria = TaskSearch with state = Done, titleContains = nothing, dueBefore = nothing
+then count of found is 1

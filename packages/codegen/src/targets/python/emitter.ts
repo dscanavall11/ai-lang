@@ -143,6 +143,10 @@ export class PythonEmitter extends LanguageEmitter {
     return `${pascalCase(typeName)}(${this.keywords(this.argumentsOf(args))})`;
   }
 
+  listLiteral(items: readonly string[], _elementType: IRType | null): string {
+    return `[${items.join(', ')}]`;
+  }
+
   now(): string {
     return 'datetime.datetime.now(datetime.UTC)';
   }

@@ -113,6 +113,26 @@ curl -X POST localhost:8080/tasks -H 'content-type: application/json' \
 That 422 came from one modifier in the source:
 `- title: text, required, min length 1, max length 200`.
 
+Before generating anything, run the design:
+
+```bash
+ail test examples/crud
+```
+
+```
+tasks
+  ✓ creating a task
+  ✓ reading one that is not there
+  ✓ a title must not be empty
+  ✓ updating changes the title
+
+7 passed
+```
+
+That runs the operations against the IR itself — no code generated, no toolchain,
+no tokens. A scenario the interpreter cannot execute is reported as **could not
+run**, never as a pass.
+
 **→ [Build your own CRUD](docs/crud-tutorial.md)** — the whole path, step by step.
 
 `ail new <name>` scaffolds a complete slice — one aggregate with a real
@@ -138,6 +158,7 @@ nothing and reviewing it is a diff, not a re-read.
 | --- | --- |
 | `ail new <name>` | Scaffold a project |
 | `ail check [paths]` | Parse, type-check and audit the design |
+| `ail test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
 | `ail build [paths] --target <lang>` | Generate the service |
 | `ail deploy [paths] --target <platform>` | Generate the infrastructure |
 | `ail architect <requirements.md>` | Turn a requirements document into a reviewable spec and draft sources |
@@ -198,7 +219,7 @@ writes a reviewable `.ai-spec/` directory rather than code.
 Working end to end, and early.
 
 The three worked examples compile to all five languages and all four platforms,
-and the compiler itself has 231 tests.
+and the compiler itself has 243 tests.
 
 Verified against a real toolchain:
 

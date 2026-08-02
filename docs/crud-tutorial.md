@@ -363,6 +363,48 @@ Run `ail explain AIL2502` for the reasoning behind any of them.
 
 ---
 
+## Testing it before you generate anything
+
+The slowest loop is: generate, install, start, curl. Skip all four — declare the
+example in the source and run it against the IR:
+
+```
+## scenario creating a task
+
+when created be create task with command = CreateTask with title = "Buy milk", notes = nothing, dueOn = nothing
+then created.title is "Buy milk"
+and created.state is Open
+
+## scenario a title must not be empty
+
+when create task with command = CreateTask with title = "", notes = nothing, dueOn = nothing
+then it fails with ConstraintViolation
+```
+
+```bash
+ail test src
+```
+
+```
+tasks
+  ✓ creating a task
+  ✓ a title must not be empty
+
+2 passed
+```
+
+It runs in milliseconds, needs no toolchain, and costs nothing. When something
+does not hold you get both sides:
+
+```
+✗ updating changes the title
+    this did not hold: "Ship it twice" equals "Ship it thrice"
+    src/tasks.ail:183
+```
+
+Only once the scenarios pass is it worth spending the tokens to expand the
+design into 420 lines of TypeScript.
+
 ## Returning a view instead of the aggregate
 
 Exposing the aggregate straight out of an endpoint is fine to start with, and

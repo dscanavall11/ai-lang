@@ -114,8 +114,10 @@ export class TypeChecker {
   // Inference
   // -------------------------------------------------------------------------
 
-  infer(expression: IRExpression, scope: Scope): IRType {
+  infer(expression: IRExpression, scope: Scope, expected?: IRType): IRType {
     switch (expression.kind) {
+      case 'list':
+        return this.inferList(expression, scope, expected);
       case 'literal':
         return expression.type;
       case 'now':
@@ -135,6 +137,34 @@ export class TypeChecker {
       case 'call':
         return this.inferCall(expression, scope);
     }
+  }
+
+  /**
+   * An empty list has nothing to infer from, so it takes the element type of
+   * wherever it is going. A list with items must agree with itself.
+   */
+  private inferList(expression: Extract<IRExpression, { kind: 'list' }>, scope: Scope, expected?: IRType): IRType {
+    const wanted = expected && elementType(expected);
+    const types = expression.items.map((item) => this.infer(item, scope, wanted ?? undefined));
+
+    let element = wanted ?? types[0] ?? UNKNOWN;
+    for (const type of types) {
+      if (this.compatible(element, type)) continue;
+      if (this.compatible(type, element)) {
+        element = type;
+        continue;
+      }
+      this.error(
+        'AIL2154',
+        `this list mixes ${typeToString(element)} with ${typeToString(type)}`,
+        expression.span,
+        { hint: 'every item of a list has the same type' },
+      );
+      return UNKNOWN;
+    }
+
+    expression.elementType = element;
+    return { kind: 'list', of: element };
   }
 
   private inferReference(expression: Extract<IRExpression, { kind: 'reference' }>, scope: Scope): IRType {
@@ -447,7 +477,7 @@ export class TypeChecker {
     const provided = new Set<string>();
     for (const argument of args) {
       const target = expected.find((e) => e.name === argument.name);
-      const actual = this.infer(argument.value, scope);
+      const actual = this.infer(argument.value, scope, expected.find((e) => e.name === argument.name)?.type);
       if (!target) {
         this.error('AIL2112', `${label} has no parameter "${argument.name}"`, argument.value.span ?? span, {
           hint: withSuggestion('', argument.name, expected.map((e) => e.name)),

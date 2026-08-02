@@ -275,6 +275,13 @@ export class GoEmitter extends LanguageEmitter {
     return `{${rendered.join(', ')}}`;
   }
 
+  listLiteral(items: readonly string[], elementType: IRType | null): string {
+    // Go cannot write a literal without its element type, which is why the
+    // analyzer records one.
+    const element = elementType ? this.typeName(elementType) : 'any';
+    return `[]${element}{${items.join(', ')}}`;
+  }
+
   now(): string {
     return 'time.Now().UTC()';
   }

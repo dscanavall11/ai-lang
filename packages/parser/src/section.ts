@@ -70,6 +70,9 @@ export function splitSections(file: SourceFile, lines: Line[], reporter: ParseRe
   return { intro, sections };
 }
 
+/** Declarations whose heading is a sentence rather than an identifier. */
+const FREE_TEXT_NAMES = new Set(['scenario', 'example']);
+
 /** Known multi-word keywords, longest first so `value object` wins over `value`. */
 const MULTI_WORD_KEYWORDS = ['value object', 'domain event', 'read model', 'anti corruption layer'];
 
@@ -105,15 +108,16 @@ function headingToSection(file: SourceFile, heading: Line, text: string, level: 
   // Everything after the name that is not parenthesised is a trailing modifier
   // clause, e.g. `## aggregate Order emits OrderPlaced`.
   let name = rest;
-  const nameSpace = rest.indexOf(' ');
-  if (nameSpace >= 0) {
-    name = rest.slice(0, nameSpace);
-    const trailing = rest.slice(nameSpace + 1).trim();
-    modifiers = modifiers.length > 0 ? `${modifiers}, ${trailing}` : trailing;
-  }
-
-  if (name.length > 0 && !/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) {
-    reporter.error('AIL1001', `"${name}" is not a valid declaration name`, file.spanOf(heading));
+  if (!FREE_TEXT_NAMES.has(keyword)) {
+    const nameSpace = rest.indexOf(' ');
+    if (nameSpace >= 0) {
+      name = rest.slice(0, nameSpace);
+      const trailing = rest.slice(nameSpace + 1).trim();
+      modifiers = modifiers.length > 0 ? `${modifiers}, ${trailing}` : trailing;
+    }
+    if (name.length > 0 && !/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) {
+      reporter.error('AIL1001', `"${name}" is not a valid declaration name`, file.spanOf(heading));
+    }
   }
 
   return {
@@ -226,6 +230,10 @@ const ATTRIBUTE_VERBS = new Set([
   'topic',
   'config',
   'invariant',
+  'given',
+  'when',
+  'then',
+  'and',
   'match',
   'sort',
   'limit',

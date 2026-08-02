@@ -150,6 +150,10 @@ export class RustEmitter extends LanguageEmitter {
     return `${pascalCase(typeName)} { ${rendered.map((a) => (a.name === a.value ? a.name : `${a.name}: ${a.value}`)).join(', ')} }`;
   }
 
+  listLiteral(items: readonly string[], _elementType: IRType | null): string {
+    return items.length === 0 ? 'Vec::new()' : `vec![${items.join(', ')}]`;
+  }
+
   now(): string {
     return 'chrono::Utc::now()';
   }

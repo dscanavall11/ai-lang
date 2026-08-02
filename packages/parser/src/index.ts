@@ -12,4 +12,5 @@ export { DeclarationRegistry, type DeclarationParser } from './declarations/regi
 export { dataShapeParsers } from './declarations/data-shapes.js';
 export { behaviourParsers } from './declarations/behaviour.js';
 export { queryParser } from './declarations/query.js';
+export { scenarioParser } from './declarations/scenario.js';
 export { parseModule, defaultDeclarationRegistry, type ParseOptions, type ParseResult } from './module-parser.js';
