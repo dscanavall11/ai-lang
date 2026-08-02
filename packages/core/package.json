@@ -1,12 +1,37 @@
 {
   "name": "@ai-lang/core",
   "version": "0.1.0",
-  "private": true,
+  "description": "The AI-Lang intermediate representation: schema, diagnostics, naming and emission primitives.",
+  "keywords": [
+    "ai-lang",
+    "compiler",
+    "intermediate-representation"
+  ],
+  "license": "Apache-2.0",
+  "author": "dscanavall11",
+  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/dscanavall11/ai-lang/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "zod": "^3.24.1"

@@ -103,6 +103,25 @@ describe('the registry', () => {
   });
 });
 
+describe('list projections', () => {
+  // orders.ail maps its items onto their product ids, so every backend has to
+  // render a map. Each one gets its own idiom; none may fall back to a loop.
+  const idiom: Record<string, RegExp> = {
+    typescript: /\.map\(\(item\) =>/,
+    java: /\.stream\(\)\.map\(item ->/,
+    python: /for item in/,
+    go: /shared\.Each\(/,
+    rust: /\.iter\(\)\.map\(\|item\|/,
+  };
+
+  for (const [id, pattern] of Object.entries(idiom)) {
+    it(`${id} emits a map rather than a loop`, () => {
+      const source = outputs.find((o) => o.generator.id === id)!.result.files.map((f) => f.contents).join('\n');
+      expect(source).toMatch(pattern);
+    });
+  }
+});
+
 describe('ordered comparisons', () => {
   it('never uses a relational operator on a type that lacks one', () => {
     // Instant and time.Time are ordered but have no `<`; the backends route

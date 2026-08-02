@@ -214,6 +214,12 @@ export class JavaEmitter extends LanguageEmitter {
     return 'java.util.UUID.randomUUID()';
   }
 
+  projectFn(fn: 'each' | 'only', collection: string, projection: string, elementVar: string, _elementType: IRType | null): string {
+    // toList() since 16, and the generated pom targets 21.
+    const stage = fn === 'each' ? 'map' : 'filter';
+    return `${collection}.stream().${stage}(${elementVar} -> ${projection}).toList()`;
+  }
+
   aggregateFn(
     fn: 'sum' | 'count' | 'min' | 'max' | 'average',
     collection: string,
@@ -412,6 +418,8 @@ export class JavaEmitter extends LanguageEmitter {
       case 'aggregate':
         if (expression.fn === 'count') return { kind: 'primitive', name: 'integer' };
         return { kind: 'primitive', name: 'decimal' };
+      case 'project':
+        return expression.elementType ? { kind: 'list', of: expression.elementType } : null;
       case 'binary':
         return ARITHMETIC.has(expression.operator) ? this.typeOf(expression.left) : { kind: 'primitive', name: 'boolean' };
       case 'unary':

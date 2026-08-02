@@ -162,6 +162,12 @@ export class RustEmitter extends LanguageEmitter {
     return 'uuid::Uuid::new_v4()';
   }
 
+  projectFn(fn: 'each' | 'only', collection: string, projection: string, elementVar: string, _elementType: IRType | null): string {
+    return fn === 'each'
+      ? `${collection}.iter().map(|${elementVar}| ${projection}).collect::<Vec<_>>()`
+      : `${collection}.iter().filter(|${elementVar}| ${projection}).cloned().collect::<Vec<_>>()`;
+  }
+
   aggregateFn(
     fn: 'sum' | 'count' | 'min' | 'max' | 'average',
     collection: string,

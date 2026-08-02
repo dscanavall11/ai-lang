@@ -79,14 +79,36 @@ a smell, not a contradiction. `ail check --strict` promotes them.
 ## Getting started
 
 ```bash
+npx ai-lang new my-store
+```
+
+That writes a complete slice — one aggregate with a real invariant, a port, a
+service, an endpoint and two scenarios — which compiles as written:
+
+```bash
+cd my-store
+npx ail check src     # parse, type-check and audit the design
+npx ail test src      # run the scenarios, ~1s, nothing generated
+npx ail build src --target typescript --out out
+```
+
+Install it properly if you would rather not type `npx` each time:
+
+```bash
+npm install -g ai-lang
+```
+
+To work on the compiler itself, clone instead:
+
+```bash
 git clone https://github.com/dscanavall11/ai-lang.git
 cd ai-lang
 npm install
 npm run build
-npm link --workspace @ai-lang/cli
+npm link --workspace ai-lang
 ```
 
-Then compile the worked CRUD and run it:
+Either way, compile the worked CRUD and run it:
 
 ```bash
 ail check examples/crud
@@ -165,6 +187,26 @@ nothing and reviewing it is a diff, not a re-read.
 | `ail ir [paths]` | Print the typed IR as JSON |
 | `ail explain <code>` | Explain the reasoning behind a diagnostic |
 | `ail targets` | List available targets |
+
+---
+
+## Handing it to an AI
+
+[`AGENTS.md`](AGENTS.md) is the whole language in one file, written to be read by
+a model rather than a person: syntax, the rules that decide reviews, the mistakes
+worth naming, and the check-test-build loop it should drive itself with.
+
+Cursor, Claude Code, Codex, Copilot and Antigravity read it from the repository
+root without being asked. For anything else — a chat window, your own agent —
+paste it. It is about 2,000 tokens and complete on its own.
+
+[`llms.txt`](llms.txt) indexes the rest for tools that follow that convention.
+
+The loop is what makes this work. `ail check` reports exact spans and stable
+codes, `ail explain <code>` explains any of them, and `ail test` runs the
+declared scenarios in about a second without generating anything. A model can
+correct itself against a real compiler instead of guessing — which is the
+difference between a language an AI can use and a prompt it can only follow.
 
 ---
 
@@ -265,13 +307,16 @@ yet.** The other four are built and verified on every commit.
 
 Known gaps, in the order they matter:
 
-- No list projection. `sum of items by quantity` works; `each of items by
-  productId` does not, so a dto cannot carry a mapped list yet.
+- No `flat map`. `each of` and `only … where` cover map and filter; a projection
+  that returns a list per element still has to be written as a loop.
+- A list literal cannot hold constructions. `lines = [Line with id = "a", Line
+  with id = "b"]` cannot be told apart from one construction with four
+  arguments; bind them first and write `lines = [first, second]`.
 - The architect's field-naming heuristic produces awkward names from long
   requirement sentences. It flags them as open questions rather than hiding them.
 - Adapters generate real queries only for the four repository phrases they
   recognise. Everything else is left, explicitly, to the author.
-- No editor support.
+- No language server, so no diagnostics in the editor.
 
 ## Licence
 

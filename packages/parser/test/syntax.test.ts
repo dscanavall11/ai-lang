@@ -186,6 +186,35 @@ describe('statements', () => {
   });
 });
 
+describe('list projections', () => {
+  const body = (statement: string): string =>
+    moduleHeader(`## aggregate Basket\n- id: uuid, required\n- lines: list of Line, required\n\noperation run () -> nothing:\n  ${statement}\n`);
+
+  it('reads "each of ... by ..." as a map', () => {
+    const { module } = parseOk(body('let ids be each of lines by productId'));
+    expect(indexModule(module).aggregates[0]!.operations[0]!.body[0]).toMatchObject({
+      kind: 'let',
+      value: { kind: 'project', fn: 'each', collection: { path: ['lines'] }, of: { path: ['productId'] } },
+    });
+  });
+
+  it('reads "only ... where ..." as a filter', () => {
+    const { module } = parseOk(body('let heavy be only lines where quantity is greater than 2'));
+    expect(indexModule(module).aggregates[0]!.operations[0]!.body[0]).toMatchObject({
+      kind: 'let',
+      value: { kind: 'project', fn: 'only', of: { kind: 'binary', operator: 'greater-than' } },
+    });
+  });
+
+  it('nests a filter inside a fold', () => {
+    const { module } = parseOk(body('let total be sum of only lines where quantity is greater than 2 by quantity'));
+    expect(indexModule(module).aggregates[0]!.operations[0]!.body[0]).toMatchObject({
+      kind: 'let',
+      value: { kind: 'aggregate', fn: 'sum', collection: { kind: 'project', fn: 'only' } },
+    });
+  });
+});
+
 describe('reported syntax errors', () => {
   const cases: Array<[string, string, string]> = [
     ['a field without a type', '## dto Shape\n- broken\n', 'AIL1101'],
@@ -198,9 +227,14 @@ describe('reported syntax errors', () => {
     ['an endpoint with no handler', '## endpoint GET /things\nresponds 200\n', 'AIL1027'],
     ['an endpoint with no responses', '## endpoint GET /things\nhandled by S.run\n', 'AIL1029'],
     ['an aggregate with no identity', '## aggregate Thing\n- label: text\n', 'AIL1003'],
+    // A misspelled clause used to be read as prose, so the aggregate silently
+    // fell back to the `id` convention and nothing was reported.
+    ['a misspelled clause', '## aggregate Thing\nprimaryKey id\n\n- id: uuid\n', 'AIL1006'],
     ['an unknown declaration keyword', '## widget Thing\n- x: text\n', 'AIL1612'],
     ['an unknown infrastructure setting', '## infrastructure\nteleport 9\n', 'AIL1508'],
     ['an unknown deployment target', '## infrastructure\ndeploy to mainframe\n', 'AIL1507'],
+    ['a map with nothing to map', '## dto Shape\n- x: text\n\n## aggregate A\n- id: uuid\n- lines: list of Line\n\noperation r () -> nothing:\n  let ids be each of lines\n', 'AIL1112'],
+    ['a filter with no condition', '## aggregate A\n- id: uuid\n- lines: list of Line\n\noperation r () -> nothing:\n  let kept be only lines\n', 'AIL1113'],
   ];
 
   for (const [label, source, code] of cases) {

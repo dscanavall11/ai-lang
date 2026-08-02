@@ -168,7 +168,7 @@
 
     "operator": {
       "comment": "AI-Lang spells its operators, which is the whole point.",
-      "match": "\\b(is not|is|are|was|not|and|or|plus|minus|times|divided by|divided|equals|contains|starts with|starts|ends with|ends|matches|with|be|then|carrying|empty|present|absent|greater than|less than|count of|sum of|min of|max of|average of|new id)\\b",
+      "match": "\\b(is not|is|are|was|not|and|or|plus|minus|times|divided by|divided|equals|contains|starts with|starts|ends with|ends|matches|with|be|then|carrying|empty|present|absent|greater than|less than|count of|sum of|min of|max of|average of|each of|only|where|new id)\\b",
       "name": "keyword.operator.word.ail"
     },
 

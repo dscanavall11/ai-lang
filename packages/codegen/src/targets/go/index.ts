@@ -838,6 +838,32 @@ function sharedNumbers() {
   writer.line('// Identity folds a []float64 onto itself, for aggregates declared without a `by` clause.');
   writer.line('func Identity(value float64) float64 { return value }');
   writer.blank();
+  writer.line('// Each and Only back the list projections. Unlike the folds above they keep');
+  writer.line('// their element type, so the result is whatever the projection returned.');
+  writer.line('func Each[T any, R any](items []T, of func(T) R) []R {');
+  writer.block(() => {
+    writer.line('mapped := make([]R, 0, len(items))');
+    writer.line('for _, item := range items {');
+    writer.block(() => writer.line('mapped = append(mapped, of(item))'));
+    writer.line('}');
+    writer.line('return mapped');
+  });
+  writer.line('}');
+  writer.blank();
+  writer.line('func Only[T any](items []T, keep func(T) bool) []T {');
+  writer.block(() => {
+    writer.line('kept := make([]T, 0, len(items))');
+    writer.line('for _, item := range items {');
+    writer.block(() => {
+      writer.line('if keep(item) {');
+      writer.block(() => writer.line('kept = append(kept, item)'));
+      writer.line('}');
+    });
+    writer.line('}');
+    writer.line('return kept');
+  });
+  writer.line('}');
+  writer.blank();
   writer.line('// ParseInt64 converts a path or query value, yielding 0 when it is not a number.');
   writer.line('func ParseInt64(value string) int64 {');
   writer.block(() => {

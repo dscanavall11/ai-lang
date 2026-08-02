@@ -11,6 +11,7 @@ import {
   elementType,
   isNumeric,
   isOrderable,
+  list,
   normalisePhrase,
   typeEquals,
   typeToString,
@@ -132,6 +133,8 @@ export class TypeChecker {
         return this.inferBinary(expression, scope);
       case 'aggregate':
         return this.inferAggregate(expression, scope);
+      case 'project':
+        return this.inferProject(expression, scope);
       case 'construct':
         return this.inferConstruct(expression, scope);
       case 'call':
@@ -318,11 +321,42 @@ export class TypeChecker {
       );
       return expression.fn === 'count' ? INTEGER : UNKNOWN;
     }
+    expression.sourceType = element;
     if (expression.fn === 'count') return INTEGER;
 
     const inner = expression.of ? this.inferInElementScope(expression.of, scope, element) : element;
     this.expectNumeric(inner, expression.span, `"${expression.fn}"`);
     return expression.fn === 'average' ? DECIMAL : inner;
+  }
+
+  /**
+   * A projection answers with a list, so the element type is what changes.
+   *
+   * `each of items by productId` is a list of whatever `productId` is; `only
+   * items where …` keeps the element it was given and asks only that the
+   * condition be boolean.
+   */
+  private inferProject(expression: Extract<IRExpression, { kind: 'project' }>, scope: Scope): IRType {
+    const collection = this.infer(expression.collection, scope);
+    const element = elementType(collection);
+    if (!element) {
+      this.error('AIL2107', `"${expression.fn}" needs a list, but ${typeToString(collection)} is not one`, expression.span);
+      return UNKNOWN;
+    }
+
+    // Recorded for the backends: the source so they can tell a field of the
+    // element from a name in the enclosing scope, the result so they can name
+    // the list they build.
+    expression.sourceType = element;
+
+    const inner = this.inferInElementScope(expression.of, scope, element);
+    if (expression.fn === 'only') {
+      this.expect(inner, BOOLEAN, expression.span, '"only … where"');
+      expression.elementType = element;
+      return list(element);
+    }
+    expression.elementType = inner;
+    return list(inner);
   }
 
   /** `sum of items by quantity times unitPrice.amount` — `of` is evaluated per element. */

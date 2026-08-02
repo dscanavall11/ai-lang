@@ -118,6 +118,7 @@ config:
 - orderId: uuid, required
 - status: OrderStatus, required
 - itemCount: integer, required
+- productIds: list of uuid, required
 - total: Money, optional
 
 ## adapter EmailCustomerNotifier implements CustomerNotifier using http-client
@@ -147,7 +148,7 @@ operation place order (command: PlaceOrder) -> OrderPlaced or OrderNotFound, Ord
 
 operation summarise order (id: uuid) -> OrderSummary or OrderNotFound:
   let order be find order by id with id = id
-  return OrderSummary from order with itemCount = count of order.items
+  return OrderSummary from order with itemCount = count of order.items, productIds = each of order.items by productId
 
 ## endpoint GET /orders/{id}
 handled by PlaceOrderService.summarise order

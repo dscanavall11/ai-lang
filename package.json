@@ -17,6 +17,7 @@
     "typecheck": "tsc --build --force",
     "test": "vitest run",
     "test:watch": "vitest",
+    "release:dry": "npm run build && npm publish --workspaces --dry-run",
     "ail": "node --experimental-strip-types packages/cli/src/bin.ts"
   },
   "devDependencies": {

@@ -45,7 +45,9 @@ type RustLayer = (typeof LAYERS)[number];
 
 export const rustGenerator: CodeGenerator = {
   id: 'rust',
-  displayName: 'Rust',
+  // Said here as well as in the README, because someone choosing a target from
+  // `ail targets` never reads the README first.
+  displayName: 'Rust (experimental — does not compile yet)',
   framework: 'Axum',
   verifyCommand: ['cargo', 'check'],
 
