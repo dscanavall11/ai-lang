@@ -219,6 +219,33 @@ Operators are spelled: `is` `is not` `and` `or` `not` `plus` `minus` `times`
 `sum of ... by ...` `min of` `max of` `average of`. Values: `now` `new id`
 `nothing` `true` `false`.
 
+### Working over a list
+
+Two forms keep the list instead of collapsing it. Reach for them before a loop:
+
+```ail
+each of items by productId                 -- list of uuid
+only items where quantity is at least 2    -- list of OrderItem
+```
+
+They compose, with each other and with the aggregates:
+
+```ail
+sum of only items where quantity is greater than 1 by unitPrice.amount
+```
+
+Inside a `by` or a `where`, a bare name is a field of the element; anything the
+element does not declare comes from the enclosing scope, so a parameter still
+means itself:
+
+```ail
+operation heavy lines (threshold: integer) -> list of OrderItem:
+  return only items where quantity is greater than threshold
+```
+
+`each of` needs its `by`, `only` needs its `where`. No `flat map` yet — a
+projection returning a list per element still needs `for each`.
+
 **Never map a DTO field by field.** Use `from`:
 
 ```ail
@@ -369,6 +396,8 @@ asserts. Assertions: `then x.field is value` · `then it fails with Error` ·
 | `sort by note.title` | sort by a number, timestamp or date |
 | setting the flag before the field it requires | set the field first |
 | `primaryKey id`, `key id` | `identified by id` |
+| a `for each` loop to build a list | `each of … by …` or `only … where …` |
+| `[Line with id = "a", Line with id = "b"]` | bind each first, then `[first, second]` |
 
 ---
 
