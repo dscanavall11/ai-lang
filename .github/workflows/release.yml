@@ -1,0 +1,53 @@
+name: Release
+
+# Publishing is driven by a tag, so what reaches npm is always a commit that
+# exists in the history and passed CI, never a working copy.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Required for npm provenance, which ties each published tarball back to the
+  # commit and workflow that produced it — worth having on a new package.
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+      # A tag that disagrees with the manifests would publish a version nobody
+      # can find from the history.
+      - name: The tag must match the version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tagged="${GITHUB_REF_NAME#v}"
+          declared=$(node -p "require('./packages/cli/package.json').version")
+          if [ "$tagged" != "$declared" ]; then
+            echo "tag $GITHUB_REF_NAME does not match package version $declared" >&2
+            exit 1
+          fi
+
+      # Dependency order: every package is published after the ones it requires,
+      # so the registry never holds a version whose dependency does not exist.
+      - name: Publish
+        run: |
+          for package in core parser codegen iac analyzer architect cli; do
+            echo "publishing packages/$package"
+            npm publish --workspace "packages/$package" --provenance --access public
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

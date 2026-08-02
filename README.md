@@ -79,14 +79,36 @@ a smell, not a contradiction. `ail check --strict` promotes them.
 ## Getting started
 
 ```bash
+npx ai-lang new my-store
+```
+
+That writes a complete slice — one aggregate with a real invariant, a port, a
+service, an endpoint and two scenarios — which compiles as written:
+
+```bash
+cd my-store
+npx ail check src     # parse, type-check and audit the design
+npx ail test src      # run the scenarios, ~1s, nothing generated
+npx ail build src --target typescript --out out
+```
+
+Install it properly if you would rather not type `npx` each time:
+
+```bash
+npm install -g ai-lang
+```
+
+To work on the compiler itself, clone instead:
+
+```bash
 git clone https://github.com/dscanavall11/ai-lang.git
 cd ai-lang
 npm install
 npm run build
-npm link --workspace @ai-lang/cli
+npm link --workspace ai-lang
 ```
 
-Then compile the worked CRUD and run it:
+Either way, compile the worked CRUD and run it:
 
 ```bash
 ail check examples/crud

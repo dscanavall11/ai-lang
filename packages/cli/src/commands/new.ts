@@ -40,6 +40,9 @@ export const newCommand: Command = {
     info('Next steps:');
     info(`  cd ${kebabCase(name)}`);
     info('  ail check src');
+    // Before build, deliberately: running the design costs nothing, and a
+    // starter that never shows it teaches the wrong loop.
+    info('  ail test src');
     info(`  ail build src --target ${target}`);
     return EXIT_OK;
   },
@@ -47,7 +50,10 @@ export const newCommand: Command = {
 
 /**
  * The starter is a complete slice, not a skeleton: one aggregate with a real
- * invariant, one port, one service, one endpoint. It compiles as written.
+ * invariant, one port, one service, one endpoint, and two scenarios. It
+ * compiles as written and `ail test` is green on it, which is the loop worth
+ * learning first — a starter that answers "no scenarios found" teaches the
+ * opposite.
  */
 function starterModule(moduleName: string, contextName: string, target: string): string {
   return `---
@@ -110,6 +116,18 @@ responds 404 when ItemNotFound
 port 8080
 database ${moduleName}db using postgres
 deploy to docker
+
+## scenario archiving an item marks it archived
+
+given item be Item with id = "i-1", name = "First item"
+when archived be archive item with command = ArchiveItem with itemId = "i-1"
+then archived.archived is true
+
+## scenario archiving one that is not there
+
+given item be Item with id = "i-1", name = "First item"
+when archive item with command = ArchiveItem with itemId = "i-2"
+then it fails with ItemNotFound
 `;
 }
 
@@ -125,8 +143,13 @@ both the code and the infrastructure.
 
 \`\`\`bash
 ail check src          # parse, type-check, and audit the design
+ail test src           # run the scenarios against the design itself
 ail build src          # generate the service
 ail deploy src         # generate the infrastructure
 \`\`\`
+
+\`ail test\` runs in about a second, generates nothing and needs no toolchain, so
+it is the one to run while the design is still moving. Only compile once it is
+green.
 `;
 }

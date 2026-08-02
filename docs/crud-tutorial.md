@@ -6,11 +6,7 @@ you, that is a bug — please report it.
 ## Install
 
 ```bash
-git clone https://github.com/dscanavall11/ai-lang.git
-cd ai-lang
-npm install
-npm run build
-npm link --workspace @ai-lang/cli
+npm install -g ai-lang
 ```
 
 `ail` is now on your path:
@@ -20,7 +16,18 @@ ail --version      # ail 0.1.0
 ail targets        # what this build can emit
 ```
 
-To uninstall later: `npm unlink -g @ai-lang/cli`.
+To uninstall later: `npm uninstall -g ai-lang`. To skip installing altogether,
+put `npx` in front of every command below.
+
+To work on the compiler itself, clone it instead:
+
+```bash
+git clone https://github.com/dscanavall11/ai-lang.git
+cd ai-lang
+npm install
+npm run build
+npm link --workspace ai-lang
+```
 
 ## Run the worked example first
 

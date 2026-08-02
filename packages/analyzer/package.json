@@ -1,11 +1,39 @@
 {
   "name": "@ai-lang/analyzer",
   "version": "0.1.0",
-  "private": true,
+  "description": "The AI-Lang semantic passes, type checker and scenario interpreter.",
+  "keywords": [
+    "ai-lang",
+    "type-checker",
+    "static-analysis",
+    "domain-driven-design"
+  ],
+  "license": "Apache-2.0",
+  "author": "dscanavall11",
+  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "directory": "packages/analyzer"
+  },
+  "bugs": {
+    "url": "https://github.com/dscanavall11/ai-lang/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": "./dist/index.js" },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@ai-lang/core": "0.1.0",
     "@ai-lang/parser": "0.1.0"
