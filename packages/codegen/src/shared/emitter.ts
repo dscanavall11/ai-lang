@@ -9,6 +9,7 @@
 import {
   CodeWriter,
   camelCase,
+  unwrap,
   type BinaryOperator,
   type IRArgument,
   type IRDeclaration,
@@ -57,6 +58,14 @@ export abstract class LanguageEmitter {
 
   /** Aggregate helpers over a collection expression. */
   abstract aggregateFn(fn: 'sum' | 'count' | 'min' | 'max' | 'average', collection: string, projection: string | null, elementVar: string): string;
+
+  /**
+   * Map and filter, which answer with a list rather than a scalar.
+   *
+   * `elementType` is the element of the *result*, which the statically typed
+   * backends need in order to name the collector or the slice they build.
+   */
+  abstract projectFn(fn: 'each' | 'only', collection: string, projection: string, elementVar: string, elementType: IRType | null): string;
 
   /** Binary and unary operators. */
   abstract binary(operator: BinaryOperator, left: string, right: string, operandType: IRType | null): string;
@@ -162,8 +171,20 @@ export abstract class LanguageEmitter {
       case 'aggregate': {
         const element = 'each';
         const collection = this.expression(expression.collection);
-        const projection = expression.of ? this.projection(expression.of, element) : null;
+        const source = expression.sourceType ?? null;
+        const projection = expression.of ? this.projection(expression.of, element, source) : null;
         return this.aggregateFn(expression.fn, collection, projection, element);
+      }
+      case 'project': {
+        const element = 'item';
+        const collection = this.expression(expression.collection);
+        return this.projectFn(
+          expression.fn,
+          collection,
+          this.elementProjection(expression.of, element, expression.sourceType ?? null),
+          element,
+          expression.elementType ?? null,
+        );
       }
     }
   }
@@ -173,8 +194,26 @@ export abstract class LanguageEmitter {
    * field of the current element, so every reference gets the loop variable:
    * `quantity times unitPrice.amount` becomes `each.quantity * each.unitPrice.amount`.
    */
-  protected projection(expression: IRExpression, elementVar: string): string {
-    return this.expression(prefixReferences(expression, elementVar));
+  protected projection(expression: IRExpression, elementVar: string, source: IRType | null = null): string {
+    return this.expression(prefixReferences(expression, elementVar, undefined, this.fieldsOf(source)));
+  }
+
+  /**
+   * The same rebinding for a map or a filter, kept separate because a fold may
+   * coerce its leaves to a number and a projection must not: `each of items by
+   * productId` yields text, and `only … where` yields a boolean.
+   */
+  protected elementProjection(expression: IRExpression, elementVar: string, source: IRType | null): string {
+    return this.expression(prefixReferences(expression, elementVar, undefined, this.fieldsOf(source)));
+  }
+
+  /** Field names of the element being folded over, when the analyzer recorded its type. */
+  private fieldsOf(type: IRType | null): ReadonlySet<string> | null {
+    if (!type) return null;
+    const named = unwrap(type);
+    if (named.kind !== 'named') return null;
+    const declaration = this.index.get(named.name);
+    return declaration && 'fields' in declaration ? new Set(declaration.fields.map((field) => field.name)) : null;
   }
 
   /** Declaration a call phrase belongs to, when it can be resolved locally. */
@@ -188,34 +227,49 @@ export abstract class LanguageEmitter {
 }
 
 /** Rewrites references so they read as members of `variable`, unless already rooted there. */
-export function prefixReferences(expression: IRExpression, variable: string, roots: ReadonlySet<string> = new Set()): IRExpression {
+export function prefixReferences(
+  expression: IRExpression,
+  variable: string,
+  roots: ReadonlySet<string> = new Set(),
+  fields: ReadonlySet<string> | null = null,
+): IRExpression {
   switch (expression.kind) {
     case 'reference': {
       const head = expression.path[0]!;
       if (head === variable || roots.has(head) || /^[A-Z]/.test(head)) return expression;
+      // Once the element's fields are known, everything else came from the
+      // enclosing scope — an operation parameter, a local — and rebinding it
+      // onto the element would silently invent a field that does not exist.
+      if (fields && !fields.has(head)) return expression;
       return { ...expression, path: [variable, ...expression.path] };
     }
     case 'binary':
       return {
         ...expression,
-        left: prefixReferences(expression.left, variable, roots),
-        right: prefixReferences(expression.right, variable, roots),
+        left: prefixReferences(expression.left, variable, roots, fields),
+        right: prefixReferences(expression.right, variable, roots, fields),
       };
     case 'unary':
-      return { ...expression, operand: prefixReferences(expression.operand, variable, roots) };
+      return { ...expression, operand: prefixReferences(expression.operand, variable, roots, fields) };
     case 'call':
     case 'construct':
       return {
         ...expression,
-        arguments: expression.arguments.map((a) => ({ ...a, value: prefixReferences(a.value, variable, roots) })),
+        arguments: expression.arguments.map((a) => ({ ...a, value: prefixReferences(a.value, variable, roots, fields) })),
       };
     case 'list':
-      return { ...expression, items: expression.items.map((item) => prefixReferences(item, variable, roots)) };
+      return { ...expression, items: expression.items.map((item) => prefixReferences(item, variable, roots, fields)) };
     case 'aggregate':
       return {
         ...expression,
-        collection: prefixReferences(expression.collection, variable, roots),
-        of: expression.of ? prefixReferences(expression.of, variable, roots) : null,
+        collection: prefixReferences(expression.collection, variable, roots, fields),
+        of: expression.of ? prefixReferences(expression.of, variable, roots, fields) : null,
+      };
+    case 'project':
+      return {
+        ...expression,
+        collection: prefixReferences(expression.collection, variable, roots, fields),
+        of: prefixReferences(expression.of, variable, roots, fields),
       };
     default:
       return expression;

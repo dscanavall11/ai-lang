@@ -100,6 +100,10 @@ export function* walkExpression(expression: IRExpression): Generator<IRExpressio
       yield* walkExpression(expression.collection);
       if (expression.of) yield* walkExpression(expression.of);
       break;
+    case 'project':
+      yield* walkExpression(expression.collection);
+      yield* walkExpression(expression.of);
+      break;
     default:
       break;
   }

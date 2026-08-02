@@ -134,6 +134,15 @@ export const AGGREGATE_FUNCTIONS = ['sum', 'count', 'min', 'max', 'average'] as 
 export const AggregateFunctionSchema = z.enum(AGGREGATE_FUNCTIONS);
 export type AggregateFunction = z.infer<typeof AggregateFunctionSchema>;
 
+/**
+ * Folds that answer with a list rather than a scalar, which is why they are not
+ * `AggregateFunction`: `each` maps and `only` filters, and both keep the
+ * collection shape the aggregates collapse.
+ */
+export const PROJECTION_FUNCTIONS = ['each', 'only'] as const;
+export const ProjectionFunctionSchema = z.enum(PROJECTION_FUNCTIONS);
+export type ProjectionFunction = z.infer<typeof ProjectionFunctionSchema>;
+
 export interface IRArgument {
   name: string;
   value: IRExpression;
@@ -150,7 +159,28 @@ export type IRExpression =
    * arguments, so every backend only ever sees a fully spelled-out construction.
    */
   | { kind: 'construct'; type: string; source: string[] | null; arguments: IRArgument[]; span?: IRSpan }
-  | { kind: 'aggregate'; fn: AggregateFunction; collection: IRExpression; of: IRExpression | null; span?: IRSpan }
+  /**
+   * `sourceType` is one element of `collection`. The backends need it to tell a
+   * name that belongs to the element from one that belongs to the enclosing
+   * scope: in `sum of items by quantity times rate`, `quantity` is a field and
+   * `rate` is an operation parameter, and only the first may be rebound.
+   */
+  | { kind: 'aggregate'; fn: AggregateFunction; collection: IRExpression; of: IRExpression | null; sourceType?: IRType; span?: IRSpan }
+  /**
+   * `each of items by productId` maps, `only items where quantity is at least 2`
+   * filters. `of` is never null: a projection with nothing to project is just
+   * the collection. `sourceType` is one element in, `elementType` one element
+   * out — they differ under `each` and coincide under `only`.
+   */
+  | {
+      kind: 'project';
+      fn: ProjectionFunction;
+      collection: IRExpression;
+      of: IRExpression;
+      sourceType?: IRType;
+      elementType?: IRType;
+      span?: IRSpan;
+    }
   /**
    * `elementType` is filled in by the analyzer. Languages that need the element
    * type to write a literal at all — Go, Java — would otherwise have to re-infer
@@ -207,6 +237,16 @@ export const IRExpressionSchema: z.ZodType<IRExpression> = z.lazy(() =>
       fn: AggregateFunctionSchema,
       collection: IRExpressionSchema,
       of: z.union([IRExpressionSchema, z.null()]),
+      sourceType: IRTypeSchema.optional(),
+      span: SourceSpanSchema.optional(),
+    }),
+    z.object({
+      kind: z.literal('project'),
+      fn: ProjectionFunctionSchema,
+      collection: IRExpressionSchema,
+      of: IRExpressionSchema,
+      sourceType: IRTypeSchema.optional(),
+      elementType: IRTypeSchema.optional(),
       span: SourceSpanSchema.optional(),
     }),
     z.object({

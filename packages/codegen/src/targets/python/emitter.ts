@@ -155,6 +155,12 @@ export class PythonEmitter extends LanguageEmitter {
     return 'uuid.uuid4()';
   }
 
+  projectFn(fn: 'each' | 'only', collection: string, projection: string, elementVar: string, _elementType: IRType | null): string {
+    return fn === 'each'
+      ? `[${projection} for ${elementVar} in ${collection}]`
+      : `[${elementVar} for ${elementVar} in ${collection} if ${projection}]`;
+  }
+
   aggregateFn(
     fn: 'sum' | 'count' | 'min' | 'max' | 'average',
     collection: string,

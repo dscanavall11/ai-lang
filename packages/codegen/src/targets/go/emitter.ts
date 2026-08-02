@@ -375,6 +375,16 @@ export class GoEmitter extends LanguageEmitter {
     return 'uuid.NewString()';
   }
 
+  projectFn(fn: 'each' | 'only', collection: string, projection: string, elementVar: string, elementType: IRType | null): string {
+    // Go has neither an expression-level map nor filter, and a func literal has
+    // to name both its parameter and its result, so both ends are needed here.
+    if (fn === 'only') {
+      return `shared.Only(${collection}, func(${elementVar} ${this.element}) bool { return ${projection} })`;
+    }
+    const result = elementType ? this.typeName(elementType) : 'any';
+    return `shared.Each(${collection}, func(${elementVar} ${this.element}) ${result} { return ${projection} })`;
+  }
+
   aggregateFn(fn: 'sum' | 'count' | 'min' | 'max' | 'average', collection: string, projection: string | null, elementVar: string): string {
     if (fn === 'count') return `int64(len(${collection}))`;
     const helper = fn === 'sum' ? 'Sum' : fn === 'average' ? 'Avg' : fn === 'min' ? 'MinOf' : 'MaxOf';
@@ -440,7 +450,7 @@ export class GoEmitter extends LanguageEmitter {
   }
 
   override expression(node: IRExpression): string {
-    if (node.kind === 'aggregate') this.element = this.elementTypeName(node.collection);
+    if (node.kind === 'aggregate' || node.kind === 'project') this.element = this.elementTypeName(node.collection);
     return super.expression(node);
   }
 

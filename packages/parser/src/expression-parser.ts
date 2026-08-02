@@ -206,6 +206,31 @@ function parsePrimary(cursor: TokenCursor, reporter: ParseReporter): IRExpressio
     return { kind: 'aggregate', fn: aggregate, collection, of, span: cursor.spanOf(token) };
   }
 
+  // `each of items by productId` maps the list; the shape mirrors an aggregate,
+  // but `by` is required because a projection with nothing to project is just
+  // the collection itself.
+  if (token.value === 'each' && cursor.peek(1)?.value === 'of') {
+    cursor.next();
+    cursor.next();
+    const collection = cursor.withStops(['by'], () => parseUnary(cursor, reporter));
+    if (!cursor.eatWord('by')) {
+      reporter.error('AIL1112', '"each of" needs "by"', cursor.currentSpan(), 'write "each of items by productId"');
+      return collection;
+    }
+    return { kind: 'project', fn: 'each', collection, of: parseMultiplicative(cursor, reporter), span: cursor.spanOf(token) };
+  }
+
+  // `only items where quantity is at least 2` filters it.
+  if (token.value === 'only') {
+    cursor.next();
+    const collection = cursor.withStops(['where'], () => parseUnary(cursor, reporter));
+    if (!cursor.eatWord('where')) {
+      reporter.error('AIL1113', '"only" needs "where"', cursor.currentSpan(), 'write "only items where quantity is at least 2"');
+      return collection;
+    }
+    return { kind: 'project', fn: 'only', collection, of: parseExpression(cursor, reporter), span: cursor.spanOf(token) };
+  }
+
   // `the result of <phrase> with ...` — explicit call marker.
   if (cursor.eatPhrase('the', 'result', 'of') || cursor.eatPhrase('result', 'of')) {
     return parseCall(cursor, reporter, token);
