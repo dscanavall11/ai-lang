@@ -1,0 +1,53 @@
+# Changelog
+
+Notable changes, newest first. Versions follow [semver](https://semver.org);
+while the major is `0`, the minor carries breaking changes.
+
+## Unreleased
+
+## 0.1.0
+
+First release. The language works end to end: a design compiles to a service
+that starts and answers correctly, and the compiler has 249 tests.
+
+### The language
+
+- Declarations: `aggregate`, `entity`, `value object`, `enum`, `dto`, `command`,
+  `event`, `error`, `query`, `port`, `adapter`, `service`, `handler`,
+  `endpoint`, `infrastructure`, `scenario`.
+- Checked errors as contracts — declared on the signature, propagated by the
+  compiler, with no `try` anywhere in the source.
+- Full type inference over operation bodies. No null, no implicit any; absence
+  is `optional`, narrowed with `when x is present:`.
+- `from` builds one shape out of another by name, so a dto is never mapped field
+  by field.
+- Ports may carry their adapter inline with `using <tech>`.
+- `## query` expresses a specification: one criterion per filter, and an absent
+  optional drops its criterion.
+- List projections: `each of items by productId` maps, `only items where …`
+  filters.
+
+### Tools
+
+- `ail check` — six semantic passes, reporting exact spans and stable codes.
+  `ail explain <code>` gives the reasoning behind any of them.
+- `ail test` — runs the scenarios a design declares against the IR itself, in
+  about a second, generating nothing. A scenario the interpreter cannot execute
+  is reported as **could not run**, never as a pass.
+- `ail build` — TypeScript, Java, Python and Go, each built by its real compiler
+  in CI on every commit.
+- `ail deploy` — Docker, Kubernetes, Terraform and AWS.
+- `ail architect` — turns a requirements document into a reviewable spec and
+  draft sources that satisfy the compiler that wrote them.
+- `ail new` — a starter that compiles as written and whose scenarios are green.
+
+### Known limitations
+
+- **Rust does not compile.** The emitter does not model ownership. It runs in CI
+  as an allowed failure so the gap stays measured. Do not pick it for real work.
+- No `flat map`; a projection returning a list per element needs `for each`.
+- A list literal cannot hold constructions — bind them first.
+- No language server, so no diagnostics inside the editor.
+- Publishing an event happens after the save with no transaction around the
+  pair, while handlers may declare `delivery at-least-once`. The generated code
+  does not yet keep that promise.
