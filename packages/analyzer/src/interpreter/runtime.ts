@@ -99,6 +99,8 @@ export class Interpreter {
         return this.binary(expression, scope);
       case 'aggregate':
         return this.aggregate(expression, scope);
+      case 'project':
+        return this.project(expression, scope);
       case 'construct':
         return this.construct(expression, scope);
       case 'call':
@@ -215,6 +217,18 @@ export class Interpreter {
       default:
         return projected.length === 0 ? 0 : Math.max(...projected);
     }
+  }
+
+  /** `each` maps and `only` filters, both evaluating `of` once per element. */
+  private project(expression: Extract<IRExpression, { kind: 'project' }>, scope: Map<string, Value>): Value {
+    const collection = this.evaluate(expression.collection, scope);
+    const items = Array.isArray(collection) ? collection : [];
+    const perElement = (item: Value): Value => {
+      const inner = new Map(scope);
+      if (isRecord(item)) for (const [key, value] of item.fields) inner.set(key, value);
+      return this.evaluate(expression.of, inner);
+    };
+    return expression.fn === 'each' ? items.map(perElement) : items.filter((item) => perElement(item) === true);
   }
 
   construct(expression: Extract<IRExpression, { kind: 'construct' }>, scope: Map<string, Value>): RecordValue {

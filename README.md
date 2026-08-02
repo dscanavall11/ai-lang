@@ -285,13 +285,16 @@ yet.** The other four are built and verified on every commit.
 
 Known gaps, in the order they matter:
 
-- No list projection. `sum of items by quantity` works; `each of items by
-  productId` does not, so a dto cannot carry a mapped list yet.
+- No `flat map`. `each of` and `only … where` cover map and filter; a projection
+  that returns a list per element still has to be written as a loop.
+- A list literal cannot hold constructions. `lines = [Line with id = "a", Line
+  with id = "b"]` cannot be told apart from one construction with four
+  arguments; bind them first and write `lines = [first, second]`.
 - The architect's field-naming heuristic produces awkward names from long
   requirement sentences. It flags them as open questions rather than hiding them.
 - Adapters generate real queries only for the four repository phrases they
   recognise. Everything else is left, explicitly, to the author.
-- No editor support.
+- No language server, so no diagnostics in the editor.
 
 ## Licence
 

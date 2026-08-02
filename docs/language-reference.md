@@ -549,6 +549,10 @@ average of ratings
 minimum of prices
 maximum of prices
 
+each of items by productId
+only items where quantity is greater than threshold
+sum of only items where quantity is greater than 1 by unitPrice.amount
+
 find order by id with id = command.orderId
 compute total with order = order
 Money with amount = 10, currency = "EUR"
@@ -571,7 +575,43 @@ now
 Precedence, loosest first: `or` → `and` → comparison → `plus`/`minus` →
 `times`/`divided by` → unary → primary. Parentheses group.
 
-### 6.1 Building one shape from another
+### 6.1 Working over a list
+
+The aggregates above collapse a list onto a single value. Two more keep it a
+list:
+
+| Written | Gives | Result |
+| --- | --- | --- |
+| `each of items by productId` | one value per element | `list of uuid` |
+| `only items where quantity is at least 2` | the elements that hold | `list of OrderItem` |
+
+Inside either clause, a bare name is a field of the element being visited;
+anything the element does not declare is read from the enclosing scope, so an
+operation parameter still means itself:
+
+```
+operation heavy lines (threshold: integer) -> list of OrderItem:
+  return only items where quantity is greater than threshold
+```
+
+`quantity` is a field of `OrderItem` and `threshold` is the parameter. The same
+rule applies to the `by` clause of a fold.
+
+They compose, and with the aggregates:
+
+```
+sum of only items where quantity is greater than 1 by unitPrice.amount
+```
+
+`each of` requires its `by` (`AIL1112`) and `only` requires its `where`
+(`AIL1113`) — a projection with nothing to project is the collection itself.
+A `where` clause that is not a condition is `AIL2115`, and either form over
+something that is not a list is `AIL2107`.
+
+There is no `flat map` yet: a projection that returns a list per element still
+has to be written as a `for each` loop.
+
+### 6.2 Building one shape from another
 
 Spelling out a projection field by field is the boilerplate this language exists
 to delete, so `from` takes everything it can by name:

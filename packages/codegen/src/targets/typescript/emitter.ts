@@ -139,6 +139,10 @@ export class TypeScriptEmitter extends LanguageEmitter {
     return 'randomUUID()';
   }
 
+  projectFn(fn: 'each' | 'only', collection: string, projection: string, elementVar: string, _elementType: IRType | null): string {
+    return `${collection}.${fn === 'each' ? 'map' : 'filter'}((${elementVar}) => ${projection})`;
+  }
+
   aggregateFn(
     fn: 'sum' | 'count' | 'min' | 'max' | 'average',
     collection: string,
