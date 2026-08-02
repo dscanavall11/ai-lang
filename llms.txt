@@ -1,0 +1,38 @@
+# AI-Lang
+
+> A programming language written in natural language. You describe a system —
+> its data, its rules, its boundaries — and the compiler emits Java, TypeScript,
+> Python or Go, plus Docker, Kubernetes, Terraform or AWS. Compilation is
+> deterministic: no model calls, no network, no randomness. The same source
+> produces the same bytes.
+
+The point is to move the conversation with a machine up one level. A design in
+AI-Lang is a tenth the size of the code it produces, so it can be read, reviewed
+and corrected before a single line is generated — and generating costs nothing,
+because the compiler is a compiler.
+
+Source files end in `.ail`. Start with the guide; it is complete on its own.
+
+## Writing it
+
+- [Agent guide](https://github.com/dscanavall11/ai-lang/blob/main/AGENTS.md): the whole language in one file, written to be read by a model. Start here.
+- [Language reference](https://github.com/dscanavall11/ai-lang/blob/main/docs/language-reference.md): every construct, exhaustively.
+- [CRUD tutorial](https://github.com/dscanavall11/ai-lang/blob/main/docs/crud-tutorial.md): a working service from an empty directory.
+
+## Worked sources
+
+- [tasks.ail](https://github.com/dscanavall11/ai-lang/blob/main/examples/crud/tasks.ail): the five CRUD operations and nothing else.
+- [orders.ail](https://github.com/dscanavall11/ai-lang/blob/main/examples/orders/orders.ail): aggregates, events, handlers, DTO projection.
+- [subscriptions.ail](https://github.com/dscanavall11/ai-lang/blob/main/examples/billing/subscriptions.ail): adapters with config, scheduled work.
+
+## Checking your work
+
+Never hand back `.ail` you have not run. `ail check` type-checks and audits the
+architecture, reporting exact spans and stable codes; `ail explain <code>`
+explains any of them. `ail test` runs the scenarios the sources declare against
+the IR in about a second — no code generated, no tokens spent.
+
+## Optional
+
+- [Design decisions](https://github.com/dscanavall11/ai-lang/blob/main/docs/decisions.md): why the compiler is built the way it is.
+- [Branching](https://github.com/dscanavall11/ai-lang/blob/main/docs/branching.md): how to contribute a change.
