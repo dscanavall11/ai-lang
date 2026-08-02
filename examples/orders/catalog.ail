@@ -1,7 +1,7 @@
 ---
 module: catalog
 context: Catalogue
-target: java
+target: python
 ---
 
 # Product Catalogue
