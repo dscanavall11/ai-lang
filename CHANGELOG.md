@@ -5,7 +5,23 @@ while the major is `0`, the minor carries breaking changes.
 
 ## Unreleased
 
+## 0.1.1
+
+The command-line package is `@ai-lang/cli`, not `ai-lang`.
+
+npm refused the unscoped name: it normalises punctuation away when comparing,
+so `ai-lang` collides with the pre-existing `ailang` and is rejected as a
+possible typosquat. That check only runs at publish time — the registry answers
+404 for the name right up until it refuses to give it to you.
+
+So `0.1.0` reached npm as six libraries with no command-line tool. This release
+is the same code under a name that can actually be published. Install it with
+`npm install -g @ai-lang/cli`; the command is still `ail`.
+
 ## 0.1.0
+
+Six packages — `@ai-lang/core`, `parser`, `codegen`, `iac`, `analyzer` and
+`architect` — published. The CLI did not; see 0.1.1. Use 0.1.1 instead.
 
 First release. The language works end to end: a design compiles to a service
 that starts and answers correctly, and the compiler has 249 tests.

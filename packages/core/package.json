@@ -1,6 +1,6 @@
 {
   "name": "@ai-lang/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The AI-Lang intermediate representation: schema, diagnostics, naming and emission primitives.",
   "keywords": [
     "ai-lang",

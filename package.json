@@ -1,6 +1,6 @@
 {
   "name": "ai-lang-monorepo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A natural-language programming language for AI to write software in. Compiles to Java, TypeScript, Python, Go and Rust, plus Docker, Kubernetes, Terraform and AWS.",
   "license": "Apache-2.0",
