@@ -7,6 +7,7 @@ export { dddPass } from './passes/ddd.js';
 export { errorFlowPass } from './passes/error-flow.js';
 export { architecturePass } from './passes/architecture.js';
 export { simplicityPass } from './passes/simplicity.js';
+export { nativePass } from './passes/native.js';
 export { walkStatements, walkExpressions, walkExpression, typesReferencedBy, typesOfDeclaration, bodies } from './walk.js';
 export { Interpreter, DomainFailure, Unsupported } from './interpreter/runtime.js';
 export { runScenarios, type ScenarioResult, type TestReport, type Outcome } from './interpreter/scenarios.js';

@@ -20,7 +20,7 @@ This is the part that matters most. Never hand back `.hadl` you have not checked
 ```bash
 haic check .          # parses, type-checks, audits the architecture
 haic test .           # runs the scenarios against the IR — no code, no tokens
-haic build . --target typescript --out out
+haic build . --language typescript --out out
 ```
 
 `haic check` is not a linter. It is a compiler front-end that reports exact
@@ -295,6 +295,68 @@ Use `schedule 0 3 * * *` instead of `on <Event>` for a cron handler.
 
 ---
 
+## When statements are not enough
+
+Some logic is not a design decision. A matching loop, a great-circle distance, a
+sum that has to be exact in cents: these have one correct form, and rewriting
+them as statements is a translation nobody can check against the original.
+
+For those, and only those, an operation body may be a fenced block — the same
+fence Markdown has always had, with the language named on it:
+
+````hadl
+operation median price () -> decimal:
+  ```typescript
+  const sorted = [...this.lines].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)]!;
+  ```
+````
+
+The block is copied into the generated project unchanged, indented to fit and
+otherwise untouched. Everything around it is still the compiler's: the
+signature, the parameter names, the checked errors, the invariants, the wiring.
+
+Rules that matter:
+
+- **Name the language.** ```` ```typescript ````, ```` ```python ````,
+  ```` ```java ````, ```` ```go ````, ```` ```rust ````. Short names work:
+  `ts`, `js`, `py`, `golang`, `rs`. A bare fence is `HADL1420`; a language no
+  backend can emit is `HADL1421`. `js` and `javascript` mean the TypeScript
+  backend, and the block lands in a `.ts` file, so it has to type-check there.
+- **One block per target, several targets per operation.** Write a `typescript`
+  block and a `python` block and each backend takes its own.
+- **Write the statements too, when you can.** Statements beside a block are the
+  reference implementation: `haic test` runs *them*, and the block is what
+  ships. An operation with a block and no statements is `HADL2602` — no scenario
+  can reach it, and the compiler says so rather than letting the untested part
+  of the system be the interesting part.
+- **Keep it indented.** The fence and its contents sit under the operation, like
+  any Markdown block. A line at column zero ends the body.
+- **A block only fits an operation.** Not a handler, not an invariant, not a
+  scenario (`HADL1424`). If a handler needs one, give the work to an operation
+  and call it.
+- **Building a target no block covers fails.** `HADL3060`, before anything is
+  written. Add a block for that target, add statements, or build the language
+  the operation was written for.
+
+Reach for a block last, not first. `only … where`, `each of … by` and the
+aggregates cover most of what looks at first like it needs a loop, and every
+line inside a fence is a line the compiler cannot check, cannot run in a
+scenario, and cannot port to another language.
+
+### Choosing the language at build time
+
+```bash
+haic build src --language typescript --out out
+```
+
+`--language` replaces the `target:` in the frontmatter for that build, and takes
+the name a person would write: `js`, `ts`, `py`, `golang`, `rs`, or the full
+name. `--target` is the same thing by backend id. Neither changes the source;
+they decide which backend runs, and therefore which block is used.
+
+---
+
 ## Queries
 
 One criterion per filter, never one repository method per combination. An absent
@@ -398,6 +460,8 @@ asserts. Assertions: `then x.field is value` · `then it fails with Error` ·
 | `primaryKey id`, `key id` | `identified by id` |
 | a `for each` loop to build a list | `each of … by …` or `only … where …` |
 | `[Line with id = "a", Line with id = "b"]` | bind each first, then `[first, second]` |
+| a fenced block for logic `only … where` covers | statements; keep the fence for what has no design form |
+| a fenced block and no statements beside it | write both, so a scenario can still run the design |
 
 ---
 
@@ -406,4 +470,7 @@ asserts. Assertions: `then x.field is value` · `then it fails with Error` ·
 - `examples/crud/tasks.hadl` — the five CRUD operations and nothing else
 - `examples/orders/orders.hadl` — aggregates, events, handlers, DTO projection
 - `examples/billing/subscriptions.hadl` — adapters with config, scheduled work
+- `examples/matching/book.hadl` — an order book: a matching loop in TypeScript and in Python, everything around it in HADL
+- `examples/ledger/ledger.hadl` — double-entry bookkeeping: a block and the statements it is checked against, side by side
+- `examples/dispatch/dispatch.hadl` — courier assignment: a distance formula and a greedy sweep, surrounded by rules
 - `docs/language-reference.md` — every construct, exhaustively

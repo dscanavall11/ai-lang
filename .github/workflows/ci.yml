@@ -36,6 +36,13 @@ jobs:
         run: node packages/cli/dist/bin.js check examples
       - name: Run the scenarios the examples declare
         run: node packages/cli/dist/bin.js test examples
+      - name: A block written for one language must not compile as another
+        shell: bash
+        run: |
+          if node packages/cli/dist/bin.js build examples/dispatch --language go --out should-fail; then
+            echo "building a Go project from a TypeScript-only body should have failed"
+            exit 1
+          fi
 
   # The real proof: the emitted projects have to satisfy their own toolchains.
   # A backend that generates plausible-looking code that does not compile is
@@ -47,15 +54,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # `sources` is not always every example. Three of them carry operations
+          # written in a fenced target-language block, and a block is only
+          # emitted for the language it names: building `examples/dispatch` as
+          # Go is `HADL3060`, by design, because nothing in the source says what
+          # that operation is in Go. Each target therefore compiles the examples
+          # it actually has bodies for — which is also what keeps HADL3060
+          # honest, since a regression that silently emitted an empty method
+          # would turn this job green.
           - target: typescript
+            sources: examples
             verify: npm install --no-audit --no-fund && npx tsc --noEmit
           - target: java
+            sources: examples/crud examples/orders examples/billing examples/guide examples/ledger
             verify: mvn -q -B compile
           - target: python
+            sources: examples/crud examples/orders examples/billing examples/guide examples/ledger examples/matching
             verify: python -m compileall -q app
           # The generated go.mod carries requires but no go.sum, whose hashes
           # cannot be produced offline. Resolving them is the build's job.
           - target: go
+            sources: examples/crud examples/orders examples/billing examples/guide examples/ledger
             verify: go mod tidy && go build ./...
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +103,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Compile the examples
-        run: node packages/cli/dist/bin.js build examples --target ${{ matrix.target }} --out out
+        run: node packages/cli/dist/bin.js build ${{ matrix.sources }} --target ${{ matrix.target }} --out out
       - name: Build the generated project
         working-directory: out/${{ matrix.target }}
         run: ${{ matrix.verify }}
@@ -108,7 +127,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Compile the examples
-        run: node packages/cli/dist/bin.js build examples --target rust --out out
+        run: >-
+          node packages/cli/dist/bin.js build
+          examples/crud examples/orders examples/billing examples/guide examples/ledger
+          --target rust --out out
       - name: Build the generated crate
         working-directory: out/rust
         run: cargo check --quiet

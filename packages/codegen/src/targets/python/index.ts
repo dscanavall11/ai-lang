@@ -416,8 +416,8 @@ function emitAdapterBody(
   index: ModuleIndex,
 ): void {
   const declared = adapter.operations.find((o) => normalisePhrase(o.phrase) === normalisePhrase(operation.phrase));
-  if (declared && declared.body.length > 0) {
-    writer.line(renderBody(emitter, declared.body, declared.parameters.map((p) => p.name)));
+  if (declared && (declared.body.length > 0 || declared.native.length > 0)) {
+    writer.line(renderBody(emitter, declared, declared.parameters.map((p) => p.name)));
     return;
   }
 
@@ -602,7 +602,7 @@ function handlersFile(module: IRModule, index: ModuleIndex): GeneratedFile | nul
       writer.line(`async def handle(self, event: ${event}) -> None:`);
       writer.block(() => {
         docstring(writer, `Handles one ${handler.on} message.`);
-        writer.line(renderBody(emitter, handler.body, ['event']));
+        writer.line(renderStatements(emitter, handler.body, ['event']));
       });
     });
     return writer.toString();
@@ -868,7 +868,7 @@ function dotEnvExample(context: GenerationContext): GeneratedFile {
 // ---------------------------------------------------------------------------
 
 function emitOperation(writer: CodeWriter, emitter: PythonEmitter, operation: IROperation, asynchronous: boolean): void {
-  const body = renderBody(emitter, operation.body, operation.parameters.map((p) => p.name));
+  const body = renderBody(emitter, operation, operation.parameters.map((p) => p.name));
   // Ports are awaited, so an operation that reaches one has to be a coroutine.
   const prefix = asynchronous || body.includes('await ') ? 'async ' : '';
   writer.line(`${prefix}def ${methodName(operation.phrase)}(${parameterList(operation, emitter)}) -> ${emitter.typeName(operation.returns)}:`);
@@ -878,10 +878,18 @@ function emitOperation(writer: CodeWriter, emitter: PythonEmitter, operation: IR
   });
 }
 
-function renderBody(emitter: PythonEmitter, statements: readonly IRStatement[], parameters: readonly string[]): string {
+function renderBody(emitter: PythonEmitter, operation: IROperation, parameters: readonly string[]): string {
+  return render(emitter, parameters, (writer) => emitter.emitImplementation(writer, operation));
+}
+
+function renderStatements(emitter: PythonEmitter, statements: readonly IRStatement[], parameters: readonly string[]): string {
+  return render(emitter, parameters, (writer) => emitter.emitBlock(writer, statements));
+}
+
+function render(emitter: PythonEmitter, parameters: readonly string[], body: (writer: CodeWriter) => void): string {
   const writer = pyWriter();
   emitter.enterOperation(parameters);
-  emitter.emitBlock(writer, statements);
+  body(writer);
   return writer.toString().replace(/\n$/, '');
 }
 

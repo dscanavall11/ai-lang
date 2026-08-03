@@ -104,6 +104,19 @@
     "description": "One operation of a service or aggregate"
   },
 
+  "Native body": {
+    "prefix": "native",
+    "body": [
+      "operation ${1:do something} (${2:input}: ${3:decimal}) -> ${4:decimal}:",
+      "  ```${5|typescript,javascript,java,python,go,rust|}",
+      "  $0",
+      "  ```",
+      "",
+      "  return ${6:the same thing, in statements, so a scenario can run it}"
+    ],
+    "description": "An operation body written in the target language, with the statements that stay its reference implementation"
+  },
+
   "Query": {
     "prefix": "query",
     "body": [

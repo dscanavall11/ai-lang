@@ -95,6 +95,34 @@ describe('the haic command', () => {
     expect(out).toContain('src/domain/orders/model.ts');
   });
 
+  it('compiles as the language asked for, whatever the source declared', async () => {
+    // The catalogue module declares `target: python`; --language replaces it.
+    const { code, out } = await run(['build', 'examples/orders', '--language', 'js', '--out', join(scratch, 'lang')]);
+    expect(code).toBe(0);
+    expect(out).toContain('src/domain/catalog/model.ts');
+    expect(out).not.toContain('.py');
+  });
+
+  it('accepts the short names people actually type', async () => {
+    const { code, out } = await run(['build', 'examples/crud', '--language', 'py', '--dry-run']);
+    expect(code).toBe(0);
+    expect(out).toContain('Python');
+  });
+
+  it('refuses a language it cannot emit rather than guessing', async () => {
+    const { code, err } = await run(['build', 'examples/crud', '--language', 'cobol', '--dry-run']);
+    expect(code).toBe(1);
+    expect(err).toContain('not a language this compiler can emit');
+  });
+
+  it('refuses to write a project with an operation it cannot lower', async () => {
+    // The matching engine is written in TypeScript and Python, and says so.
+    const { code, out } = await run(['build', 'examples/matching', '--language', 'go', '--out', join(scratch, 'nope')]);
+    expect(code).toBe(1);
+    expect(out).toContain('HADL3060');
+    expect(out).toContain('--language typescript');
+  });
+
   it('explains the reasoning behind a design rule', async () => {
     const { code, out } = await run(['explain', 'HADL2503']);
     expect(code).toBe(0);

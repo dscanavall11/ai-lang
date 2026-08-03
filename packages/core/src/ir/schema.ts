@@ -48,6 +48,15 @@ export const PRIMITIVE_TYPES = [
 export const PrimitiveTypeSchema = z.enum(PRIMITIVE_TYPES);
 export type PrimitiveType = z.infer<typeof PrimitiveTypeSchema>;
 
+/**
+ * The languages a design can be lowered into. Declared here rather than beside
+ * the module header because an operation can now carry a body written in one of
+ * them, and both places must agree on the list.
+ */
+export const CODEGEN_TARGETS = ['java', 'typescript', 'python', 'go', 'rust'] as const;
+export const CodegenTargetSchema = z.enum(CODEGEN_TARGETS);
+export type CodegenTarget = z.infer<typeof CodegenTargetSchema>;
+
 export type IRType =
   | { kind: 'primitive'; name: PrimitiveType }
   | { kind: 'named'; name: string }
@@ -368,8 +377,38 @@ export const OperationSignatureSchema = z.object({
 });
 export type IROperationSignature = z.infer<typeof OperationSignatureSchema>;
 
+/**
+ * An implementation written in the target language, taken verbatim from a
+ * fenced block in the source.
+ *
+ * The escape hatch exists because some logic is not a design decision: a
+ * matching loop, a scoring formula, a bit of numeric care. Expressing it in
+ * HADL statements would be a translation, and a translation is a place for the
+ * meaning to change. So the compiler carries it across untouched and keeps
+ * owning everything around it — the signature, the errors, the wiring.
+ *
+ * It is deliberately not an escape from the type system: the signature is still
+ * checked, still generated, and still the contract every caller sees.
+ */
+export const NativeBlockSchema = z.object({
+  /** Backend this block implements, resolved from the word on the fence. */
+  target: CodegenTargetSchema,
+  /** The word as written, e.g. `js`. Kept so diagnostics quote the source. */
+  dialect: z.string().min(1),
+  /** Source lines, indentation relative to the fence preserved. */
+  code: z.array(z.string()),
+  span: SourceSpanSchema.optional(),
+});
+export type IRNativeBlock = z.infer<typeof NativeBlockSchema>;
+
 export const OperationSchema = OperationSignatureSchema.extend({
   body: z.array(IRStatementSchema).default([]),
+  /**
+   * Target-specific bodies, at most one per target. When the backend being
+   * generated has one, it wins over `body`; `body` stays the reference
+   * implementation `haic test` runs.
+   */
+  native: z.array(NativeBlockSchema).default([]),
 });
 export type IROperation = z.infer<typeof OperationSchema>;
 
@@ -694,10 +733,6 @@ export type IRInfrastructure = z.infer<typeof InfrastructureSchema>;
 // ---------------------------------------------------------------------------
 // Module and project
 // ---------------------------------------------------------------------------
-
-export const CODEGEN_TARGETS = ['java', 'typescript', 'python', 'go', 'rust'] as const;
-export const CodegenTargetSchema = z.enum(CODEGEN_TARGETS);
-export type CodegenTarget = z.infer<typeof CodegenTargetSchema>;
 
 export const ModuleSchema = z.object({
   irVersion: z.literal(IR_VERSION),

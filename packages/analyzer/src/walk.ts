@@ -1,5 +1,5 @@
 /** Structural traversal helpers. Passes describe *what* to check; this file knows *where* to look. */
-import type { IRDeclaration, IRExpression, IRModule, IRStatement, IRType, SourceSpan } from '@haic/core';
+import { camelCase, type IRDeclaration, type IRExpression, type IRModule, type IRStatement, type IRType, type SourceSpan } from '@haic/core';
 
 export interface TypeUse {
   type: IRType;
@@ -121,4 +121,33 @@ export function* bodies(module: IRModule): Generator<{ owner: IRDeclaration; lab
       yield { owner: declaration, label: declaration.name, body: declaration.body, span: declaration.span };
     }
   }
+}
+
+/**
+ * Every identifier a native block mentions, in the spelling used and in
+ * camelCase.
+ *
+ * The compiler does not parse target-language code and will not pretend to, so
+ * this is a word scan on purpose. It over-reports mentions and never
+ * under-reports them, which is the right way round: telling an author that a
+ * field nothing reads is dead, when the block three lines below reads it, is a
+ * worse failure than staying quiet about one named only in a comment.
+ */
+export function namesInNativeBlocks(declaration: IRDeclaration): Set<string> {
+  const found = new Set<string>();
+  // Ports declare signatures, which have no body to write a block in.
+  if (declaration.kind !== 'aggregate' && declaration.kind !== 'service' && declaration.kind !== 'adapter') return found;
+
+  for (const operation of declaration.operations) {
+    for (const block of operation.native) {
+      for (const line of block.code) {
+        for (const word of line.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []) {
+          found.add(word);
+          // `limit_price` in Python is `limitPrice` in the design.
+          found.add(camelCase(word));
+        }
+      }
+    }
+  }
+  return found;
 }

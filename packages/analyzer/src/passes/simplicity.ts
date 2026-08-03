@@ -18,7 +18,7 @@ import {
   type SourceSpan,
 } from '@haic/core';
 import type { AnalysisContext, SemanticPass } from '../context.js';
-import { typesOfDeclaration, walkExpressions, walkStatements } from '../walk.js';
+import { namesInNativeBlocks, typesOfDeclaration, walkExpressions, walkStatements } from '../walk.js';
 
 export const simplicityPass: SemanticPass = {
   id: 'simplicity',
@@ -74,6 +74,9 @@ function collectReferences(context: AnalysisContext): Map<string, Set<string>> {
         if (statement.kind === 'fail') record(statement.error, declaration.name);
       }
     }
+    // A name used only inside a fenced block is still used. The compiler cannot
+    // read that code, so it takes every word in it as a possible mention.
+    for (const word of namesInNativeBlocks(declaration)) record(word, declaration.name);
   }
   return uses;
 }
@@ -258,6 +261,7 @@ function reportSpeculativeFields(context: AnalysisContext, referenced: Map<strin
         }
       }
     }
+    for (const word of namesInNativeBlocks(declaration)) mentionedPaths.add(word);
     if ('invariants' in declaration) {
       for (const invariant of declaration.invariants) {
         for (const expression of walkExpressions([{ kind: 'perform', value: invariant.condition }])) {

@@ -314,6 +314,15 @@ export class Interpreter {
   }
 
   private runOperation(operation: IROperation, args: Map<string, Value>, receiver: RecordValue | null): Value {
+    // A native block is target-language source; there is nothing here that could
+    // run it, and guessing at its result would make the scenario meaningless.
+    if (operation.body.length === 0 && operation.native.length > 0) {
+      const written = operation.native.map((n) => n.dialect).join(', ');
+      throw new Unsupported(
+        `"${operation.phrase}" is written in ${written}, so this scenario has no HADL body to run`,
+      );
+    }
+
     const scope = new Map<string, Value>(args);
     // An aggregate operation reads and writes its own fields directly.
     if (receiver) for (const [key, value] of receiver.fields) scope.set(key, value);

@@ -2,6 +2,7 @@ export * from './diagnostics.js';
 export * from './ir/schema.js';
 export * from './ir/index-module.js';
 export * from './ir/type-utils.js';
+export * from './languages.js';
 export * from './naming.js';
 export * from './emit.js';
 export * from './registry.js';

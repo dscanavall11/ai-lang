@@ -529,6 +529,68 @@ fail with Missing
 narrowed — narrowing `a.b.c` would need alias analysis to stay sound, and binding
 it with `let` first is one line.
 
+### 5.3 A body written in the target language
+
+An operation body may be a fenced block instead of statements — Markdown's own
+fence, with the language named on it:
+
+````
+operation median price () -> decimal:
+  ```typescript
+  const sorted = [...this.lines].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)]!;
+  ```
+````
+
+The fence and everything inside it are indented under the operation, exactly as
+they would be in Markdown. That indentation is what tells the parser the block
+is part of this body — a line at column zero ends the operation, and a `#` there
+opens a declaration.
+
+The block is emitted into the generated project verbatim, re-indented to sit
+where the body belongs and otherwise untouched. The compiler still owns
+everything around it: the signature, the parameter names, the checked errors,
+the invariants that run on the fields it writes, and the wiring that calls it.
+
+| Rule | Code |
+| --- | --- |
+| The fence must name a language | `HADL1420` |
+| The language must be one a backend emits | `HADL1421` |
+| The fence must be closed | `HADL1422` |
+| At most one block per target | `HADL1423` |
+| Only an operation body may hold one | `HADL1424` |
+| A block with nothing in it | `HADL2601` |
+| A block with no statements beside it | `HADL2602` |
+| The module's target has no body | `HADL2603` |
+| The target being built has no body | `HADL3060` |
+
+Accepted names are the backend ids and their usual short forms: `typescript`,
+`ts`, `javascript`, `js`, `node`; `java`; `python`, `py`; `go`, `golang`;
+`rust`, `rs`. `haic targets` lists them. A `js` block is emitted into a `.ts`
+file, because the TypeScript backend is the one that generates Node.js.
+
+Several blocks may sit under one operation, at most one per target, and
+statements may sit beside them:
+
+````
+operation total debited () -> Money:
+  ```typescript
+  const cents = this.postings.reduce((sum, p) => sum + Math.round(p.amount.amount * 100), 0);
+  return new Money({ amount: cents / 100, currency: this.currency });
+  ```
+
+  return Money with amount = sum of postings by amount.amount, currency = currency
+````
+
+The statements are the **reference implementation**: `haic test` runs them, and
+they are what the design says the operation means. The block is what ships for
+the target it names. An operation with a block and no statements cannot be
+reached by any scenario, and `HADL2602` says so — the interpreter reports such a
+scenario as inconclusive rather than passing it.
+
+Nothing inside a fence is checked, inferred, or ported. That is the cost, and it
+is why the compiler is loud about who is paying it.
+
 ---
 
 ## 6. Expressions
@@ -677,7 +739,9 @@ The backend emits `order.computeTotal()`.
 | `HADL23xx` | Checked and unchecked error flow |
 | `HADL24xx` | Hexagonal architecture and SOLID |
 | `HADL25xx` | Simplicity (YAGNI) |
+| `HADL26xx` | Bodies written in a target language |
 | `HADL29xx` | Internal IR validation |
+| `HADL30xx` | Code generation and deployment |
 
 `haic explain <code>` prints the reasoning behind the design rules.
 
@@ -694,9 +758,16 @@ smell, not a contradiction. `haic check --strict` promotes them to errors.
 - **No free functions.** Behaviour belongs to an aggregate, a service or a handler.
 - **No generics.** `list`, `set`, `map` and `optional` are the only parameterised types.
 - **No imports inside a module body.** Dependencies are declared once, in the frontmatter.
-- **No inline SQL, no inline YAML, no target-language escape hatch.** If the
-  compiler cannot express something, that is a gap to close in the language, not
-  a hole to punch through it.
+- **No inline SQL, no inline YAML.** If the compiler cannot express something
+  about storage or deployment, that is a gap to close in the language, not a hole
+  to punch through it.
+- **One escape hatch, declared and bounded.** An operation body may be a fenced
+  block in a target language (§5.3). It is deliberately the only one: it names
+  its language, it lives inside a signature the compiler still owns, and every
+  consequence of using it — untestable by scenarios, unportable to another
+  target — is reported rather than assumed. Algorithms are not design decisions,
+  and a language that forces them into design vocabulary gets a worse
+  translation, not a better design.
 
 Each of these is a decision to make one obvious thing possible rather than many
 things expressible. A model with fewer ways to say something is a model an AI

@@ -1,0 +1,173 @@
+---
+module: ledger
+context: Ledger
+target: typescript
+---
+
+# Double-Entry Ledger
+
+Money moves in pairs. Every journal entry names at least two accounts, and the
+debits equal the credits or the entry does not exist.
+
+The rule is a design decision and it is written as one — the invariant below is
+the whole of double-entry bookkeeping, in one line the compiler enforces on
+every mutation. What is *not* a design decision is how a total is added up:
+adding `0.1` to `0.2` in binary floating point is how a ledger ends up out by a
+cent, and no amount of design language changes that.
+
+So `total debited` is written twice, on purpose. The HADL statements are the
+reference implementation: they say what the total means, and `haic test` runs
+them. The fenced block is what ships: it sums in minor units, where the
+arithmetic is exact. Both are in the file, side by side, and the compiler knows
+which is which.
+
+## enum PostingSide
+- Debit
+- Credit
+
+## value object Money
+
+An amount in one currency. Amounts are held in the currency's major unit and
+totalled in its minor unit, which is the only place rounding is allowed to
+happen.
+
+- amount: decimal, required, min 0
+- currency: text, required, length 3
+
+## entity Posting
+identified by id
+belongs to JournalEntry
+
+- id: uuid, required
+- accountId: uuid, required
+- side: PostingSide, required
+- amount: Money, required
+
+invariant "a posting moves a non-zero amount":
+  amount.amount is greater than 0
+
+## aggregate JournalEntry
+identified by id
+contains Posting
+emits EntryPosted
+
+An entry is the unit of consistency: it is balanced as a whole or not at all,
+which is exactly why the postings live inside it rather than beside it.
+
+- id: uuid, required
+- reference: text, required, min length 1, max length 64
+- currency: text, required, length 3
+- postings: list of Posting, required
+- postedAt: timestamp, optional
+
+invariant "an entry moves at least two accounts":
+  count of postings is at least 2
+
+invariant "the debits equal the credits":
+  sum of only postings where side is Debit by amount.amount is sum of only postings where side is Credit by amount.amount
+
+The total of one side. What it means is the sum of the debit postings; how it is
+computed is a question about binary floating point, and the answer to that is
+not expressible in a design language, nor should it be.
+
+operation total debited () -> Money:
+  ```typescript
+  // Sum in minor units, so 0.1 + 0.2 is 30 cents rather than 0.30000000000000004.
+  const cents = this.postings
+    .filter((posting) => posting.side === PostingSide.Debit)
+    .reduce((sum, posting) => sum + Math.round(posting.amount.amount * 100), 0);
+  return new Money({ amount: cents / 100, currency: this.currency });
+  ```
+
+  return Money with amount = sum of only postings where side is Debit by amount.amount, currency = currency
+
+Posting freezes the entry. Nothing else about it may change afterwards, which
+the service enforces by refusing a second attempt.
+
+operation post (at: timestamp) -> nothing:
+  set postedAt to at
+
+## command PostEntry targets JournalEntry
+- entryId: uuid, required
+
+## event EntryPosted from JournalEntry
+topic entry-posted
+
+- entryId: uuid, required
+- reference: text, required
+- total: Money, required
+- accounts: list of uuid, required
+- postedAt: timestamp, required
+
+## error EntryNotFound (checked, status 404)
+message: "no journal entry exists with id {entryId}"
+
+- entryId: uuid, required
+
+## error EntryAlreadyPosted (checked, status 409)
+message: "journal entry {entryId} was already posted"
+
+- entryId: uuid, required
+
+## port JournalRepository (outbound)
+using sql
+config:
+  table = journal_entries
+
+- find journal entry by id (id: uuid) -> JournalEntry or EntryNotFound
+- save journal entry (journalEntry: JournalEntry) -> nothing
+
+## port PostEntryUseCase (inbound)
+
+- post entry (command: PostEntry) -> EntryPosted or EntryNotFound, EntryAlreadyPosted
+
+## service PostingService
+uses JournalRepository
+implements PostEntryUseCase
+
+Loads the entry, refuses to post it twice, and announces the movement. The
+balance rule is not checked here: it is the aggregate's, and it holds by
+construction.
+
+operation post entry (command: PostEntry) -> EntryPosted or EntryNotFound, EntryAlreadyPosted:
+  let entry be find journal entry by id with id = command.entryId
+  when entry.postedAt is present:
+    fail with EntryAlreadyPosted using entryId = command.entryId
+  let total be total debited with journalEntry = entry
+  let accounts be each of entry.postings by accountId
+  let at be now
+  perform post with journalEntry = entry, at = at
+  perform save journal entry with journalEntry = entry
+  publish EntryPosted with entryId = entry.id, reference = entry.reference, total = total, accounts = accounts, postedAt = at
+  return EntryPosted with entryId = entry.id, reference = entry.reference, total = total, accounts = accounts, postedAt = at
+
+## endpoint POST /entries/{entryId}/post
+handled by PostingService.post entry
+request PostEntry
+auth bearer
+responds 200 with EntryPosted
+responds 404 when EntryNotFound
+responds 409 when EntryAlreadyPosted
+
+## scenario posting a balanced entry announces the movement
+
+given debit be Posting with id = "p-1", accountId = "a-cash", side = Debit, amount = Money with amount = 40, currency = "EUR"
+and credit be Posting with id = "p-2", accountId = "a-sales", side = Credit, amount = Money with amount = 40, currency = "EUR"
+and entry be JournalEntry with id = "e-1", reference = "INV-1", currency = "EUR", postings = [debit, credit]
+when post entry with command = PostEntry with entryId = "e-1"
+then it publishes EntryPosted
+and result.total.amount is 40
+and count of result.accounts is 2
+
+## scenario posting the same entry twice
+
+given debit be Posting with id = "p-1", accountId = "a-cash", side = Debit, amount = Money with amount = 40, currency = "EUR"
+and credit be Posting with id = "p-2", accountId = "a-sales", side = Credit, amount = Money with amount = 40, currency = "EUR"
+and entry be JournalEntry with id = "e-1", reference = "INV-1", currency = "EUR", postings = [debit, credit], postedAt = now
+when post entry with command = PostEntry with entryId = "e-1"
+then it fails with EntryAlreadyPosted
+
+## infrastructure
+port 8082
+database ledgerdb using postgres version 16
+deploy to docker, kubernetes

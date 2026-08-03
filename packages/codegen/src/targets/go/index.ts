@@ -1066,8 +1066,10 @@ function writeOperation(writer: CodeWriter, emitter: GoEmitter, operation: IROpe
   writer.line(`func ${options.receiver} ${goExported(operation.phrase)}(${parameterList(operation, emitter, options.contextual)})${results ? ` ${results}` : ''} {`);
   writer.block(() => {
     emitter.enterOperation(operation.returns, fallible, operation.parameters);
-    emitter.emitBlock(writer, operation.body);
-    if (!endsWithReturn(operation.body)) {
+    // Native code returns for itself; only generated bodies get a trailing
+    // zero value bolted on to satisfy the compiler.
+    const emitted = emitter.emitImplementation(writer, operation);
+    if (emitted !== 'native' && !endsWithReturn(operation.body)) {
       const terminal = emitter.terminalReturn();
       if (terminal) writer.line(terminal);
     }

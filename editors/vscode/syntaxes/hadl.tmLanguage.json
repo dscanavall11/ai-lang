@@ -3,6 +3,7 @@
   "name": "HADL",
   "scopeName": "source.hadl",
   "patterns": [
+    { "include": "#native-block" },
     { "include": "#frontmatter" },
     { "include": "#title" },
     { "include": "#declaration" },
@@ -22,6 +23,84 @@
     { "include": "#punctuation" }
   ],
   "repository": {
+    "native-block": {
+      "comment": "An operation body written in a target language. The info string names the backend the block belongs to, so the code inside is highlighted by that language's own grammar.",
+      "patterns": [
+        { "include": "#native-typescript" },
+        { "include": "#native-java" },
+        { "include": "#native-python" },
+        { "include": "#native-go" },
+        { "include": "#native-rust" },
+        { "include": "#native-unknown" }
+      ]
+    },
+    "native-typescript": {
+      "begin": "^\\s*(`{3,}|~{3,})\\s*(typescript|ts|javascript|js|node|nodejs)\\s*$",
+      "end": "^\\s*(\\1)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.raw.begin.hadl" },
+        "2": { "name": "fenced_code.block.language.hadl entity.name.type.hadl" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.raw.end.hadl" } },
+      "contentName": "meta.embedded.block.typescript",
+      "patterns": [{ "include": "source.ts" }]
+    },
+    "native-java": {
+      "begin": "^\\s*(`{3,}|~{3,})\\s*(java|jvm)\\s*$",
+      "end": "^\\s*(\\1)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.raw.begin.hadl" },
+        "2": { "name": "fenced_code.block.language.hadl entity.name.type.hadl" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.raw.end.hadl" } },
+      "contentName": "meta.embedded.block.java",
+      "patterns": [{ "include": "source.java" }]
+    },
+    "native-python": {
+      "begin": "^\\s*(`{3,}|~{3,})\\s*(python|py|python3)\\s*$",
+      "end": "^\\s*(\\1)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.raw.begin.hadl" },
+        "2": { "name": "fenced_code.block.language.hadl entity.name.type.hadl" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.raw.end.hadl" } },
+      "contentName": "meta.embedded.block.python",
+      "patterns": [{ "include": "source.python" }]
+    },
+    "native-go": {
+      "begin": "^\\s*(`{3,}|~{3,})\\s*(go|golang)\\s*$",
+      "end": "^\\s*(\\1)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.raw.begin.hadl" },
+        "2": { "name": "fenced_code.block.language.hadl entity.name.type.hadl" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.raw.end.hadl" } },
+      "contentName": "meta.embedded.block.go",
+      "patterns": [{ "include": "source.go" }]
+    },
+    "native-rust": {
+      "begin": "^\\s*(`{3,}|~{3,})\\s*(rust|rs)\\s*$",
+      "end": "^\\s*(\\1)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.raw.begin.hadl" },
+        "2": { "name": "fenced_code.block.language.hadl entity.name.type.hadl" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.raw.end.hadl" } },
+      "contentName": "meta.embedded.block.rust",
+      "patterns": [{ "include": "source.rust" }]
+    },
+    "native-unknown": {
+      "comment": "A fence naming a language no backend emits is HADL1421. Highlighting it as an error beats highlighting it as code.",
+      "begin": "^\\s*(`{3,}|~{3,})\\s*(\\S*)\\s*$",
+      "end": "^\\s*(\\1)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.raw.begin.hadl" },
+        "2": { "name": "invalid.illegal.language.hadl" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.raw.end.hadl" } },
+      "name": "markup.raw.block.hadl"
+    },
+
     "frontmatter": {
       "comment": "The YAML header, which is the only part of the file that is not prose or declaration.",
       "begin": "\\A---\\s*$",

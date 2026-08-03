@@ -16,6 +16,7 @@ import type { AnalysisContext, SemanticPass } from './context.js';
 import { architecturePass } from './passes/architecture.js';
 import { dddPass } from './passes/ddd.js';
 import { errorFlowPass } from './passes/error-flow.js';
+import { nativePass } from './passes/native.js';
 import { simplicityPass } from './passes/simplicity.js';
 import { symbolPass } from './passes/symbols.js';
 import { typePass } from './passes/types.js';
@@ -31,6 +32,7 @@ export const defaultPasses: readonly SemanticPass[] = [
   errorFlowPass,
   dddPass,
   simplicityPass,
+  nativePass,
 ];
 
 export interface AnalyzeOptions {
