@@ -7,12 +7,12 @@ export default defineConfig({
   resolve: {
     // Tests run against sources, so `npm test` never needs a build first.
     alias: {
-      '@ai-lang/core': src('core'),
-      '@ai-lang/parser': src('parser'),
-      '@ai-lang/analyzer': src('analyzer'),
-      '@ai-lang/codegen': src('codegen'),
-      '@ai-lang/iac': src('iac'),
-      '@ai-lang/architect': src('architect'),
+      '@haic/core': src('core'),
+      '@haic/parser': src('parser'),
+      '@haic/analyzer': src('analyzer'),
+      '@haic/codegen': src('codegen'),
+      '@haic/iac': src('iac'),
+      '@haic/architect': src('architect'),
     },
   },
   test: {

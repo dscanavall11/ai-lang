@@ -15,7 +15,7 @@
  * The aggregate is bound to its own name in lower camel case, so the two sides
  * of a criterion never look alike even when they share a field name.
  */
-import { camelCase, type IRDeclaration, type IRExpression } from '@ai-lang/core';
+import { camelCase, type IRDeclaration, type IRExpression } from '@haic/core';
 import { parseExpression } from '../expression-parser.js';
 import type { ParseReporter } from '../reporter.js';
 import type { Line } from '../source.js';
@@ -31,7 +31,7 @@ export const queryParser: DeclarationParser = {
     const over = /\bover\s+([A-Z][A-Za-z0-9_]*)/.exec(section.modifiers)?.[1];
     if (!over) {
       reporter.error(
-        'AIL1040',
+        'HADL1040',
         `query ${section.name} does not say what it selects from`,
         section.span,
         'write "## query OrdersForCustomer over Order"',
@@ -43,7 +43,7 @@ export const queryParser: DeclarationParser = {
     const criteria = criteriaOf(parsed, fields.map((f) => f.name), camelCase(over), reporter);
     if (criteria.length === 0) {
       reporter.error(
-        'AIL1041',
+        'HADL1041',
         `query ${section.name} has no criteria`,
         section.span,
         `write "match ${camelCase(over)}.<field> is <parameter>" for each condition`,
@@ -85,7 +85,7 @@ function criteriaOf(parsed: ParsedSection, parameters: readonly string[], subjec
     const guards = parameters.filter((name) => mentions(condition, name));
     if (!mentions(condition, subject)) {
       reporter.error(
-        'AIL1042',
+        'HADL1042',
         `this criterion never mentions "${subject}"`,
         parsed.section.file.spanOf(line),
         `compare a field of the aggregate against a parameter: "match ${subject}.<field> is <parameter>"`,
@@ -106,7 +106,7 @@ function sortOf(parsed: ParsedSection, reporter: ParseReporter): Extract<IRDecla
       const match = /^([A-Za-z_][\w.]*)\s*(ascending|descending|asc|desc)?$/.exec(part.trim());
       if (!match) {
         reporter.error(
-          'AIL1043',
+          'HADL1043',
           `expected "<path> ascending" or "<path> descending", found "${part.trim()}"`,
           parsed.section.file.spanOf(line),
         );
@@ -124,7 +124,7 @@ function limitOf(parsed: ParsedSection, reporter: ParseReporter): number | null 
   if (!line) return null;
   const value = Number(line.text.replace(/^limit\s+/i, '').trim());
   if (!Number.isInteger(value) || value < 1) {
-    reporter.error('AIL1044', 'limit must be a positive whole number', parsed.section.file.spanOf(line));
+    reporter.error('HADL1044', 'limit must be a positive whole number', parsed.section.file.spanOf(line));
     return null;
   }
   return value;

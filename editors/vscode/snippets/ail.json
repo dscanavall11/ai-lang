@@ -12,7 +12,7 @@
       "",
       "$0"
     ],
-    "description": "The header every .ail file starts with"
+    "description": "The header every .hadl file starts with"
   },
 
   "Aggregate": {
@@ -140,7 +140,7 @@
       "then ${5:result}.${7:id} is \"${4:o-1}\"",
       "$0"
     ],
-    "description": "A runnable example, checked by `ail test`"
+    "description": "A runnable example, checked by `haic test`"
   },
 
   "Infrastructure": {

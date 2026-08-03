@@ -32,7 +32,7 @@ import {
   type IRStatement,
   type IRType,
   type ModuleIndex,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { ProjectLayout, type Layer } from '../../shared/layout.js';
 import { PythonEmitter, attributeName, methodName, pythonName } from './emitter.js';
 
@@ -91,7 +91,7 @@ function enumsFile(module: IRModule, index: ModuleIndex): GeneratedFile | null {
     const writer = pyWriter();
     writer.line(`class ${pascalCase(declaration.name)}(str, Enum):`);
     writer.block(() => {
-      docstring(writer, declaration.description ?? `${titleCase(declaration.name)} as declared in AI-Lang.`);
+      docstring(writer, declaration.description ?? `${titleCase(declaration.name)} as declared in HADL.`);
       writer.blank();
       for (const value of declaration.values) {
         if (value.description) writer.line(`# ${value.description}`);
@@ -741,7 +741,7 @@ function sharedErrors(): GeneratedFile {
 
   return pythonFile(
     layout.sharedPath('errors'),
-    'The two error families, mirroring AI-Lang, and the FastAPI handlers that render them.',
+    'The two error families, mirroring HADL, and the FastAPI handlers that render them.',
     [],
     [base.toString(), checked.toString(), unchecked.toString(), install.toString()],
   );
@@ -812,7 +812,7 @@ function readme(context: GenerationContext): GeneratedFile {
   const lines = [
     `# ${context.project.name}`,
     '',
-    'Generated from AI-Lang sources. Edit the `.ail` files and recompile; everything here is overwritten.',
+    'Generated from HADL sources. Edit the `.hadl` files and recompile; everything here is overwritten.',
     '',
     '## Layout',
     '',
@@ -847,7 +847,7 @@ function readme(context: GenerationContext): GeneratedFile {
 }
 
 function dotEnvExample(context: GenerationContext): GeneratedFile {
-  const lines = ['# Generated from the infrastructure blocks of the .ail sources.'];
+  const lines = ['# Generated from the infrastructure blocks of the .hadl sources.'];
   for (const module of context.project.modules) {
     const infrastructure = module.infrastructure;
     if (!infrastructure) continue;
@@ -1007,7 +1007,7 @@ function parameterList(operation: IROperationSignature, emitter: PythonEmitter):
 }
 
 function signatureDoc(operation: IROperationSignature): string {
-  const parts = [operation.description, `Declared in AI-Lang as "${operation.phrase}".`];
+  const parts = [operation.description, `Declared in HADL as "${operation.phrase}".`];
   if (operation.throws.length > 0) parts.push(`Raises ${operation.throws.map((t) => pascalCase(t)).join(', ')}.`);
   return parts.filter(Boolean).join(' ');
 }

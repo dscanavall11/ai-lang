@@ -6,7 +6,7 @@
  * the requirements contain a signal that justifies it; otherwise the default is
  * recorded as an assumption, not presented as a decision.
  */
-import type { CodegenTarget, DiagnosticBag } from '@ai-lang/core';
+import type { CodegenTarget, DiagnosticBag } from '@haic/core';
 import { DEFAULT_TARGET, STACK_RULES, matchMarker } from '../lexicon.js';
 import { workflowDiagram } from '../mermaid.js';
 import {

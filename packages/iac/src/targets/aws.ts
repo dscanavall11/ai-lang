@@ -16,7 +16,7 @@ import {
   type GeneratedFile,
   type IRHandlerDecl,
   type InfrastructureGenerator,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { IAC_CODE, iacWarning, noContextRequests, unsupportedEngine } from '../shared/diagnostics.js';
 import {
   baseEnvironment,
@@ -142,7 +142,7 @@ function samTemplate(plan: InfrastructurePlan, contexts: readonly ContextPlan[],
   const template: Template = {
     AWSTemplateFormatVersion: '2010-09-09',
     Transform: 'AWS::Serverless-2016-10-31',
-    Description: `${plan.project.name}: generated from the AI-Lang infrastructure blocks.`,
+    Description: `${plan.project.name}: generated from the HADL infrastructure blocks.`,
     Parameters: {
       StageName: { Type: 'String', Default: 'dev', Description: 'API Gateway stage the endpoints are published under.' },
     },
@@ -209,7 +209,7 @@ function secretResources(plan: ContextPlan, prefix: string): { resources: Record
       Type: 'AWS::SecretsManager::Secret',
       Properties: {
         Name: { 'Fn::Sub': `\${AWS::StackName}/${secret}` },
-        Description: `${secret}, declared by an AI-Lang infrastructure block.`,
+        Description: `${secret}, declared by an HADL infrastructure block.`,
         // The value is generated in-account, so no placeholder is ever committed.
         GenerateSecretString: { PasswordLength: 32, ExcludePunctuation: true },
       },

@@ -10,7 +10,7 @@ export interface Command {
   readonly name: string;
   readonly summary: string;
   readonly usage: string;
-  /** Flag documentation shown by `ail help <command>`. */
+  /** Flag documentation shown by `haic help <command>`. */
   readonly flags?: ReadonlyArray<{ name: string; description: string }>;
   /** Returns the process exit code. */
   run(context: CommandContext): number | Promise<number>;

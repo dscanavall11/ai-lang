@@ -17,7 +17,7 @@ import {
   type IRStatement,
   type IRType,
   type SourceSpan,
-} from '@ai-lang/core';
+} from '@haic/core';
 import type { AnalysisContext, SemanticPass } from '../context.js';
 import { Scope, withSuggestion } from '../context.js';
 import { BOOLEAN, TypeChecker, UNKNOWN } from '../type-checker.js';
@@ -80,7 +80,7 @@ function checkOperation(
   if (!isNothing(expected) && operation.body.length > 0 && !alwaysReturns(operation.body)) {
     context.diagnostics.error(
       'type',
-      'AIL2120',
+      'HADL2120',
       `${key} must return ${typeToString(expected)} on every path`,
       span,
       { hint: 'add a "return" at the end, or make every branch return or fail' },
@@ -102,7 +102,7 @@ function checkInvariants(
     if (type !== UNKNOWN && !checker.compatible(BOOLEAN, type)) {
       context.diagnostics.error(
         'type',
-        'AIL2121',
+        'HADL2121',
         `invariant "${invariant.description}" must be a yes/no condition, but it is ${typeToString(type)}`,
         invariant.span ?? declaration.span ?? fallbackSpan(context),
       );
@@ -112,7 +112,7 @@ function checkInvariants(
       if (error?.kind !== 'error') {
         context.diagnostics.error(
           'type',
-          'AIL2122',
+          'HADL2122',
           `invariant "${invariant.description}" raises "${invariant.raises}", which is not a declared error`,
           invariant.span ?? declaration.span ?? fallbackSpan(context),
         );
@@ -132,7 +132,7 @@ function checkQuery(context: AnalysisContext, checker: TypeChecker, query: Extra
   if (subject?.kind !== 'aggregate') {
     context.diagnostics.error(
       'type',
-      'AIL2150',
+      'HADL2150',
       `query ${query.name} selects from "${query.over}", which is not an aggregate`,
       span,
       { hint: withSuggestion('', query.over, context.index.aggregates.map((a) => a.name)) ?? 'a query filters one aggregate' },
@@ -154,7 +154,7 @@ function checkQuery(context: AnalysisContext, checker: TypeChecker, query: Extra
     if (type !== UNKNOWN && !checker.compatible(BOOLEAN, type)) {
       context.diagnostics.error(
         'type',
-        'AIL2151',
+        'HADL2151',
         `a criterion must be a yes/no condition, but this is ${typeToString(type)}`,
         criterion.span ?? span,
       );
@@ -167,7 +167,7 @@ function checkQuery(context: AnalysisContext, checker: TypeChecker, query: Extra
     if (!isOrderable(type)) {
       context.diagnostics.error(
         'type',
-        'AIL2152',
+        'HADL2152',
         `cannot sort by ${entry.path.join('.')}: ${typeToString(type)} has no order`,
         span,
         { hint: 'sort by a number, a timestamp or a date' },
@@ -180,7 +180,7 @@ function checkQuery(context: AnalysisContext, checker: TypeChecker, query: Extra
     if (query.criteria.some((c) => c.guards.includes(parameter.name))) continue;
     context.diagnostics.warn(
       'type',
-      'AIL2153',
+      'HADL2153',
       `query ${query.name} takes "${parameter.name}" but no criterion reads it`,
       parameter.span ?? span,
       { hint: `add "match ${camelCase(subject.name)}.<field> is ${parameter.name}", or drop the parameter` },
@@ -212,8 +212,8 @@ function checkStatement(
   switch (statement.kind) {
     case 'let': {
       if (scope.has(statement.name)) {
-        context.diagnostics.error('type', 'AIL2123', `"${statement.name}" is already defined`, statement.span ?? span, {
-          hint: 'pick another name; AI-Lang does not allow shadowing inside an operation',
+        context.diagnostics.error('type', 'HADL2123', `"${statement.name}" is already defined`, statement.span ?? span, {
+          hint: 'pick another name; HADL does not allow shadowing inside an operation',
         });
       }
       scope.define(statement.name, checker.infer(statement.value, scope));
@@ -226,7 +226,7 @@ function checkStatement(
       if (target && !checker.compatible(target.type, value)) {
         context.diagnostics.error(
           'type',
-          'AIL2124',
+          'HADL2124',
           `cannot assign ${typeToString(value)} to ${statement.target.join('.')} of type ${typeToString(target.type)}`,
           statement.span ?? span,
         );
@@ -234,7 +234,7 @@ function checkStatement(
       if (target?.immutable) {
         context.diagnostics.error(
           'type',
-          'AIL2125',
+          'HADL2125',
           `${statement.target.join('.')} is immutable`,
           statement.span ?? span,
           { hint: 'build a new value instead of changing this one' },
@@ -246,11 +246,11 @@ function checkStatement(
     case 'perform': {
       const type = checker.infer(statement.value, scope);
       if (statement.value.kind !== 'call') {
-        context.diagnostics.error('type', 'AIL2126', '"perform" needs an operation call', statement.span ?? span);
+        context.diagnostics.error('type', 'HADL2126', '"perform" needs an operation call', statement.span ?? span);
       } else if (!isNothing(type) && type !== UNKNOWN) {
         context.diagnostics.warn(
           'type',
-          'AIL2127',
+          'HADL2127',
           `the result of "${statement.value.operation}" is discarded`,
           statement.span ?? span,
           { hint: `bind it with "let ... be ${statement.value.operation} ..." if you need it` },
@@ -264,7 +264,7 @@ function checkStatement(
       if (condition !== UNKNOWN && !checker.compatible(BOOLEAN, condition)) {
         context.diagnostics.error(
           'type',
-          'AIL2128',
+          'HADL2128',
           `"when" needs a yes/no condition, but this is ${typeToString(condition)}`,
           statement.span ?? span,
         );
@@ -287,7 +287,7 @@ function checkStatement(
       if (!element) {
         context.diagnostics.error(
           'type',
-          'AIL2129',
+          'HADL2129',
           `"for each" needs a list, but ${typeToString(collection)} is not one`,
           statement.span ?? span,
         );
@@ -302,7 +302,7 @@ function checkStatement(
     case 'fail': {
       const error = checker.lookup(statement.error);
       if (error?.kind !== 'error') {
-        context.diagnostics.error('type', 'AIL2130', `"${statement.error}" is not a declared error`, statement.span ?? span, {
+        context.diagnostics.error('type', 'HADL2130', `"${statement.error}" is not a declared error`, statement.span ?? span, {
           hint: withSuggestion('', statement.error, checker.index.errors.map((e) => e.name)) ?? 'declare it with "## error <Name> (checked, status 4xx)"',
         });
         return;
@@ -313,11 +313,11 @@ function checkStatement(
         const match = expected.find((e) => e.name === argument.name);
         const actual = checker.infer(argument.value, scope);
         if (!match) {
-          context.diagnostics.error('type', 'AIL2131', `error ${error.name} has no field "${argument.name}"`, statement.span ?? span);
+          context.diagnostics.error('type', 'HADL2131', `error ${error.name} has no field "${argument.name}"`, statement.span ?? span);
         } else if (!checker.compatible(match.type, actual)) {
           context.diagnostics.error(
             'type',
-            'AIL2132',
+            'HADL2132',
             `"${argument.name}" expects ${typeToString(match.type)} but received ${typeToString(actual)}`,
             statement.span ?? span,
           );
@@ -327,7 +327,7 @@ function checkStatement(
       if (missing.length > 0) {
         context.diagnostics.error(
           'type',
-          'AIL2133',
+          'HADL2133',
           `error ${error.name} needs ${missing.map((m) => `"${m.name}"`).join(', ')}`,
           statement.span ?? span,
           { hint: `write "fail with ${error.name} using ${missing.map((m) => `${m.name} = ...`).join(', ')}"` },
@@ -339,7 +339,7 @@ function checkStatement(
     case 'publish': {
       const event = checker.lookup(statement.event);
       if (event?.kind !== 'event') {
-        context.diagnostics.error('type', 'AIL2134', `"${statement.event}" is not a declared event`, statement.span ?? span, {
+        context.diagnostics.error('type', 'HADL2134', `"${statement.event}" is not a declared event`, statement.span ?? span, {
           hint: withSuggestion('', statement.event, checker.index.events.map((e) => e.name)),
         });
         return;
@@ -349,11 +349,11 @@ function checkStatement(
         const match = expected.find((e) => e.name === argument.name);
         const actual = checker.infer(argument.value, scope);
         if (!match) {
-          context.diagnostics.error('type', 'AIL2135', `event ${event.name} has no field "${argument.name}"`, statement.span ?? span);
+          context.diagnostics.error('type', 'HADL2135', `event ${event.name} has no field "${argument.name}"`, statement.span ?? span);
         } else if (!checker.compatible(match.type, actual)) {
           context.diagnostics.error(
             'type',
-            'AIL2136',
+            'HADL2136',
             `"${argument.name}" expects ${typeToString(match.type)} but received ${typeToString(actual)}`,
             statement.span ?? span,
           );
@@ -363,7 +363,7 @@ function checkStatement(
       if (missing.length > 0) {
         context.diagnostics.error(
           'type',
-          'AIL2137',
+          'HADL2137',
           `event ${event.name} needs ${missing.map((m) => `"${m.name}"`).join(', ')}`,
           statement.span ?? span,
         );
@@ -379,7 +379,7 @@ function checkStatement(
       if (!element) {
         context.diagnostics.error(
           'type',
-          'AIL2138',
+          'HADL2138',
           `${statement.collection.join('.')} is ${typeToString(target.type)}, not a list`,
           statement.span ?? span,
         );
@@ -389,7 +389,7 @@ function checkStatement(
       if (!checker.compatible(element, value)) {
         context.diagnostics.error(
           'type',
-          'AIL2139',
+          'HADL2139',
           `${statement.collection.join('.')} holds ${typeToString(element)}, not ${typeToString(value)}`,
           statement.span ?? span,
         );
@@ -402,7 +402,7 @@ function checkStatement(
         if (!isNothing(expectedReturn)) {
           context.diagnostics.error(
             'type',
-            'AIL2140',
+            'HADL2140',
             `this operation must return ${typeToString(expectedReturn)}`,
             statement.span ?? span,
           );
@@ -413,7 +413,7 @@ function checkStatement(
       if (!checker.compatible(expectedReturn, actual)) {
         context.diagnostics.error(
           'type',
-          'AIL2141',
+          'HADL2141',
           `this operation returns ${typeToString(expectedReturn)} but the value is ${typeToString(actual)}`,
           statement.span ?? span,
         );
@@ -462,7 +462,7 @@ function resolvePath(
   if (head === undefined) return null;
   let current = scope.lookup(head);
   if (current === undefined) {
-    context.diagnostics.error('type', 'AIL2142', `"${head}" is not defined here`, span, {
+    context.diagnostics.error('type', 'HADL2142', `"${head}" is not defined here`, span, {
       hint: withSuggestion('', head, scope.names()),
     });
     return null;
@@ -471,14 +471,14 @@ function resolvePath(
   for (const part of rest) {
     const inner = unwrap(current);
     if (inner.kind !== 'named') {
-      context.diagnostics.error('type', 'AIL2143', `${typeToString(inner)} has no field "${part}"`, span);
+      context.diagnostics.error('type', 'HADL2143', `${typeToString(inner)} has no field "${part}"`, span);
       return null;
     }
     const declaration = checker.lookup(inner.name);
     const fields = declaration && 'fields' in declaration ? declaration.fields : null;
     const field = fields?.find((f) => f.name === part);
     if (!field) {
-      context.diagnostics.error('type', 'AIL2144', `${inner.name} has no field "${part}"`, span, {
+      context.diagnostics.error('type', 'HADL2144', `${inner.name} has no field "${part}"`, span, {
         hint: withSuggestion('', part, fields?.map((f) => f.name) ?? []),
       });
       return null;

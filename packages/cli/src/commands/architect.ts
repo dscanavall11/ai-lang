@@ -1,10 +1,10 @@
 /**
- * `ail architect` — turn a requirements document into a reviewable spec and a
+ * `haic architect` — turn a requirements document into a reviewable spec and a
  * first draft of the sources. Deterministic: no LLM, no network, no randomness.
  */
 import { readFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
-import { runArchitect } from '@ai-lang/architect';
+import { runArchitect } from '@haic/architect';
 import { flagBoolean, flagString } from '../args.js';
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, type Command } from '../command.js';
 import { dim, error, heading, info, listFiles, success, writeFiles } from '../output.js';
@@ -12,7 +12,7 @@ import { dim, error, heading, info, listFiles, success, writeFiles } from '../ou
 export const architectCommand: Command = {
   name: 'architect',
   summary: 'Turn a requirements document into a reviewable spec and draft sources',
-  usage: 'ail architect <requirements.md> [--out <dir>] [--project <name>]',
+  usage: 'haic architect <requirements.md> [--out <dir>] [--project <name>]',
   flags: [
     { name: '--out <dir>', description: 'Output directory (default: the current directory)' },
     { name: '--project <name>', description: 'Project name (default: the requirements file name)' },
@@ -22,7 +22,7 @@ export const architectCommand: Command = {
   run({ args, cwd }) {
     const input = args.positional[0];
     if (!input) {
-      error('a requirements document is required: ail architect requirements.md');
+      error('a requirements document is required: haic architect requirements.md');
       return EXIT_USAGE;
     }
 
@@ -78,8 +78,8 @@ export const architectCommand: Command = {
     info('');
     info('Next steps:');
     info('  review .ai-spec/ and answer the open questions');
-    info('  ail check src');
-    info('  ail build src');
+    info('  haic check src');
+    info('  haic build src');
     return EXIT_OK;
   },
 };

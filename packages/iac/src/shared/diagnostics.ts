@@ -4,18 +4,18 @@
  * A platform that cannot express something the IR declares says so instead of
  * emitting a plausible-looking guess: an unusable warning beats wrong YAML.
  */
-import { unknownSpan, type Diagnostic, type SourceSpan } from '@ai-lang/core';
+import { unknownSpan, type Diagnostic, type SourceSpan } from '@haic/core';
 
 /** Stable machine-readable codes for the `iac` stage. */
 export const IAC_CODE = {
-  noContextRequests: 'AIL3001',
-  unsupportedRuntime: 'AIL3002',
-  unsupportedDatabase: 'AIL3010',
-  unsupportedBroker: 'AIL3011',
-  unsupportedCache: 'AIL3012',
-  unsupportedObjectStore: 'AIL3013',
-  unsupportedAuth: 'AIL3020',
-  noEventSource: 'AIL3021',
+  noContextRequests: 'HADL3001',
+  unsupportedRuntime: 'HADL3002',
+  unsupportedDatabase: 'HADL3010',
+  unsupportedBroker: 'HADL3011',
+  unsupportedCache: 'HADL3012',
+  unsupportedObjectStore: 'HADL3013',
+  unsupportedAuth: 'HADL3020',
+  noEventSource: 'HADL3021',
 } as const;
 
 export function iacWarning(code: string, message: string, span: SourceSpan, hint?: string): Diagnostic {
@@ -45,6 +45,6 @@ export function unsupportedEngine(
     code,
     `${platform} cannot provision the ${kind} "${resource}": engine "${engine}" has no equivalent there`,
     span,
-    `declare a different engine for "${resource}", or provision it outside AI-Lang`,
+    `declare a different engine for "${resource}", or provision it outside HADL`,
   );
 }

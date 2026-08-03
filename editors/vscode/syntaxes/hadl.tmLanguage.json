@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "name": "AI-Lang",
-  "scopeName": "source.ail",
+  "name": "HADL",
+  "scopeName": "source.hadl",
   "patterns": [
     { "include": "#frontmatter" },
     { "include": "#title" },
@@ -26,16 +26,16 @@
       "comment": "The YAML header, which is the only part of the file that is not prose or declaration.",
       "begin": "\\A---\\s*$",
       "end": "^---\\s*$",
-      "beginCaptures": { "0": { "name": "punctuation.definition.frontmatter.begin.ail" } },
-      "endCaptures": { "0": { "name": "punctuation.definition.frontmatter.end.ail" } },
-      "name": "meta.embedded.frontmatter.ail",
+      "beginCaptures": { "0": { "name": "punctuation.definition.frontmatter.begin.hadl" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.frontmatter.end.hadl" } },
+      "name": "meta.embedded.frontmatter.hadl",
       "patterns": [
         {
           "match": "^\\s*([A-Za-z][A-Za-z0-9_-]*)\\s*(:)\\s*(.*)$",
           "captures": {
-            "1": { "name": "entity.name.tag.ail" },
-            "2": { "name": "punctuation.separator.key-value.ail" },
-            "3": { "name": "string.unquoted.frontmatter.ail" }
+            "1": { "name": "entity.name.tag.hadl" },
+            "2": { "name": "punctuation.separator.key-value.hadl" },
+            "3": { "name": "string.unquoted.frontmatter.hadl" }
           }
         }
       ]
@@ -45,8 +45,8 @@
       "comment": "The module heading. Everything under it that is not a declaration is prose.",
       "match": "^(#)\\s+(.*)$",
       "captures": {
-        "1": { "name": "punctuation.definition.heading.ail" },
-        "2": { "name": "markup.heading.ail entity.name.section.ail" }
+        "1": { "name": "punctuation.definition.heading.hadl" },
+        "2": { "name": "markup.heading.hadl entity.name.section.hadl" }
       }
     },
 
@@ -54,8 +54,8 @@
       "comment": "## <kind> <Name> <trailing clause>. The kind is what gives the file its shape.",
       "match": "^(##)\\s+(aggregate|entity|value[ -]object|enum|enumeration|dto|view|read model|command|domain event|event|error|failure|query|specification|port|interface|adapter|service|use case|usecase|handler|reaction|policy|endpoint|route|infrastructure|infra|glossary|scenario|example)\\b\\s*(.*)$",
       "captures": {
-        "1": { "name": "punctuation.definition.heading.ail" },
-        "2": { "name": "keyword.other.declaration.ail storage.type.ail" },
+        "1": { "name": "punctuation.definition.heading.hadl" },
+        "2": { "name": "keyword.other.declaration.hadl storage.type.hadl" },
         "3": {
           "patterns": [
             { "include": "#http-method" },
@@ -72,23 +72,23 @@
     "declaration-modifier": {
       "comment": "(inbound), (outbound), (checked, status 404).",
       "match": "\\b(inbound|outbound|checked|unchecked|status)\\b",
-      "name": "storage.modifier.ail"
+      "name": "storage.modifier.hadl"
     },
 
     "http-method": {
       "match": "\\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\b",
-      "name": "keyword.other.http-method.ail support.constant.ail"
+      "name": "keyword.other.http-method.hadl support.constant.hadl"
     },
 
     "route-path": {
       "comment": "/tasks/{id} — the placeholder is the part worth seeing.",
       "match": "(/[A-Za-z0-9_./-]*)(\\{)([A-Za-z_][A-Za-z0-9_]*)(\\})|(/[A-Za-z0-9_./-]+)",
       "captures": {
-        "1": { "name": "string.unquoted.route.ail" },
-        "2": { "name": "punctuation.definition.template-expression.begin.ail" },
-        "3": { "name": "variable.parameter.route.ail" },
-        "4": { "name": "punctuation.definition.template-expression.end.ail" },
-        "5": { "name": "string.unquoted.route.ail" }
+        "1": { "name": "string.unquoted.route.hadl" },
+        "2": { "name": "punctuation.definition.template-expression.begin.hadl" },
+        "3": { "name": "variable.parameter.route.hadl" },
+        "4": { "name": "punctuation.definition.template-expression.end.hadl" },
+        "5": { "name": "string.unquoted.route.hadl" }
       }
     },
 
@@ -96,9 +96,9 @@
       "comment": "- name: Type, required, min length 1. Also the bare `- Open` of an enum.",
       "match": "^(\\s*)(-)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(:)\\s*(.*)$",
       "captures": {
-        "2": { "name": "punctuation.definition.list.ail" },
-        "3": { "name": "variable.other.member.declaration.ail" },
-        "4": { "name": "punctuation.separator.type.ail" },
+        "2": { "name": "punctuation.definition.list.hadl" },
+        "3": { "name": "variable.other.member.declaration.hadl" },
+        "4": { "name": "punctuation.separator.type.hadl" },
         "5": {
           "patterns": [
             { "include": "#constraint" },
@@ -115,16 +115,16 @@
     "constraint": {
       "comment": "The vocabulary that turns a field into a rule.",
       "match": "\\b(required|optional|unique|default|list of|set of|map of|min length|max length|min|max|pattern|format|precision|scale|between|one of|reference|references|derived|readonly)\\b",
-      "name": "keyword.other.constraint.ail support.function.ail"
+      "name": "keyword.other.constraint.hadl support.function.hadl"
     },
 
     "port-operation": {
       "comment": "- find task by id (id: uuid) -> Task or TaskNotFound",
       "match": "^(\\s*)(-)\\s+([a-z][A-Za-z0-9_ ]*?)\\s*(\\()",
       "captures": {
-        "2": { "name": "punctuation.definition.list.ail" },
-        "3": { "name": "entity.name.function.ail" },
-        "4": { "name": "punctuation.definition.parameters.begin.ail" }
+        "2": { "name": "punctuation.definition.list.hadl" },
+        "3": { "name": "entity.name.function.hadl" },
+        "4": { "name": "punctuation.definition.parameters.begin.hadl" }
       }
     },
 
@@ -132,49 +132,49 @@
       "comment": "operation create task (command: CreateTask) -> Task:",
       "match": "^(\\s*)(operation)\\s+([a-z][A-Za-z0-9_ ]*?)\\s*(?=\\()",
       "captures": {
-        "2": { "name": "keyword.declaration.function.ail storage.type.function.ail" },
-        "3": { "name": "entity.name.function.ail" }
+        "2": { "name": "keyword.declaration.function.hadl storage.type.function.hadl" },
+        "3": { "name": "entity.name.function.hadl" }
       }
     },
 
     "invariant": {
       "match": "^(\\s*)(invariant|rule|guard)\\b",
-      "captures": { "2": { "name": "keyword.declaration.ail storage.type.ail" } }
+      "captures": { "2": { "name": "keyword.declaration.hadl storage.type.hadl" } }
     },
 
     "endpoint-clause": {
       "comment": "handled by / request / responds N with T / responds N when Error.",
       "match": "^(\\s*)(handled by|responds|request|accepts|produces|secured by|rate limit)\\b",
-      "captures": { "2": { "name": "keyword.control.endpoint.ail" } }
+      "captures": { "2": { "name": "keyword.control.endpoint.hadl" } }
     },
 
     "scenario-step": {
       "comment": "given / when / then / and — the Gherkin spine of a scenario.",
       "match": "^(\\s*)(given|when|then|and)\\b(?=\\s)",
-      "captures": { "2": { "name": "keyword.control.scenario.ail markup.bold" } }
+      "captures": { "2": { "name": "keyword.control.scenario.hadl markup.bold" } }
     },
 
     "statement": {
       "comment": "The imperative core of an operation body.",
       "match": "^(\\s*)(let|set|perform|return|fail with|fail|publish|add|remove|for each|when|otherwise|else|match|sort by|limit|emit)\\b",
-      "captures": { "2": { "name": "keyword.control.ail" } }
+      "captures": { "2": { "name": "keyword.control.hadl" } }
     },
 
     "clause": {
       "comment": "Words that bind a declaration to another one.",
       "match": "\\b(identified by|belongs to|uses|implements|emits|handles|extends|using|over|deploy to|database|version|port|on|to|from|by|of|in|for|as|at most|at least|descending|ascending)\\b",
-      "name": "keyword.other.clause.ail"
+      "name": "keyword.other.clause.hadl"
     },
 
     "operator": {
-      "comment": "AI-Lang spells its operators, which is the whole point.",
+      "comment": "HADL spells its operators, which is the whole point.",
       "match": "\\b(is not|is|are|was|not|and|or|plus|minus|times|divided by|divided|equals|contains|starts with|starts|ends with|ends|matches|with|be|then|carrying|empty|present|absent|greater than|less than|count of|sum of|min of|max of|average of|each of|only|where|new id)\\b",
-      "name": "keyword.operator.word.ail"
+      "name": "keyword.operator.word.hadl"
     },
 
     "constant": {
       "match": "\\b(true|false|yes|no|nothing|null|none|now)\\b",
-      "name": "constant.language.ail"
+      "name": "constant.language.hadl"
     },
 
     "type": {
@@ -182,11 +182,11 @@
       "patterns": [
         {
           "match": "\\b(text|integer|decimal|boolean|uuid|timestamp|date|duration|json|bytes|nothing)\\b",
-          "name": "support.type.primitive.ail"
+          "name": "support.type.primitive.hadl"
         },
         {
           "match": "\\b([A-Z][A-Za-z0-9_]*)\\b",
-          "name": "entity.name.type.ail"
+          "name": "entity.name.type.hadl"
         }
       ]
     },
@@ -194,44 +194,44 @@
     "string": {
       "patterns": [
         {
-          "name": "string.quoted.double.ail",
+          "name": "string.quoted.double.hadl",
           "begin": "\"",
           "end": "\"",
-          "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.ail" } },
-          "endCaptures": { "0": { "name": "punctuation.definition.string.end.ail" } },
+          "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.hadl" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.hadl" } },
           "patterns": [
-            { "match": "\\\\.", "name": "constant.character.escape.ail" },
+            { "match": "\\\\.", "name": "constant.character.escape.hadl" },
             {
               "comment": "Error messages interpolate their own fields.",
               "match": "(\\{)([A-Za-z_][A-Za-z0-9_.]*)(\\})",
               "captures": {
-                "1": { "name": "punctuation.definition.template-expression.begin.ail" },
-                "2": { "name": "variable.other.member.ail" },
-                "3": { "name": "punctuation.definition.template-expression.end.ail" }
+                "1": { "name": "punctuation.definition.template-expression.begin.hadl" },
+                "2": { "name": "variable.other.member.hadl" },
+                "3": { "name": "punctuation.definition.template-expression.end.hadl" }
               }
             }
           ]
         },
         {
-          "name": "string.quoted.single.ail",
+          "name": "string.quoted.single.hadl",
           "begin": "'",
           "end": "'",
-          "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.ail" }]
+          "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.hadl" }]
         }
       ]
     },
 
     "number": {
       "match": "\\b-?[0-9][0-9_]*(\\.[0-9][0-9_]*)?\\b",
-      "name": "constant.numeric.ail"
+      "name": "constant.numeric.hadl"
     },
 
     "punctuation": {
       "patterns": [
-        { "match": "->|=>", "name": "keyword.operator.arrow.ail" },
-        { "match": "=", "name": "keyword.operator.assignment.ail" },
-        { "match": "[(){}\\[\\]]", "name": "punctuation.section.ail" },
-        { "match": "[,.:]", "name": "punctuation.separator.ail" }
+        { "match": "->|=>", "name": "keyword.operator.arrow.hadl" },
+        { "match": "=", "name": "keyword.operator.assignment.hadl" },
+        { "match": "[(){}\\[\\]]", "name": "punctuation.section.hadl" },
+        { "match": "[,.:]", "name": "punctuation.separator.hadl" }
       ]
     }
   }

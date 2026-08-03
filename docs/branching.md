@@ -79,7 +79,7 @@ Admins are included, so the rules apply to the maintainer too. To lift that in a
 emergency:
 
 ```bash
-gh api -X DELETE repos/dscanavall11/ai-lang/branches/main/protection/enforce_admins
+gh api -X DELETE repos/dscanavall11/hadl/branches/main/protection/enforce_admins
 ```
 
 Restore it with `-X POST` on the same endpoint.

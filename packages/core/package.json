@@ -1,22 +1,22 @@
 {
-  "name": "@ai-lang/core",
-  "version": "0.1.1",
-  "description": "The AI-Lang intermediate representation: schema, diagnostics, naming and emission primitives.",
+  "name": "@haic/core",
+  "version": "0.2.0",
+  "description": "The HADL intermediate representation: schema, diagnostics, naming and emission primitives.",
   "keywords": [
-    "ai-lang",
+    "hadl",
     "compiler",
     "intermediate-representation"
   ],
   "license": "Apache-2.0",
   "author": "dscanavall11",
-  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "homepage": "https://github.com/dscanavall11/hadl#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "url": "git+https://github.com/dscanavall11/hadl.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/dscanavall11/ai-lang/issues"
+    "url": "https://github.com/dscanavall11/hadl/issues"
   },
   "engines": {
     "node": ">=20"

@@ -1,4 +1,4 @@
-/** `ail check` — parse, analyse and report. The command every other one starts with. */
+/** `haic check` — parse, analyse and report. The command every other one starts with. */
 import { flagBoolean, flagString } from '../args.js';
 import { EXIT_FAILURE, EXIT_OK, type Command } from '../command.js';
 import { loadProject, renderDiagnostics } from '../driver.js';
@@ -6,8 +6,8 @@ import { heading, info, summarise } from '../output.js';
 
 export const checkCommand: Command = {
   name: 'check',
-  summary: 'Parse and analyse .ail sources without generating anything',
-  usage: 'ail check [paths...] [--strict] [--project <name>]',
+  summary: 'Parse and analyse .hadl sources without generating anything',
+  usage: 'haic check [paths...] [--strict] [--project <name>]',
   flags: [
     { name: '--strict', description: 'Treat warnings as errors' },
     { name: '--project <name>', description: 'Project name recorded in the IR' },
@@ -17,7 +17,7 @@ export const checkCommand: Command = {
   run({ args, cwd }) {
     const loaded = loadProject(args.positional, cwd, {
       strict: flagBoolean(args, 'strict'),
-      projectName: flagString(args, 'project', 'ai-lang-project'),
+      projectName: flagString(args, 'project', 'hadl-project'),
     });
 
     if (!flagBoolean(args, 'quiet') && loaded.diagnostics.length > 0) {

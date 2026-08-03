@@ -104,7 +104,7 @@ export function typeEquals(a: IRType, b: IRType): boolean {
   }
 }
 
-/** Renders a type back into AI-Lang surface syntax. Used by diagnostics and docs. */
+/** Renders a type back into HADL surface syntax. Used by diagnostics and docs. */
 export function typeToString(type: IRType): string {
   switch (type.kind) {
     case 'primitive':

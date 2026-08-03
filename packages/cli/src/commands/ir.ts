@@ -1,4 +1,4 @@
-/** `ail ir` — dump the typed IR. The artifact other tools (and reviewers) read. */
+/** `haic ir` — dump the typed IR. The artifact other tools (and reviewers) read. */
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { flagBoolean, flagString } from '../args.js';
@@ -9,14 +9,14 @@ import { error, info, success, summarise } from '../output.js';
 export const irCommand: Command = {
   name: 'ir',
   summary: 'Print the typed intermediate representation as JSON',
-  usage: 'ail ir [paths...] [--out <file>] [--pretty]',
+  usage: 'haic ir [paths...] [--out <file>] [--pretty]',
   flags: [
     { name: '--out <file>', description: 'Write to a file instead of stdout' },
     { name: '--pretty', description: 'Indent the JSON (default when writing to a terminal)' },
   ],
 
   run({ args, cwd }) {
-    const loaded = loadProject(args.positional, cwd, { projectName: flagString(args, 'project', 'ai-lang-project') });
+    const loaded = loadProject(args.positional, cwd, { projectName: flagString(args, 'project', 'hadl-project') });
     if (!loaded.ok) {
       info(renderDiagnostics(loaded));
       error(`cannot emit IR: ${summarise(loaded.diagnostics)}`);

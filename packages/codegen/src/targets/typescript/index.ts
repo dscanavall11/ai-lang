@@ -32,7 +32,7 @@ import {
   type IRQueryDecl,
   type IRType,
   type ModuleIndex,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { prefixReferences } from '../../shared/emitter.js';
 import { ProjectLayout, relativeImport } from '../../shared/layout.js';
 import { compileQuery } from '../../shared/query-sql.js';
@@ -257,7 +257,7 @@ function messagesFile(module: IRModule, index: ModuleIndex) {
     writer.block(() => {
       for (const field of declaration.fields) {
         fieldDoc(writer, field);
-        // AI-Lang has no `undefined`: an optional field is present and null, so
+        // HADL has no `undefined`: an optional field is present and null, so
         // it assigns straight into a domain field of the same optional type.
         writer.line(`${camelCase(field.name)}: ${emitter.typeName(field.type)};`);
       }
@@ -774,7 +774,7 @@ function sharedErrors() {
   const writer = banner();
   writer.lines_(
     comment(
-      'Two error families, mirroring AI-Lang. A CheckedError is part of a contract and every caller is expected to handle it. An UncheckedError signals a defect: catching it to keep going only hides the bug.',
+      'Two error families, mirroring HADL. A CheckedError is part of a contract and every caller is expected to handle it. An UncheckedError signals a defect: catching it to keep going only hides the bug.',
       ' * ',
     ).map((l, i, all) => (i === 0 ? `/**\n${l}` : i === all.length - 1 ? `${l}\n */` : l)),
   );
@@ -971,7 +971,7 @@ function readme(context: GenerationContext) {
   const lines = [
     `# ${context.project.name}`,
     '',
-    'Generated from AI-Lang sources. Edit the `.ail` files and recompile; everything here is overwritten.',
+    'Generated from HADL sources. Edit the `.hadl` files and recompile; everything here is overwritten.',
     '',
     '## Layout',
     '',
@@ -999,7 +999,7 @@ function readme(context: GenerationContext) {
 }
 
 function dotEnvExample(context: GenerationContext) {
-  const lines = ['# Generated from the infrastructure blocks of the .ail sources.'];
+  const lines = ['# Generated from the infrastructure blocks of the .hadl sources.'];
   for (const module of context.project.modules) {
     const infrastructure = module.infrastructure;
     if (!infrastructure) continue;
@@ -1270,7 +1270,7 @@ function fieldDoc(writer: CodeWriter, field: IRField): void {
 function signatureDoc(writer: CodeWriter, operation: IROperationSignature): void {
   const lines: string[] = [];
   if (operation.description) lines.push(operation.description);
-  lines.push(`Declared in AI-Lang as "${operation.phrase}".`);
+  lines.push(`Declared in HADL as "${operation.phrase}".`);
   for (const name of operation.throws) lines.push(`@throws ${pascalCase(name)}`);
   writer.line('/**');
   for (const line of lines) writer.line(` * ${line}`);

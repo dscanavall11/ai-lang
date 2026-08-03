@@ -1,11 +1,11 @@
 /** Source discovery, parsing and analysis — the front half of every command. */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
-import { DiagnosticBag, formatDiagnostics, type Diagnostic, type IRModule, type IRProject } from '@ai-lang/core';
-import { parseModule } from '@ai-lang/parser';
-import { analyze, type AnalyzeOptions } from '@ai-lang/analyzer';
+import { DiagnosticBag, formatDiagnostics, type Diagnostic, type IRModule, type IRProject } from '@haic/core';
+import { parseModule } from '@haic/parser';
+import { analyze, type AnalyzeOptions } from '@haic/analyzer';
 
-export const SOURCE_EXTENSION = '.ail';
+export const SOURCE_EXTENSION = '.hadl';
 
 export interface LoadedProject {
   project: IRProject;
@@ -14,7 +14,7 @@ export interface LoadedProject {
   ok: boolean;
 }
 
-/** Collects every `.ail` file under the given files or directories. */
+/** Collects every `.hadl` file under the given files or directories. */
 export function discoverSources(inputs: readonly string[], cwd: string): string[] {
   const roots = inputs.length > 0 ? inputs : ['.'];
   const found: string[] = [];
@@ -80,7 +80,7 @@ export function loadProject(inputs: readonly string[], cwd: string, options: Ana
 function emptyProject(options: AnalyzeOptions): IRProject {
   return {
     irVersion: '0.1',
-    name: options.projectName ?? 'ai-lang-project',
+    name: options.projectName ?? 'hadl-project',
     contexts: [],
     contextMap: [],
     modules: [],

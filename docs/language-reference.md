@@ -1,10 +1,10 @@
-# AI-Lang Language Reference
+# HADL Language Reference
 
-AI-Lang is a programming language whose source is a Markdown document. It exists
+HADL is a programming language whose source is a Markdown document. It exists
 for one purpose: to be the thing an AI writes when it is asked to build software,
 so that what gets built is the system that was asked for and nothing else.
 
-A `.ail` file declares a **bounded context's module**: its domain model, the rules
+A `.hadl` file declares a **bounded context's module**: its domain model, the rules
 that model must obey, the ports it depends on, the use cases it exposes, and the
 infrastructure it needs. The compiler lowers that into a typed IR, checks it
 against the rules below, and emits idiomatic code in a target language plus the
@@ -131,7 +131,7 @@ invariant "amounts are never negative":
 ```
 
 A value object may not declare an identity field, and may not hold anything that
-has one (`AIL2208`).
+has one (`HADL2208`).
 
 ### 4.3 `entity`
 
@@ -169,11 +169,11 @@ operation compute total () -> Money:
 
 Rules the compiler enforces:
 
-- an entity named in `contains` belongs to no other aggregate (`AIL2203`);
-- nothing outside the aggregate may reference a contained entity (`AIL2206`);
-- an aggregate references another by identity, never by embedding (`AIL2207`);
-- an aggregate operation may not call a port (`AIL2213`);
-- an aggregate with no invariants and no operations is flagged (`AIL2214`).
+- an entity named in `contains` belongs to no other aggregate (`HADL2203`);
+- nothing outside the aggregate may reference a contained entity (`HADL2206`);
+- an aggregate references another by identity, never by embedding (`HADL2207`);
+- an aggregate operation may not call a port (`HADL2213`);
+- an aggregate with no invariants and no operations is flagged (`HADL2214`).
 
 ### 4.5 Field syntax
 
@@ -222,12 +222,12 @@ message: "cannot total an order with no items"
 ```
 
 **Checked** errors are part of a contract. Every operation that can raise one
-must declare it (`AIL2303`), every endpoint that exposes one must map it to a
-status (`AIL2305`), and declaring one that can never happen is flagged
-(`AIL2304`).
+must declare it (`HADL2303`), every endpoint that exposes one must map it to a
+status (`HADL2305`), and declaring one that can never happen is flagged
+(`HADL2304`).
 
 **Unchecked** errors signal a defect. They propagate on their own and may never
-appear in a contract (`AIL2302`).
+appear in a contract (`HADL2302`).
 
 `{fieldName}` inside `message` is substituted from the error's own fields.
 
@@ -242,10 +242,10 @@ appear in a contract (`AIL2302`).
 - place order (command: PlaceOrder) -> OrderPlaced or OrderNotFound
 ```
 
-`outbound` — the domain drives the outside world. Needs an adapter (`AIL2408`).
-`inbound` — the outside world drives the domain. Needs a service (`AIL2409`).
+`outbound` — the domain drives the outside world. Needs an adapter (`HADL2408`).
+`inbound` — the outside world drives the domain. Needs a service (`HADL2409`).
 
-A port with more than seven operations is flagged (`AIL2421`). Most of the time
+A port with more than seven operations is flagged (`HADL2421`). Most of the time
 the cure is a [`## query`](#49-query) rather than a narrower port: one criterion
 replaces the family of `find … by …` methods that made the port wide.
 
@@ -271,7 +271,7 @@ The port stays a real seam: swapping `using sql` for `using in-memory` changes
 one word and nothing else in the module. Write the long form when you need a
 name of your own, several adapters for one port, or per-operation bodies.
 
-An inbound port may not name a technology (`AIL1031`): it is fulfilled by a
+An inbound port may not name a technology (`HADL1031`): it is fulfilled by a
 service, not by infrastructure.
 
 ### 4.9 `query`
@@ -318,11 +318,11 @@ agree on what a comparison against nothing means: false.
 
 Rules:
 
-- the source must be an aggregate (`AIL2150`);
-- a criterion must be a yes/no condition (`AIL2151`) and must mention the
-  aggregate (`AIL1042`);
-- `sort by` needs an ordered type (`AIL2152`);
-- a parameter no criterion reads is flagged (`AIL2153`).
+- the source must be an aggregate (`HADL2150`);
+- a criterion must be a yes/no condition (`HADL2151`) and must mention the
+  aggregate (`HADL1042`);
+- `sort by` needs an ordered type (`HADL2152`);
+- a parameter no criterion reads is flagged (`HADL2153`).
 
 Deliberately narrow: filter, sort and limit over **one** aggregate. No joins, no
 projections, no aggregation. A criterion with no faithful SQL form is left out
@@ -347,7 +347,7 @@ plainly, in the generated code, where they could not.
 
 More than one adapter may implement the same port — an in-memory pair for tests
 is the usual reason — but the generated composition root wires the first, and
-says which one (`AIL2423`).
+says which one (`HADL2423`).
 
 ### 4.11 `service`
 
@@ -361,8 +361,8 @@ operation place order (command: PlaceOrder) -> OrderPlaced or OrderNotFound:
   ...
 ```
 
-`uses` may only name ports (`AIL2402`, `AIL2403`). A service whose operations use
-disjoint sets of ports is flagged as two services sharing a name (`AIL2422`).
+`uses` may only name ports (`HADL2402`, `HADL2403`). A service whose operations use
+disjoint sets of ports is flagged as two services sharing a name (`HADL2422`).
 
 ### 4.12 `endpoint`
 
@@ -377,7 +377,7 @@ responds 409 when OrderAlreadyPlaced
 ```
 
 Every path parameter must be carried by the request or by a parameter of the
-handled operation (`AIL2416`).
+handled operation (`HADL2416`).
 
 ### 4.13 `handler`
 
@@ -415,7 +415,7 @@ Only names appear here. A secret's **value** never lives in the source.
 
 ### 4.15 `scenario`
 
-An executable example. `ail test` runs these **against the IR itself** — no code
+An executable example. `haic test` runs these **against the IR itself** — no code
 is generated, no toolchain is needed, and no tokens are spent.
 
 ```
@@ -460,7 +460,7 @@ reported as **inconclusive**, never as a pass:
 1 passed, 0 failed, 1 could not run
 ```
 
-`ail test` exits non-zero when anything failed **or** could not run. Reporting
+`haic test` exits non-zero when anything failed **or** could not run. Reporting
 "0 failures" for work that never happened is the one thing a test runner must
 not do.
 
@@ -603,10 +603,10 @@ They compose, and with the aggregates:
 sum of only items where quantity is greater than 1 by unitPrice.amount
 ```
 
-`each of` requires its `by` (`AIL1112`) and `only` requires its `where`
-(`AIL1113`) — a projection with nothing to project is the collection itself.
-A `where` clause that is not a condition is `AIL2115`, and either form over
-something that is not a list is `AIL2107`.
+`each of` requires its `by` (`HADL1112`) and `only` requires its `where`
+(`HADL1113`) — a projection with nothing to project is the collection itself.
+A `where` clause that is not a condition is `HADL2115`, and either form over
+something that is not a list is `HADL2107`.
 
 There is no `flat map` yet: a projection that returns a list per element still
 has to be written as a `for each` loop.
@@ -630,7 +630,7 @@ Each field of `OrderSummary` is resolved in this order:
 Anything left over is **an error**, never a silent null:
 
 ```
-error[AIL2147]: OrderSummary needs "itemCount", which Order does not provide
+error[HADL2147]: OrderSummary needs "itemCount", which Order does not provide
   help: add them explicitly: "with itemCount = ..."
 ```
 
@@ -646,7 +646,7 @@ else.
 
 There is no automatic mapping without `from`. A construction that names no
 source states every field, and a bare type name used as a value is an error
-(`AIL2149`) rather than an empty object.
+(`HADL2149`) rather than an empty object.
 
 ### 6.2 Calling an aggregate operation
 
@@ -679,10 +679,10 @@ The backend emits `order.computeTotal()`.
 | `AIL25xx` | Simplicity (YAGNI) |
 | `AIL29xx` | Internal IR validation |
 
-`ail explain <code>` prints the reasoning behind the design rules.
+`haic explain <code>` prints the reasoning behind the design rules.
 
 Everything in `AIL25xx` is a warning or a note, never an error: unused code is a
-smell, not a contradiction. `ail check --strict` promotes them to errors.
+smell, not a contradiction. `haic check --strict` promotes them to errors.
 
 ---
 

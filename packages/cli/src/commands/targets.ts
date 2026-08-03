@@ -1,13 +1,13 @@
-/** `ail targets` — what this build of the compiler can emit. */
-import { codeGenerators } from '@ai-lang/codegen';
-import { infrastructureGenerators } from '@ai-lang/iac';
+/** `haic targets` — what this build of the compiler can emit. */
+import { codeGenerators } from '@haic/codegen';
+import { infrastructureGenerators } from '@haic/iac';
 import { EXIT_OK, type Command } from '../command.js';
 import { dim, heading, info } from '../output.js';
 
 export const targetsCommand: Command = {
   name: 'targets',
   summary: 'List the available language and deployment targets',
-  usage: 'ail targets',
+  usage: 'haic targets',
 
   run() {
     heading('Languages');

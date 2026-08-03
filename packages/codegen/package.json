@@ -1,9 +1,9 @@
 {
-  "name": "@ai-lang/codegen",
-  "version": "0.1.1",
-  "description": "AI-Lang code generators: one backend per target language, all from one IR.",
+  "name": "@haic/codegen",
+  "version": "0.2.0",
+  "description": "HADL code generators: one backend per target language, all from one IR.",
   "keywords": [
-    "ai-lang",
+    "hadl",
     "code-generation",
     "java",
     "typescript",
@@ -12,14 +12,14 @@
   ],
   "license": "Apache-2.0",
   "author": "dscanavall11",
-  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "homepage": "https://github.com/dscanavall11/hadl#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "url": "git+https://github.com/dscanavall11/hadl.git",
     "directory": "packages/codegen"
   },
   "bugs": {
-    "url": "https://github.com/dscanavall11/ai-lang/issues"
+    "url": "https://github.com/dscanavall11/hadl/issues"
   },
   "engines": {
     "node": ">=20"
@@ -37,6 +37,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.1"
+    "@haic/core": "0.2.0"
   }
 }

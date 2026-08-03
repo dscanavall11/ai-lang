@@ -6,7 +6,7 @@
  * calls, no network, no randomness. Anything the requirements leave open becomes
  * an explicit question rather than a guess.
  */
-import { DiagnosticBag } from '@ai-lang/core';
+import { DiagnosticBag } from '@haic/core';
 import { RequirementsDocument } from './document.js';
 import type { Phase } from './phase.js';
 import { architecturePhase } from './phases/architecture.js';

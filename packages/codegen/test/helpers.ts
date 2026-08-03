@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect } from 'vitest';
-import { DiagnosticBag, formatDiagnostics, type GeneratedFile, type IRModule, type IRProject } from '@ai-lang/core';
-import { parseModule } from '@ai-lang/parser';
-import { analyze } from '@ai-lang/analyzer';
+import { DiagnosticBag, formatDiagnostics, type GeneratedFile, type IRModule, type IRProject } from '@haic/core';
+import { parseModule } from '@haic/parser';
+import { analyze } from '@haic/analyzer';
 
-const EXAMPLES = ['examples/orders/orders.ail', 'examples/orders/catalog.ail'];
+const EXAMPLES = ['examples/orders/orders.hadl', 'examples/orders/catalog.hadl'];
 
 /** Any set of example sources, parsed and analysed, with errors surfaced as failures. */
 export function projectFrom(paths: readonly string[], projectName: string): IRProject {

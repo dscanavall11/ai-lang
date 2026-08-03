@@ -1,5 +1,5 @@
 /** Parsers for the declarations that carry data: enum, value object, entity, aggregate, dto, command, event, error. */
-import type { IRDeclaration } from '@ai-lang/core';
+import type { IRDeclaration } from '@haic/core';
 import { bulletBody } from '../field-parser.js';
 import type { ParseReporter } from '../reporter.js';
 import type { Section } from '../section.js';
@@ -19,7 +19,7 @@ export const enumParser: DeclarationParser = {
       return value;
     });
     if (values.length === 0) {
-      reporter.error('AIL1010', `enum ${section.name} has no values`, section.span, 'list values as "- Draft"');
+      reporter.error('HADL1010', `enum ${section.name} has no values`, section.span, 'list values as "- Draft"');
       return null;
     }
     return withDescription({ kind: 'enum', name: section.name, values, span: section.span }, parsed.description);
@@ -32,13 +32,13 @@ export const valueObjectParser: DeclarationParser = {
     const parsed = read(section);
     const fields = fieldsOf(parsed, reporter);
     if (fields.length === 0) {
-      reporter.error('AIL1011', `value object ${section.name} has no fields`, section.span);
+      reporter.error('HADL1011', `value object ${section.name} has no fields`, section.span);
       return null;
     }
     for (const field of fields) {
       if (field.identity) {
         reporter.error(
-          'AIL1012',
+          'HADL1012',
           `value object ${section.name} cannot have an identity field`,
           field.span ?? section.span,
           'value objects are compared by their values; use "## entity" when identity matters',
@@ -58,7 +58,7 @@ export const entityParser: DeclarationParser = {
     const parsed = read(section);
     const fields = fieldsOf(parsed, reporter);
     if (fields.length === 0) {
-      reporter.error('AIL1013', `entity ${section.name} has no fields`, section.span);
+      reporter.error('HADL1013', `entity ${section.name} has no fields`, section.span);
       return null;
     }
     const aggregate = singleAttribute(parsed, /^(belongs\s+to|part\s+of)\s+/i);
@@ -83,7 +83,7 @@ export const aggregateParser: DeclarationParser = {
     const parsed = read(section);
     const fields = fieldsOf(parsed, reporter);
     if (fields.length === 0) {
-      reporter.error('AIL1014', `aggregate ${section.name} has no fields`, section.span);
+      reporter.error('HADL1014', `aggregate ${section.name} has no fields`, section.span);
       return null;
     }
     return withDescription(
@@ -164,7 +164,7 @@ export const errorParser: DeclarationParser = {
     const isUnchecked = modifiers.includes('unchecked') || modifiers.includes('panic');
     if (!isChecked && !isUnchecked) {
       reporter.error(
-        'AIL1015',
+        'HADL1015',
         `error ${section.name} must say whether it is checked or unchecked`,
         section.span,
         'write "## error OrderNotFound (checked, status 404)" for errors callers must handle, or "(unchecked)" for bugs',

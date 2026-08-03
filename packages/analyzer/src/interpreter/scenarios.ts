@@ -5,7 +5,7 @@
  * execute is **inconclusive**, never a pass. Reporting "0 failures" for work
  * that never ran is the one thing a test runner must not do.
  */
-import { indexModule, type IRModule, type IRScenarioDecl, type SourceSpan } from '@ai-lang/core';
+import { indexModule, type IRModule, type IRScenarioDecl, type SourceSpan } from '@haic/core';
 import { DomainFailure, Interpreter, Unsupported } from './runtime.js';
 import { isRecord, show, type Value } from './values.js';
 

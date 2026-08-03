@@ -13,7 +13,7 @@ import { defaultDeclarationRegistry } from '../src/module-parser.js';
 import { RESERVED_WORDS } from '../src/tokens.js';
 
 const grammar = JSON.parse(
-  readFileSync(fileURLToPath(new URL('../../../editors/vscode/syntaxes/ail.tmLanguage.json', import.meta.url)), 'utf8'),
+  readFileSync(fileURLToPath(new URL('../../../editors/vscode/syntaxes/hadl.tmLanguage.json', import.meta.url)), 'utf8'),
 ) as {
   repository: Record<string, { match?: string; patterns?: Array<{ match?: string }> }>;
 };

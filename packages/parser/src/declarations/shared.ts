@@ -1,5 +1,5 @@
 /** Helpers reused by several declaration parsers. */
-import type { IRField, IRInvariant, IROperation, IROperationSignature } from '@ai-lang/core';
+import type { IRField, IRInvariant, IROperation, IROperationSignature } from '@haic/core';
 import { bulletBody, parseFieldLine, parseOperationSignature, splitTopLevel, subCursor } from '../field-parser.js';
 import { parseExpression } from '../expression-parser.js';
 import type { ParseReporter } from '../reporter.js';
@@ -38,7 +38,7 @@ export function identityOf(parsed: ParsedSection, fields: IRField[], reporter: P
     for (const name of names) {
       if (!fields.some((f) => f.name === name)) {
         reporter.error(
-          'AIL1002',
+          'HADL1002',
           `"${name}" is not a field of ${parsed.section.name}`,
           parsed.section.file.spanOf(line),
           'the identity must name fields declared in this block',
@@ -53,7 +53,7 @@ export function identityOf(parsed: ParsedSection, fields: IRField[], reporter: P
   if (conventional) return ['id'];
 
   reporter.error(
-    'AIL1003',
+    'HADL1003',
     `${parsed.section.keyword} ${parsed.section.name} has no identity`,
     parsed.section.span,
     'add a field named "id", mark one field "identity", or write "identified by <field>"',
@@ -93,7 +93,7 @@ export function invariantsOf(parsed: ParsedSection, reporter: ParseReporter): IR
     block.body.skipTrivia();
     const conditionLine = block.body.peek();
     if (!conditionLine) {
-      reporter.error('AIL1004', `invariant "${description}" has no condition`, parsed.section.file.spanOf(block.header));
+      reporter.error('HADL1004', `invariant "${description}" has no condition`, parsed.section.file.spanOf(block.header));
       continue;
     }
     block.body.next();
@@ -167,7 +167,7 @@ export function parseKeyValues(
       const separator = part.indexOf('=') >= 0 ? '=' : ':';
       const index = part.indexOf(separator);
       if (index < 0) {
-        reporter.error('AIL1005', `expected "key = value", found "${part.trim()}"`, file.spanOf(line));
+        reporter.error('HADL1005', `expected "key = value", found "${part.trim()}"`, file.spanOf(line));
         continue;
       }
       const key = part.slice(0, index).trim();

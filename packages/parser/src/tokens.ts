@@ -1,11 +1,11 @@
 /**
  * Inline tokenizer.
  *
- * Splits the text of a single line into words, literals and punctuation. AI-Lang
+ * Splits the text of a single line into words, literals and punctuation. HADL
  * has no operator symbols apart from `=`, `.`, `,` and parentheses: everything
  * else is a word, which is what makes the surface syntax read as prose.
  */
-import type { SourceSpan } from '@ai-lang/core';
+import type { SourceSpan } from '@haic/core';
 import type { Line, SourceFile } from './source.js';
 
 export type TokenKind = 'word' | 'number' | 'string' | 'punct';

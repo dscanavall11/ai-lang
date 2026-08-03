@@ -14,7 +14,7 @@ import {
   type Diagnostic,
   type GeneratedFile,
   type InfrastructureGenerator,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { IAC_CODE, noContextRequests, unsupportedEngine } from '../shared/diagnostics.js';
 import {
   HclWriter,
@@ -696,7 +696,7 @@ function rootModule(plan: InfrastructurePlan, contexts: readonly ContextPlan[], 
           object([
             ['Project', 'var.project'],
             ['Environment', 'var.environment'],
-            ['ManagedBy', quote('ai-lang')],
+            ['ManagedBy', quote('hadl')],
           ]),
         ],
       ]),
@@ -940,7 +940,7 @@ function securityModule(contexts: readonly ContextPlan[], data: DataPlan): Gener
     writer.block('resource "aws_security_group" "service"', (body) =>
       body.attributes([
         ['name', '"${var.name_prefix}-service"'],
-        ['description', quote('Application tasks generated from the AI-Lang bounded contexts')],
+        ['description', quote('Application tasks generated from the HADL bounded contexts')],
         ['vpc_id', 'var.vpc_id'],
         ['tags', 'var.tags'],
       ]),
@@ -975,7 +975,7 @@ function securityModule(contexts: readonly ContextPlan[], data: DataPlan): Gener
       writer.block('resource "aws_security_group" "data"', (body) =>
         body.attributes([
           ['name', '"${var.name_prefix}-data"'],
-          ['description', quote('Backing services declared in the AI-Lang sources')],
+          ['description', quote('Backing services declared in the HADL sources')],
           ['vpc_id', 'var.vpc_id'],
           ['tags', 'var.tags'],
         ]),
@@ -998,11 +998,11 @@ function securityModule(contexts: readonly ContextPlan[], data: DataPlan): Gener
 
     for (const secret of data.secrets) {
       writer.blank();
-      writer.comment(`declared as "secrets ${secret}"; the value is written outside AI-Lang`);
+      writer.comment(`declared as "secrets ${secret}"; the value is written outside HADL`);
       writer.block(`resource "aws_secretsmanager_secret" ${quote(secretKey(secret))}`, (body) =>
         body.attributes([
           ['name', `"\${var.name_prefix}/${secret}"`],
-          ['description', quote(`${secret}, declared by an AI-Lang infrastructure block`)],
+          ['description', quote(`${secret}, declared by an HADL infrastructure block`)],
           ['recovery_window_in_days', 'var.secret_recovery_window_days'],
           ['tags', 'var.tags'],
         ]),

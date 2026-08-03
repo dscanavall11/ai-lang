@@ -4,7 +4,7 @@
  * Terraform files are nothing but blocks of aligned `name = value` pairs; owning
  * that shape here is what keeps the Terraform generator free of string surgery.
  */
-import { CodeWriter, GENERATED_BANNER } from '@ai-lang/core';
+import { CodeWriter, GENERATED_BANNER } from '@haic/core';
 
 export type HclEntry = readonly [name: string, value: string];
 
@@ -134,7 +134,7 @@ export function object(entries: readonly HclEntry[]): string {
   return `{ ${entries.map(([name, value]) => `${name} = ${value}`).join(', ')} }`;
 }
 
-/** Terraform identifiers allow letters, digits, `-` and `_`; AI-Lang names may not. */
+/** Terraform identifiers allow letters, digits, `-` and `_`; HADL names may not. */
 export function identifier(name: string): string {
   return name.replace(/[^A-Za-z0-9_-]/g, '_');
 }

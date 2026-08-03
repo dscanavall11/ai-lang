@@ -1,11 +1,11 @@
 /**
  * Infrastructure generator registry.
  *
- * `ail deploy --iac-target <id>` looks the platform up here. Supporting another
+ * `haic deploy --iac-target <id>` looks the platform up here. Supporting another
  * one means writing a new file and adding a `.register(...)` line: none of the
  * existing generators changes.
  */
-import { Registry, type GenerationContext, type GenerationResult, type InfrastructureGenerator } from '@ai-lang/core';
+import { Registry, type GenerationContext, type GenerationResult, type InfrastructureGenerator } from '@haic/core';
 import { awsGenerator } from './targets/aws.js';
 import { dockerGenerator } from './targets/docker.js';
 import { kubernetesGenerator } from './targets/kubernetes.js';
