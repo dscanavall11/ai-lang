@@ -1,6 +1,6 @@
 {
-  "name": "ai-lang-monorepo",
-  "version": "0.1.1",
+  "name": "hadl-monorepo",
+  "version": "0.2.0",
   "private": true,
   "description": "A natural-language programming language for AI to write software in. Compiles to Java, TypeScript, Python, Go and Rust, plus Docker, Kubernetes, Terraform and AWS.",
   "license": "Apache-2.0",
@@ -18,20 +18,20 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "release:dry": "npm run build && npm publish --workspaces --dry-run",
-    "ail": "node --experimental-strip-types packages/cli/src/bin.ts"
+    "hadl": "node --experimental-strip-types packages/cli/src/bin.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
-  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "homepage": "https://github.com/dscanavall11/hadl#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscanavall11/ai-lang.git"
+    "url": "git+https://github.com/dscanavall11/hadl.git"
   },
   "bugs": {
-    "url": "https://github.com/dscanavall11/ai-lang/issues"
+    "url": "https://github.com/dscanavall11/hadl/issues"
   },
   "author": "dscanavall11",
   "keywords": [

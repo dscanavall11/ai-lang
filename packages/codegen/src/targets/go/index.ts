@@ -37,7 +37,7 @@ import {
   type IRType,
   type IRValueObjectDecl,
   type ModuleIndex,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { ProjectLayout } from '../../shared/layout.js';
 import { GoEmitter, goExported, goPackage, goString, goUnexported } from './emitter.js';
 
@@ -684,7 +684,7 @@ function mainFile(context: GenerationContext) {
 
 function sharedErrors() {
   const writer = goWriter();
-  writer.lines_(comment('Two error families mirror AI-Lang. A checked error is part of a contract and every caller is expected to handle it; an unchecked one signals a defect and is raised as a panic.', '// '));
+  writer.lines_(comment('Two error families mirror HADL. A checked error is part of a contract and every caller is expected to handle it; an unchecked one signals a defect and is raised as a panic.', '// '));
   writer.line('type StatusCarrier interface {');
   writer.block(() => writer.line('Status() int'));
   writer.line('}');
@@ -775,7 +775,7 @@ function sharedNumbers() {
   // time.Time has no relational operators and Go has no Comparable interface, so
   // ordering dispatches on the dynamic type. The analyzer has already proved both
   // sides are ordered and of the same type, so the default branch is unreachable.
-  writer.line('// Ordering across every type AI-Lang considers ordered.');
+  writer.line('// Ordering across every type HADL considers ordered.');
   for (const [name, operator] of [['Gt', '>'], ['Ge', '>='], ['Lt', '<'], ['Le', '<=']] as const) {
     writer.line(`func ${name}(left any, right any) bool { return compareOrdered(left, right) ${operator} 0 }`);
   }
@@ -910,7 +910,7 @@ function readme(context: GenerationContext) {
   const lines = [
     `# ${context.project.name}`,
     '',
-    'Generated from AI-Lang sources. Edit the `.ail` files and recompile; everything here is overwritten.',
+    'Generated from HADL sources. Edit the `.hadl` files and recompile; everything here is overwritten.',
     '',
     '## Layout',
     '',
@@ -941,7 +941,7 @@ function readme(context: GenerationContext) {
 }
 
 function dotEnvExample(context: GenerationContext) {
-  const lines = ['# Generated from the infrastructure blocks of the .ail sources.'];
+  const lines = ['# Generated from the infrastructure blocks of the .hadl sources.'];
   for (const module of context.project.modules) {
     const infrastructure = module.infrastructure;
     if (!infrastructure) continue;
@@ -1207,7 +1207,7 @@ function doc(writer: CodeWriter, name: string, summary: string, description?: st
 
 function signatureDoc(writer: CodeWriter, operation: IROperationSignature): void {
   const name = goExported(operation.phrase);
-  const parts = [`implements the AI-Lang operation "${operation.phrase}", returning ${typeToString(operation.returns)}.`];
+  const parts = [`implements the HADL operation "${operation.phrase}", returning ${typeToString(operation.returns)}.`];
   if (operation.throws.length > 0) parts.push(`It fails with ${operation.throws.join(', ')}.`);
   writer.lines_(comment(`${name} ${parts.join(' ')}`, '// '));
   if (operation.description) {

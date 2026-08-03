@@ -1,11 +1,11 @@
 blank_issues_enabled: true
 contact_links:
   - name: Question or idea
-    url: https://github.com/dscanavall11/ai-lang/discussions
+    url: https://github.com/dscanavall11/hadl/discussions
     about: For anything that is not yet a bug or a concrete proposal.
   - name: Language reference
-    url: https://github.com/dscanavall11/ai-lang/blob/main/docs/language-reference.md
+    url: https://github.com/dscanavall11/hadl/blob/main/docs/language-reference.md
     about: The specification. Check here before reporting a syntax bug.
   - name: Why a rule exists
-    url: https://github.com/dscanavall11/ai-lang/blob/main/docs/decisions.md
+    url: https://github.com/dscanavall11/hadl/blob/main/docs/decisions.md
     about: The reasoning behind the design decisions, including what each one rules out.

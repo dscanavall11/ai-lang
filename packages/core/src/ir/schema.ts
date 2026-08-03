@@ -1,5 +1,5 @@
 /**
- * AI-Lang typed IR.
+ * HADL typed IR.
  *
  * The IR is the single source of truth consumed by every code generator and
  * every infrastructure generator. It is JSON-serializable on purpose: it can be
@@ -571,7 +571,7 @@ export const HandlerDeclSchema = z.object({
 });
 
 /**
- * An executable example. `ail test` runs these against the IR itself, so a
+ * An executable example. `haic test` runs these against the IR itself, so a
  * design can be exercised before a single line of target code exists.
  */
 export const ScenarioDeclSchema = z.object({

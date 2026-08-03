@@ -1,7 +1,7 @@
 /** Terminal output and file writing. */
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { Diagnostic, GeneratedFile } from '@ai-lang/core';
+import type { Diagnostic, GeneratedFile } from '@haic/core';
 
 const COLOURS = {
   reset: '[0m',

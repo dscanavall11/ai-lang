@@ -1,7 +1,7 @@
 /**
  * Executing the IR.
  *
- * `ail test` runs a design before any target code exists, so this evaluates the
+ * `haic test` runs a design before any target code exists, so this evaluates the
  * same statements and expressions the backends lower. It is deliberately not a
  * production runtime: ports resolve to an in-memory store, `now` is frozen, and
  * identifiers are counted rather than random, because a scenario that passes
@@ -20,7 +20,7 @@ import {
   type IRQueryDecl,
   type IRStatement,
   type ModuleIndex,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { compare, emptyFor, equals, isRecord, record, show, type RecordValue, type Value } from './values.js';
 
 /** Raised by `fail`, and by a port that cannot find what it was asked for. */

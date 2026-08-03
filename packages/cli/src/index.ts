@@ -29,7 +29,7 @@ export async function main(argv: readonly string[], cwd: string = process.cwd())
   const args = parseArgs(argv);
 
   if (args.flags.has('version') || args.flags.has('v') || args.command === 'version') {
-    info(`ail ${VERSION}`);
+    info(`haic ${VERSION}`);
     return EXIT_OK;
   }
   if (args.command === undefined || args.command === 'help' || args.flags.has('help') || args.flags.has('h')) {
@@ -40,7 +40,7 @@ export async function main(argv: readonly string[], cwd: string = process.cwd())
   const command = registry.get(args.command);
   if (!command) {
     error(`unknown command "${args.command}"`);
-    info(dim(`Run "ail help" to see the available commands.`));
+    info(dim(`Run "haic help" to see the available commands.`));
     return EXIT_USAGE;
   }
 
@@ -59,16 +59,16 @@ function printHelp(topic: string | undefined): void {
     return;
   }
 
-  info(`ail ${VERSION} — the AI-Lang compiler`);
+  info(`ail ${VERSION} — the HADL compiler`);
   info('');
-  info(`${dim('Usage:')} ail <command> [paths...] [options]`);
+  info(`${dim('Usage:')} haic <command> [paths...] [options]`);
   heading('Commands');
   const width = Math.max(...registry.all().map((c) => c.name.length));
   for (const entry of registry.all()) {
     info(`  ${entry.name.padEnd(width)}  ${entry.summary}`);
   }
   info('');
-  info(dim('Run "ail help <command>" for the options of one command.'));
+  info(dim('Run "haic help <command>" for the options of one command.'));
 }
 
 function printCommandHelp(command: Command): void {

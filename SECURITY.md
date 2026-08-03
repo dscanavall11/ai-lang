@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Report privately through GitHub's
-[security advisory form](https://github.com/dscanavall11/ai-lang/security/advisories/new).
+[security advisory form](https://github.com/dscanavall11/hadl/security/advisories/new).
 Please do not open a public issue for a vulnerability.
 
 Expect an acknowledgement within a week. The project is maintained in spare
@@ -12,7 +12,7 @@ things stand.
 
 ## What counts
 
-AI-Lang is a compiler. The interesting attack surface is what it *emits*, not
+HADL is a compiler. The interesting attack surface is what it *emits*, not
 what it runs:
 
 - **Generated code that is exploitable** — an injection in a generated query, a
@@ -25,7 +25,7 @@ what it runs:
 
 ## What the compiler promises
 
-- It never writes a secret **value** into any artifact. `.ail` sources declare
+- It never writes a secret **value** into any artifact. `.hadl` sources declare
   secrets by name only; generated code references them through the environment.
   If you find a literal value in generated output, that is a vulnerability.
 - It makes no network requests and executes nothing during compilation.

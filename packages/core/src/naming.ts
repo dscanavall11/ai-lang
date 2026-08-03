@@ -1,5 +1,5 @@
 /**
- * Identifier casing. Every generator renames AI-Lang identifiers into its own
+ * Identifier casing. Every generator renames HADL identifiers into its own
  * idiom, so the rules live here once instead of in five backends.
  */
 

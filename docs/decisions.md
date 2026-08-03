@@ -12,7 +12,7 @@ TypeScript. No parser generator, no grammar file, no code generation step.
 
 **Deviates from the plan**, which specified ANTLR4 with semantic predicates.
 
-**Why.** AI-Lang's surface syntax is line-oriented and indentation-sensitive:
+**Why.** HADL's surface syntax is line-oriented and indentation-sensitive:
 Markdown headings open declarations, bullets declare fields, a trailing `:` opens
 a block. That is the shape a parser generator is worst at. ANTLR would have meant
 a Java toolchain in the build, a generated-code checkout step, and a grammar
@@ -39,7 +39,7 @@ source-to-source path between targets.
 
 **Why.** Five languages and four deployment platforms is nine backends. Pairwise
 lowering would be 5 × 4 = 20 translators that all drift apart. One IR makes each
-backend independent, and makes the IR itself the reviewable artifact: `ail ir`
+backend independent, and makes the IR itself the reviewable artifact: `haic ir`
 prints something a person can read and diff.
 
 **Rules out.** Target-specific source constructs. If a backend needs something
@@ -50,9 +50,9 @@ other target can express it too. That friction is the point.
 
 ## ADR-003 — Compilation is deterministic; the architect is a separate phase
 
-**Decision.** `ail check`, `ail build` and `ail deploy` make no LLM calls, no
+**Decision.** `haic check`, `haic build` and `haic deploy` make no LLM calls, no
 network requests, and use no randomness. The same input produces the same bytes.
-`ail architect`, which turns a requirements document into a first draft, is a
+`haic architect`, which turns a requirements document into a first draft, is a
 separate command that writes a reviewable `.ai-spec/` directory.
 
 **Why.** A compiler that consults a model is a compiler whose output you cannot
@@ -69,8 +69,8 @@ that can raise it, and every endpoint that exposes it must map it to a status.
 `## error X (unchecked)` may never appear in a signature.
 
 **Why.** Java's checked exceptions failed because `throws Exception` was legal
-and `catch (Exception e) {}` was easy. AI-Lang closes both: an operation declares
-exactly the errors it raises — no more (`AIL2304`) and no fewer (`AIL2303`) —
+and `catch (Exception e) {}` was easy. HADL closes both: an operation declares
+exactly the errors it raises — no more (`HADL2304`) and no fewer (`HADL2303`) —
 and there is no catch construct at all. Errors propagate; the only place they
 stop is an endpoint, which must say what status each one becomes.
 
@@ -89,7 +89,7 @@ into whatever its ecosystem already does. Java uses checked exceptions,
 TypeScript and Python use typed thrown errors with a central handler, Go uses
 `(T, error)`, Rust uses `Result<T, E>`.
 
-**Why.** The compile-time guarantee is already delivered — by AI-Lang, before any
+**Why.** The compile-time guarantee is already delivered — by HADL, before any
 target code exists. What the generated code owes its readers is idiom. A
 `Result<T, E>` union hand-rolled in Java would be correct and unreadable.
 
@@ -99,11 +99,11 @@ target code exists. What the generated code owes its readers is idiom. A
 
 **Decision.** Everything in the `AIL25xx` family — unreachable declarations,
 duplicate shapes, pass-through operations, ports with no callers, fields nothing
-reads — is a warning or a note. `ail check --strict` promotes them.
+reads — is a warning or a note. `haic check --strict` promotes them.
 
 **Why.** Unused code is a smell, not a contradiction. A rule that blocks the
 build on a smell gets suppressed, and a suppressed rule teaches nothing. A rule
-that names the cost in a sentence, with `ail explain` behind it, changes what
+that names the cost in a sentence, with `haic explain` behind it, changes what
 gets written next time.
 
 The exception is the structural rules — aggregate boundaries, error contracts,
@@ -143,11 +143,11 @@ place a human has to act, is the honest option.
 
 ## ADR-009 — No configuration for what the language already says
 
-**Decision.** There is no `ail.config.js`, no per-target options file, no
-codegen templates. `ail build --target java` reads the `.ail` sources and emits.
+**Decision.** There is no `haic.config.js`, no per-target options file, no
+codegen templates. `haic build --target java` reads the `.hadl` sources and emits.
 
 **Why.** Every knob is a way for the generated system to disagree with its
-source. The `.ail` file already says which database, which port, which scaling
+source. The `.hadl` file already says which database, which port, which scaling
 policy, which deployment targets. A configuration layer on top would let those
 two descriptions drift, and the whole premise is that they cannot.
 

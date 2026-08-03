@@ -5,13 +5,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        A failing `.ail` file is a better bug report than any description of it.
+        A failing `.hadl` file is a better bug report than any description of it.
         The smallest one that still reproduces is ideal.
 
   - type: textarea
     id: source
     attributes:
-      label: The .ail source that reproduces it
+      label: The .hadl source that reproduces it
       render: markdown
       placeholder: |
         ---
@@ -29,7 +29,7 @@ body:
     id: command
     attributes:
       label: Command you ran
-      placeholder: ail build repro.ail --target java
+      placeholder: haic build repro.hadl --target java
     validations:
       required: true
 
@@ -68,6 +68,6 @@ body:
     id: version
     attributes:
       label: Version
-      description: Output of `ail --version`, or the commit you built from.
+      description: Output of `haic --version`, or the commit you built from.
     validations:
       required: true

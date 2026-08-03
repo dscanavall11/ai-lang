@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { indexModule } from '@ai-lang/core';
+import { indexModule } from '@haic/core';
 import { moduleHeader, parseErrors, parseOk } from './helpers.js';
 
 describe('type expressions', () => {
@@ -217,24 +217,24 @@ describe('list projections', () => {
 
 describe('reported syntax errors', () => {
   const cases: Array<[string, string, string]> = [
-    ['a field without a type', '## dto Shape\n- broken\n', 'AIL1101'],
-    ['an unknown field modifier', '## dto Shape\n- x: text, wobbly\n', 'AIL1106'],
-    ['an unknown type', '## dto Shape\n- x: wobbly\n', 'AIL1213'],
-    ['a port without operations', '## port Repo (outbound)\n', 'AIL1021'],
-    ['an operation without a parameter list', '## port Repo (outbound)\n- find thing -> Thing\n', 'AIL1108'],
-    ['an error that says neither checked nor unchecked', '## error Oops\nmessage: "oops"\n', 'AIL1015'],
-    ['an adapter without a port', '## adapter A using sql\n', 'AIL1022'],
-    ['an endpoint with no handler', '## endpoint GET /things\nresponds 200\n', 'AIL1027'],
-    ['an endpoint with no responses', '## endpoint GET /things\nhandled by S.run\n', 'AIL1029'],
-    ['an aggregate with no identity', '## aggregate Thing\n- label: text\n', 'AIL1003'],
+    ['a field without a type', '## dto Shape\n- broken\n', 'HADL1101'],
+    ['an unknown field modifier', '## dto Shape\n- x: text, wobbly\n', 'HADL1106'],
+    ['an unknown type', '## dto Shape\n- x: wobbly\n', 'HADL1213'],
+    ['a port without operations', '## port Repo (outbound)\n', 'HADL1021'],
+    ['an operation without a parameter list', '## port Repo (outbound)\n- find thing -> Thing\n', 'HADL1108'],
+    ['an error that says neither checked nor unchecked', '## error Oops\nmessage: "oops"\n', 'HADL1015'],
+    ['an adapter without a port', '## adapter A using sql\n', 'HADL1022'],
+    ['an endpoint with no handler', '## endpoint GET /things\nresponds 200\n', 'HADL1027'],
+    ['an endpoint with no responses', '## endpoint GET /things\nhandled by S.run\n', 'HADL1029'],
+    ['an aggregate with no identity', '## aggregate Thing\n- label: text\n', 'HADL1003'],
     // A misspelled clause used to be read as prose, so the aggregate silently
     // fell back to the `id` convention and nothing was reported.
-    ['a misspelled clause', '## aggregate Thing\nprimaryKey id\n\n- id: uuid\n', 'AIL1006'],
-    ['an unknown declaration keyword', '## widget Thing\n- x: text\n', 'AIL1612'],
-    ['an unknown infrastructure setting', '## infrastructure\nteleport 9\n', 'AIL1508'],
-    ['an unknown deployment target', '## infrastructure\ndeploy to mainframe\n', 'AIL1507'],
-    ['a map with nothing to map', '## dto Shape\n- x: text\n\n## aggregate A\n- id: uuid\n- lines: list of Line\n\noperation r () -> nothing:\n  let ids be each of lines\n', 'AIL1112'],
-    ['a filter with no condition', '## aggregate A\n- id: uuid\n- lines: list of Line\n\noperation r () -> nothing:\n  let kept be only lines\n', 'AIL1113'],
+    ['a misspelled clause', '## aggregate Thing\nprimaryKey id\n\n- id: uuid\n', 'HADL1006'],
+    ['an unknown declaration keyword', '## widget Thing\n- x: text\n', 'HADL1612'],
+    ['an unknown infrastructure setting', '## infrastructure\nteleport 9\n', 'HADL1508'],
+    ['an unknown deployment target', '## infrastructure\ndeploy to mainframe\n', 'HADL1507'],
+    ['a map with nothing to map', '## dto Shape\n- x: text\n\n## aggregate A\n- id: uuid\n- lines: list of Line\n\noperation r () -> nothing:\n  let ids be each of lines\n', 'HADL1112'],
+    ['a filter with no condition', '## aggregate A\n- id: uuid\n- lines: list of Line\n\noperation r () -> nothing:\n  let kept be only lines\n', 'HADL1113'],
   ];
 
   for (const [label, source, code] of cases) {
@@ -266,7 +266,7 @@ describe('frontmatter', () => {
   });
 
   it('rejects an unknown target', () => {
-    expect(parseErrors('---\nmodule: a\ntarget: cobol\n---\n\n## dto Shape\n- x: text\n')).toContain('AIL1614');
+    expect(parseErrors('---\nmodule: a\ntarget: cobol\n---\n\n## dto Shape\n- x: text\n')).toContain('HADL1614');
   });
 });
 
@@ -288,10 +288,10 @@ describe('a port that names its own technology', () => {
   });
 
   it('rejects a technology on an inbound port', () => {
-    expect(parseErrors(moduleHeader('## port UseCase (inbound)\nusing sql\n\n- run (id: uuid) -> Thing\n'))).toContain('AIL1031');
+    expect(parseErrors(moduleHeader('## port UseCase (inbound)\nusing sql\n\n- run (id: uuid) -> Thing\n'))).toContain('HADL1031');
   });
 
   it('rejects an unknown technology', () => {
-    expect(parseErrors(moduleHeader(PORT.replace('using sql', 'using telepathy')))).toContain('AIL1032');
+    expect(parseErrors(moduleHeader(PORT.replace('using sql', 'using telepathy')))).toContain('HADL1032');
   });
 });

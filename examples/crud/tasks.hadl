@@ -6,7 +6,7 @@ target: typescript
 
 # Tasks
 
-A plain CRUD service, written the way AI-Lang wants CRUD written: the five
+A plain CRUD service, written the way HADL wants CRUD written: the five
 operations, the rules that make them refuse bad input, and nothing else.
 
 ## enum TaskState

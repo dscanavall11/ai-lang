@@ -12,8 +12,8 @@ identified by id
 invariant "a customer is real":
   id is not empty
 `);
-    expect(errorCodes(diagnostics)).toContain('AIL2207');
-    expect(diagnostics.find((d) => d.code === 'AIL2207')?.hint).toContain('store the identity instead');
+    expect(errorCodes(diagnostics)).toContain('HADL2207');
+    expect(diagnostics.find((d) => d.code === 'HADL2207')?.hint).toContain('store the identity instead');
   });
 
   it('rejects a value object holding something with identity', () => {
@@ -24,7 +24,7 @@ invariant "a customer is real":
 - taken: Order, required
 `),
       ),
-    ).toContain('AIL2208');
+    ).toContain('HADL2208');
   });
 
   it('rejects reaching past an aggregate root to its inner entity', () => {
@@ -48,7 +48,7 @@ invariant "a cart holds lines":
 - line: Line, required
 `),
       ),
-    ).toContain('AIL2206');
+    ).toContain('HADL2206');
   });
 
   it('rejects two aggregates claiming the same entity', () => {
@@ -77,7 +77,7 @@ invariant "an invoice holds lines":
   lines is not empty
 `),
       ),
-    ).toContain('AIL2203');
+    ).toContain('HADL2203');
   });
 
   it('rejects I/O inside an aggregate operation', () => {
@@ -100,7 +100,7 @@ operation refresh () -> nothing:
   perform load thing with id = id
 `),
       ),
-    ).toContain('AIL2213');
+    ).toContain('HADL2213');
   });
 
   it('warns about an aggregate with no rules and no behaviour', () => {
@@ -112,7 +112,7 @@ identified by id
 - payload: text, required
 `),
       ),
-    ).toContain('AIL2214');
+    ).toContain('HADL2214');
   });
 
   it('accepts an aggregate that references another by identity', () => {
@@ -128,7 +128,7 @@ invariant "a customer is real":
   id is not empty
 `),
       ),
-    ).not.toContain('AIL2207');
+    ).not.toContain('HADL2207');
   });
 });
 
@@ -158,7 +158,7 @@ operation run (id: uuid) -> Order or Broken:
   return found
 `),
       ),
-    ).toContain('AIL2302');
+    ).toContain('HADL2302');
   });
 
   it('rejects raising a checked error the contract omits', () => {
@@ -169,8 +169,8 @@ operation run (id: uuid) -> Order:
   let found be load thing with id = id
   return found
 `);
-    expect(errorCodes(diagnostics)).toContain('AIL2303');
-    expect(diagnostics.find((d) => d.code === 'AIL2303')?.hint).toContain('-> ... or Missing');
+    expect(errorCodes(diagnostics)).toContain('HADL2303');
+    expect(diagnostics.find((d) => d.code === 'HADL2303')?.hint).toContain('-> ... or Missing');
   });
 
   it('warns about a declared error that can never be raised', () => {
@@ -186,7 +186,7 @@ operation run (order: Order) -> nothing or Unused:
   perform store thing with order = order
 `),
       ),
-    ).toContain('AIL2304');
+    ).toContain('HADL2304');
   });
 
   it('rejects an endpoint that leaves a checked error unmapped', () => {
@@ -204,7 +204,7 @@ handled by S.run
 responds 200 with Order
 `),
       ),
-    ).toContain('AIL2305');
+    ).toContain('HADL2305');
   });
 
   it('accepts a contract where every raised error is declared and mapped', () => {
@@ -240,8 +240,8 @@ uses Memory
 operation run (order: Order) -> nothing:
   perform store thing with order = order
 `);
-    expect(errorCodes(diagnostics)).toContain('AIL2402');
-    expect(diagnostics.find((d) => d.code === 'AIL2402')?.hint).toContain('uses Repo');
+    expect(errorCodes(diagnostics)).toContain('HADL2402');
+    expect(diagnostics.find((d) => d.code === 'HADL2402')?.hint).toContain('uses Repo');
   });
 
   it('rejects an outbound port with no adapter', () => {
@@ -257,7 +257,7 @@ operation run (order: Order) -> nothing:
   perform store thing with order = order
 `),
       ),
-    ).toContain('AIL2408');
+    ).toContain('HADL2408');
   });
 
   it('rejects an inbound port nobody implements', () => {
@@ -268,7 +268,7 @@ operation run (order: Order) -> nothing:
 - run (order: Order) -> nothing
 `),
       ),
-    ).toContain('AIL2409');
+    ).toContain('HADL2409');
   });
 
   it('warns about a port that does too many things', () => {
@@ -282,7 +282,7 @@ ${operations}
 ## adapter Memory implements Wide using in-memory
 `),
       ),
-    ).toContain('AIL2421');
+    ).toContain('HADL2421');
   });
 
   it('rejects an endpoint whose path parameter nothing carries', () => {
@@ -304,7 +304,7 @@ handled by S.run
 responds 204
 `),
       ),
-    ).toContain('AIL2416');
+    ).toContain('HADL2416');
   });
 });
 
@@ -327,7 +327,7 @@ operation fetch (id: uuid) -> Order:
 handled by S.fetch
 responds 200 with Order
 `);
-    expect(codes(diagnostics)).toContain('AIL2503');
+    expect(codes(diagnostics)).toContain('HADL2503');
   });
 
   it('warns about a dto with exactly the same shape as the model', () => {
@@ -346,7 +346,7 @@ invariant "a thing has a label":
 - label: text, required
 `),
       ),
-    ).toContain('AIL2502');
+    ).toContain('HADL2502');
   });
 
   it('warns about a port with no callers', () => {
@@ -359,7 +359,7 @@ invariant "a thing has a label":
 ## adapter SpareMemory implements Spare using in-memory
 `),
       ),
-    ).toContain('AIL2504');
+    ).toContain('HADL2504');
   });
 
   it('warns about a declaration nothing reaches', () => {
@@ -370,7 +370,7 @@ invariant "a thing has a label":
 - ghost: text, required
 `),
       ),
-    ).toContain('AIL2501');
+    ).toContain('HADL2501');
   });
 
   it('promotes every warning to an error under --strict', () => {
@@ -386,7 +386,7 @@ invariant "a thing has a label":
       { strict: true },
     );
     expect(relaxed.filter((d) => d.severity === 'error')).toEqual([]);
-    expect(strict.some((d) => d.severity === 'error' && d.code === 'AIL2501')).toBe(true);
+    expect(strict.some((d) => d.severity === 'error' && d.code === 'HADL2501')).toBe(true);
   });
 });
 
@@ -404,7 +404,7 @@ invariant "nonsense":
   count is label
 `),
       ),
-    ).toContain('AIL2105');
+    ).toContain('HADL2105');
   });
 
   it('rejects arithmetic on text', () => {
@@ -420,7 +420,7 @@ invariant "nonsense":
   label times 2 is at least count
 `),
       ),
-    ).toContain('AIL2116');
+    ).toContain('HADL2116');
   });
 
   it('rejects an unknown field', () => {
@@ -435,7 +435,7 @@ invariant "nonsense":
   missing is not empty
 `),
       ),
-    ).toContain('AIL2101');
+    ).toContain('HADL2101');
   });
 
   it('rejects a constructor missing a required field', () => {
@@ -454,7 +454,7 @@ operation reprice () -> Money:
   return Money with amount = 1
 `),
       ),
-    ).toContain('AIL2114');
+    ).toContain('HADL2114');
   });
 
   it('rejects assigning to an immutable field', () => {
@@ -472,7 +472,7 @@ operation cheapen () -> nothing:
   set price.amount to 0
 `),
       ),
-    ).toContain('AIL2125');
+    ).toContain('HADL2125');
   });
 
   it('suggests a near-miss name', () => {
@@ -484,7 +484,7 @@ identified by id
 invariant "typo":
   labell is not empty
 `);
-    expect(diagnostics.find((d) => d.code === 'AIL2101')?.hint).toContain('label');
+    expect(diagnostics.find((d) => d.code === 'HADL2101')?.hint).toContain('label');
   });
 });
 
@@ -516,7 +516,7 @@ operation run (id: uuid) -> text or Missing:
   return found
 `),
       ),
-    ).toContain('AIL2141');
+    ).toContain('HADL2141');
   });
 
   it('accepts an optional inside a presence check', () => {
@@ -595,8 +595,8 @@ ${body}
     const diagnostics = check(
       service('  return Summary from order', '- orderId: uuid, required\n- lineCount: integer, required'),
     );
-    expect(errorCodes(diagnostics)).toContain('AIL2147');
-    expect(diagnostics.find((d) => d.code === 'AIL2147')?.hint).toContain('with lineCount = ...');
+    expect(errorCodes(diagnostics)).toContain('HADL2147');
+    expect(diagnostics.find((d) => d.code === 'HADL2147')?.hint).toContain('with lineCount = ...');
   });
 
   it('lets an explicit argument fill what the source cannot', () => {
@@ -619,17 +619,17 @@ ${body}
           service('  return Summary from order with lineCount = count of order.lines', '- lineCount: integer, required'),
         ),
       ),
-    ).toContain('AIL2148');
+    ).toContain('HADL2148');
   });
 
   it('rejects mapping from something without fields', () => {
-    expect(errorCodes(check(service('  return Summary from id', '- orderId: uuid, required')))).toContain('AIL2145');
+    expect(errorCodes(check(service('  return Summary from id', '- orderId: uuid, required')))).toContain('HADL2145');
   });
 
   it('rejects a bare type name used as a value', () => {
     const diagnostics = check(service('  return Summary', '- orderId: uuid, required'));
-    expect(errorCodes(diagnostics)).toContain('AIL2149');
-    expect(diagnostics.find((d) => d.code === 'AIL2149')?.hint).toContain('Summary from <source>');
+    expect(errorCodes(diagnostics)).toContain('HADL2149');
+    expect(diagnostics.find((d) => d.code === 'HADL2149')?.hint).toContain('Summary from <source>');
   });
 });
 
@@ -675,15 +675,15 @@ responds 404 when Missing
   });
 
   it('still reports a port that names no technology and has no adapter', () => {
-    expect(errorCodes(check(SHORT.replace('using sql\nconfig:\n  table = notes\n\n', '')))).toContain('AIL2408');
+    expect(errorCodes(check(SHORT.replace('using sql\nconfig:\n  table = notes\n\n', '')))).toContain('HADL2408');
   });
 
   it('says which adapter wins when a port has more than one', () => {
     const diagnostics = check(`${SHORT}
 ## adapter MemoryNoteRepository implements NoteRepository using in-memory
 `);
-    expect(codes(diagnostics)).toContain('AIL2423');
-    expect(diagnostics.find((d) => d.code === 'AIL2423')?.hint).toContain('SqlNoteRepository');
+    expect(codes(diagnostics)).toContain('HADL2423');
+    expect(diagnostics.find((d) => d.code === 'HADL2423')?.hint).toContain('SqlNoteRepository');
   });
 
 });
@@ -734,7 +734,7 @@ limit 20
 match task.state is state
 `),
       ),
-    ).not.toContain('AIL2105');
+    ).not.toContain('HADL2105');
   });
 
   it('rejects selecting from something that is not an aggregate', () => {
@@ -750,7 +750,7 @@ match task.state is state
 match row.id is rowId
 `),
       ),
-    ).toContain('AIL2150');
+    ).toContain('HADL2150');
   });
 
   it('rejects sorting by something with no order', () => {
@@ -764,7 +764,7 @@ match task.state is state
 sort by task.title ascending
 `),
       ),
-    ).toContain('AIL2152');
+    ).toContain('HADL2152');
   });
 
   it('warns about a parameter no criterion reads', () => {
@@ -778,6 +778,6 @@ sort by task.title ascending
 match task.state is state
 `),
       ),
-    ).toContain('AIL2153');
+    ).toContain('HADL2153');
   });
 });

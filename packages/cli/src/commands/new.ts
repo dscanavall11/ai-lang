@@ -1,21 +1,21 @@
-/** `ail new` — scaffold a project that already compiles. */
+/** `haic new` — scaffold a project that already compiles. */
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { kebabCase, pascalCase } from '@ai-lang/core';
+import { kebabCase, pascalCase } from '@haic/core';
 import { flagString } from '../args.js';
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, type Command } from '../command.js';
 import { dim, error, info, success } from '../output.js';
 
 export const newCommand: Command = {
   name: 'new',
-  summary: 'Create a new AI-Lang project',
-  usage: 'ail new <name> [--target <language>]',
+  summary: 'Create a new HADL project',
+  usage: 'haic new <name> [--target <language>]',
   flags: [{ name: '--target <language>', description: 'Default compilation target (default: typescript)' }],
 
   run({ args, cwd }) {
     const name = args.positional[0];
     if (!name) {
-      error('a project name is required: ail new my-service');
+      error('a project name is required: haic new my-service');
       return EXIT_USAGE;
     }
 
@@ -30,8 +30,8 @@ export const newCommand: Command = {
     const contextName = pascalCase(name);
 
     mkdirSync(join(root, 'src'), { recursive: true });
-    writeFileSync(join(root, 'src', `${kebabCase(name)}.ail`), starterModule(moduleName, contextName, target), 'utf8');
-    writeFileSync(join(root, 'ail.json'), starterConfig(name, target), 'utf8');
+    writeFileSync(join(root, 'src', `${kebabCase(name)}.hadl`), starterModule(moduleName, contextName, target), 'utf8');
+    writeFileSync(join(root, 'hadl.json'), starterConfig(name, target), 'utf8');
     writeFileSync(join(root, 'README.md'), starterReadme(name), 'utf8');
     writeFileSync(join(root, '.gitignore'), 'out/\nnode_modules/\n', 'utf8');
 
@@ -39,11 +39,11 @@ export const newCommand: Command = {
     info('');
     info('Next steps:');
     info(`  cd ${kebabCase(name)}`);
-    info('  ail check src');
+    info('  haic check src');
     // Before build, deliberately: running the design costs nothing, and a
     // starter that never shows it teaches the wrong loop.
-    info('  ail test src');
-    info(`  ail build src --target ${target}`);
+    info('  haic test src');
+    info(`  haic build src --target ${target}`);
     return EXIT_OK;
   },
 };
@@ -51,7 +51,7 @@ export const newCommand: Command = {
 /**
  * The starter is a complete slice, not a skeleton: one aggregate with a real
  * invariant, one port, one service, one endpoint, and two scenarios. It
- * compiles as written and `ail test` is green on it, which is the loop worth
+ * compiles as written and `haic test` is green on it, which is the loop worth
  * learning first — a starter that answers "no scenarios found" teaches the
  * opposite.
  */
@@ -138,17 +138,17 @@ function starterConfig(name: string, target: string): string {
 function starterReadme(name: string): string {
   return `# ${name}
 
-An AI-Lang project. The \`.ail\` files under \`src/\` are the source of truth for
+An HADL project. The \`.hadl\` files under \`src/\` are the source of truth for
 both the code and the infrastructure.
 
 \`\`\`bash
-ail check src          # parse, type-check, and audit the design
-ail test src           # run the scenarios against the design itself
-ail build src          # generate the service
-ail deploy src         # generate the infrastructure
+haic check src          # parse, type-check, and audit the design
+haic test src           # run the scenarios against the design itself
+haic build src          # generate the service
+haic deploy src         # generate the infrastructure
 \`\`\`
 
-\`ail test\` runs in about a second, generates nothing and needs no toolchain, so
+\`haic test\` runs in about a second, generates nothing and needs no toolchain, so
 it is the one to run while the design is still moving. Only compile once it is
 green.
 `;

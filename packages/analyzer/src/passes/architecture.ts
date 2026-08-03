@@ -5,7 +5,7 @@
  * shape is what the compiler polices: services depend on ports, adapters
  * implement exactly one port, and nothing in the domain knows about transport.
  */
-import { normalisePhrase, typeToString, typeEquals, type SourceSpan } from '@ai-lang/core';
+import { normalisePhrase, typeToString, typeEquals, type SourceSpan } from '@haic/core';
 import type { AnalysisContext, SemanticPass } from '../context.js';
 import { withSuggestion } from '../context.js';
 
@@ -33,7 +33,7 @@ function checkServiceDependencies(context: AnalysisContext): void {
     for (const name of service.uses) {
       const dependency = context.index.get(name);
       if (!dependency) {
-        error(context, 'AIL2401', `service ${service.name} uses "${name}", which is not declared`, service.span, {
+        error(context, 'HADL2401', `service ${service.name} uses "${name}", which is not declared`, service.span, {
           hint: withSuggestion('', name, context.index.ports.map((p) => p.name)),
         });
         continue;
@@ -41,7 +41,7 @@ function checkServiceDependencies(context: AnalysisContext): void {
       if (dependency.kind === 'adapter') {
         error(
           context,
-          'AIL2402',
+          'HADL2402',
           `service ${service.name} depends on the adapter ${name}`,
           service.span,
           { hint: `depend on the port it implements instead: "uses ${dependency.implements}"` },
@@ -51,7 +51,7 @@ function checkServiceDependencies(context: AnalysisContext): void {
       if (dependency.kind !== 'port') {
         error(
           context,
-          'AIL2403',
+          'HADL2403',
           `service ${service.name} uses ${dependency.kind} ${name}; services depend on ports only`,
           service.span,
         );
@@ -64,13 +64,13 @@ function checkAdapters(context: AnalysisContext): void {
   for (const adapter of context.index.adapters) {
     const port = context.index.get(adapter.implements);
     if (!port) {
-      error(context, 'AIL2404', `adapter ${adapter.name} implements "${adapter.implements}", which is not declared`, adapter.span, {
+      error(context, 'HADL2404', `adapter ${adapter.name} implements "${adapter.implements}", which is not declared`, adapter.span, {
         hint: withSuggestion('', adapter.implements, context.index.ports.map((p) => p.name)),
       });
       continue;
     }
     if (port.kind !== 'port') {
-      error(context, 'AIL2405', `adapter ${adapter.name} implements ${port.kind} ${port.name}, which is not a port`, adapter.span);
+      error(context, 'HADL2405', `adapter ${adapter.name} implements ${port.kind} ${port.name}, which is not a port`, adapter.span);
       continue;
     }
 
@@ -80,7 +80,7 @@ function checkAdapters(context: AnalysisContext): void {
       if (!declared) {
         error(
           context,
-          'AIL2406',
+          'HADL2406',
           `adapter ${adapter.name} defines "${operation.phrase}", which port ${port.name} does not declare`,
           operation.span ?? adapter.span,
           { hint: 'adapters implement the port contract; extra operations are unreachable' },
@@ -90,7 +90,7 @@ function checkAdapters(context: AnalysisContext): void {
       if (!typeEquals(declared.returns, operation.returns)) {
         error(
           context,
-          'AIL2407',
+          'HADL2407',
           `adapter ${adapter.name}."${operation.phrase}" returns ${typeToString(operation.returns)} but port ${port.name} promises ${typeToString(declared.returns)}`,
           operation.span ?? adapter.span,
         );
@@ -105,7 +105,7 @@ function checkPortsAreImplemented(context: AnalysisContext): void {
   for (const port of context.index.ports) {
     if (port.direction !== 'outbound') continue;
     if (!implemented.has(port.name)) {
-      error(context, 'AIL2408', `outbound port ${port.name} has no adapter`, port.span, {
+      error(context, 'HADL2408', `outbound port ${port.name} has no adapter`, port.span, {
         hint: `name a technology on the port itself with "using sql", or add "## adapter <Name> implements ${port.name} using sql"`,
       });
       continue;
@@ -117,7 +117,7 @@ function checkPortsAreImplemented(context: AnalysisContext): void {
     if (candidates.length > 1) {
       warn(
         context,
-        'AIL2423',
+        'HADL2423',
         `port ${port.name} has ${candidates.length} adapters: ${candidates.map((a) => a.name).join(', ')}`,
         port.span,
         `the generated composition root wires ${candidates[0]!.name}; delete the others or wire them yourself`,
@@ -132,7 +132,7 @@ function checkInboundPorts(context: AnalysisContext): void {
     if (port.direction !== 'inbound') continue;
     const implementations = context.index.services.filter((s) => s.implements === port.name);
     if (implementations.length === 0) {
-      error(context, 'AIL2409', `inbound port ${port.name} is not implemented by any service`, port.span, {
+      error(context, 'HADL2409', `inbound port ${port.name} is not implemented by any service`, port.span, {
         hint: `add "implements ${port.name}" to the service that carries out this use case`,
       });
       continue;
@@ -143,7 +143,7 @@ function checkInboundPorts(context: AnalysisContext): void {
         if (!found) {
           error(
             context,
-            'AIL2410',
+            'HADL2410',
             `service ${service.name} implements ${port.name} but does not define "${declared.phrase}"`,
             service.span,
           );
@@ -152,7 +152,7 @@ function checkInboundPorts(context: AnalysisContext): void {
         if (!typeEquals(found.returns, declared.returns)) {
           error(
             context,
-            'AIL2411',
+            'HADL2411',
             `${service.name}."${declared.phrase}" returns ${typeToString(found.returns)} but ${port.name} promises ${typeToString(declared.returns)}`,
             found.span ?? service.span,
           );
@@ -169,24 +169,24 @@ function checkEndpoints(context: AnalysisContext): void {
     const route = `${endpoint.method} ${endpoint.path}`;
     const previous = seen.get(route);
     if (previous) {
-      error(context, 'AIL2412', `${route} is declared twice`, endpoint.span);
+      error(context, 'HADL2412', `${route} is declared twice`, endpoint.span);
     }
     seen.set(route, endpoint.name);
 
     const service = context.index.get(endpoint.handler.service);
     if (!service) {
-      error(context, 'AIL2413', `${route} is handled by "${endpoint.handler.service}", which is not declared`, endpoint.span, {
+      error(context, 'HADL2413', `${route} is handled by "${endpoint.handler.service}", which is not declared`, endpoint.span, {
         hint: withSuggestion('', endpoint.handler.service, context.index.services.map((s) => s.name)),
       });
       continue;
     }
     if (service.kind !== 'service') {
-      error(context, 'AIL2414', `${route} is handled by ${service.kind} ${service.name}; endpoints call services`, endpoint.span);
+      error(context, 'HADL2414', `${route} is handled by ${service.kind} ${service.name}; endpoints call services`, endpoint.span);
       continue;
     }
     const operation = service.operations.find((o) => normalisePhrase(o.phrase) === normalisePhrase(endpoint.handler.operation));
     if (!operation) {
-      error(context, 'AIL2415', `service ${service.name} has no operation "${endpoint.handler.operation}"`, endpoint.span, {
+      error(context, 'HADL2415', `service ${service.name} has no operation "${endpoint.handler.operation}"`, endpoint.span, {
         hint: withSuggestion('', endpoint.handler.operation, service.operations.map((o) => o.phrase)),
       });
       continue;
@@ -199,7 +199,7 @@ function checkEndpoints(context: AnalysisContext): void {
       if (!inRequest && !inParameters) {
         error(
           context,
-          'AIL2416',
+          'HADL2416',
           `path parameter "{${parameter}}" of ${route} is not carried by the request`,
           endpoint.span,
           { hint: `add "${parameter}" to the request type, or rename the path segment` },
@@ -209,7 +209,7 @@ function checkEndpoints(context: AnalysisContext): void {
 
     const success = endpoint.responses.find((r) => r.status < 400);
     if (!success) {
-      error(context, 'AIL2417', `${route} declares no successful response`, endpoint.span, {
+      error(context, 'HADL2417', `${route} declares no successful response`, endpoint.span, {
         hint: 'add "responds 200 with <Type>" or "responds 204"',
       });
     }
@@ -221,7 +221,7 @@ function checkHandlers(context: AnalysisContext): void {
     if (handler.trigger === 'schedule') continue;
     const trigger = context.index.get(handler.on);
     if (!trigger) {
-      error(context, 'AIL2418', `handler ${handler.name} reacts to "${handler.on}", which is not declared`, handler.span, {
+      error(context, 'HADL2418', `handler ${handler.name} reacts to "${handler.on}", which is not declared`, handler.span, {
         hint: withSuggestion('', handler.on, [...context.index.events, ...context.index.commands].map((d) => d.name)),
       });
       continue;
@@ -229,7 +229,7 @@ function checkHandlers(context: AnalysisContext): void {
     if (trigger.kind !== 'event' && trigger.kind !== 'command') {
       error(
         context,
-        'AIL2419',
+        'HADL2419',
         `handler ${handler.name} reacts to ${trigger.kind} ${trigger.name}; handlers react to events or commands`,
         handler.span,
       );
@@ -237,7 +237,7 @@ function checkHandlers(context: AnalysisContext): void {
     for (const name of handler.uses) {
       const dependency = context.index.get(name);
       if (dependency?.kind !== 'port') {
-        error(context, 'AIL2420', `handler ${handler.name} uses "${name}", which is not a port`, handler.span);
+        error(context, 'HADL2420', `handler ${handler.name} uses "${name}", which is not a port`, handler.span);
       }
     }
   }
@@ -249,7 +249,7 @@ function checkInterfaceSegregation(context: AnalysisContext): void {
     if (port.operations.length <= PORT_OPERATION_LIMIT) continue;
     warn(
       context,
-      'AIL2421',
+      'HADL2421',
       `port ${port.name} declares ${port.operations.length} operations`,
       port.span,
       `split it: clients that need two operations should not be forced to know about ${port.operations.length}`,
@@ -270,7 +270,7 @@ function checkSingleResponsibility(context: AnalysisContext): void {
     if (clusters.length < 2) continue;
     warn(
       context,
-      'AIL2422',
+      'HADL2422',
       `service ${service.name} splits into ${clusters.length} groups of operations that share nothing`,
       service.span,
       `consider ${clusters.map((c) => `{${c.join(', ')}}`).join(' and ')} as separate services`,

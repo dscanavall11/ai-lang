@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { DiagnosticBag, formatDiagnostics, type IRModule } from '@ai-lang/core';
-import { analyze } from '@ai-lang/analyzer';
-import { parseModule } from '@ai-lang/parser';
+import { DiagnosticBag, formatDiagnostics, type IRModule } from '@haic/core';
+import { analyze } from '@haic/analyzer';
+import { parseModule } from '@haic/parser';
 import { generateInfrastructure, infrastructureGenerators } from '../src/index.js';
 
-const FILES = ['examples/orders/orders.ail', 'examples/orders/catalog.ail', 'examples/billing/subscriptions.ail'];
+const FILES = ['examples/orders/orders.hadl', 'examples/orders/catalog.hadl', 'examples/billing/subscriptions.hadl'];
 
 function project() {
   const bag = new DiagnosticBag();
@@ -63,7 +63,7 @@ describe.each(outputs)('the $generator.id generator', ({ generator, result }) =>
   it('warns rather than guessing when it cannot satisfy a declaration', () => {
     for (const diagnostic of result.diagnostics) {
       expect(diagnostic.severity).not.toBe('error');
-      expect(diagnostic.code).toMatch(/^AIL3\d{3}$/);
+      expect(diagnostic.code).toMatch(/^HADL3\d{3}$/);
     }
   });
 });

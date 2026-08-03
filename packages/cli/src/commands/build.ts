@@ -1,6 +1,6 @@
-/** `ail build` — lower validated IR into a target language project. */
-import { codeGenerators, generateProject } from '@ai-lang/codegen';
-import type { CodegenTarget, GenerationContext } from '@ai-lang/core';
+/** `haic build` — lower validated IR into a target language project. */
+import { codeGenerators, generateProject } from '@haic/codegen';
+import type { CodegenTarget, GenerationContext } from '@haic/core';
 import { flagBoolean, flagList, flagString } from '../args.js';
 import { EXIT_FAILURE, EXIT_OK, type Command } from '../command.js';
 import { loadProject, renderDiagnostics } from '../driver.js';
@@ -8,8 +8,8 @@ import { dim, error, heading, info, listFiles, success, summarise, writeFiles } 
 
 export const buildCommand: Command = {
   name: 'build',
-  summary: 'Compile .ail sources into a target language project',
-  usage: 'ail build [paths...] --target <language> [--out <dir>]',
+  summary: 'Compile .hadl sources into a target language project',
+  usage: 'haic build [paths...] --target <language> [--out <dir>]',
   flags: [
     { name: '--target <ids>', description: 'Comma-separated targets, or "all". Defaults to each context\'s declared target' },
     { name: '--out <dir>', description: 'Output directory (default: ./out)' },
@@ -20,7 +20,7 @@ export const buildCommand: Command = {
   run({ args, cwd }) {
     const loaded = loadProject(args.positional, cwd, {
       strict: flagBoolean(args, 'strict'),
-      projectName: flagString(args, 'project', 'ai-lang-project'),
+      projectName: flagString(args, 'project', 'hadl-project'),
     });
 
     if (loaded.diagnostics.length > 0) info(renderDiagnostics(loaded));

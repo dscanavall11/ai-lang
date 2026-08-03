@@ -13,7 +13,7 @@
  *
  * Values never appear here — only names. Secrets are resolved at deploy time.
  */
-import { DEPLOY_TARGETS, type DeployTarget, type IRInfrastructure } from '@ai-lang/core';
+import { DEPLOY_TARGETS, type DeployTarget, type IRInfrastructure } from '@haic/core';
 import type { ParseReporter } from './reporter.js';
 import { readBody, type Section } from './section.js';
 
@@ -55,7 +55,7 @@ export function parseInfrastructure(section: Section, reporter: ParseReporter): 
     if (database) {
       const engine = (database[2] ?? 'postgres').toLowerCase();
       if (!(DATABASE_ENGINES as readonly string[]).includes(engine)) {
-        reporter.error('AIL1501', `unknown database engine "${engine}"`, span, `supported engines: ${DATABASE_ENGINES.join(', ')}`);
+        reporter.error('HADL1501', `unknown database engine "${engine}"`, span, `supported engines: ${DATABASE_ENGINES.join(', ')}`);
         continue;
       }
       const entry: IRInfrastructure['databases'][number] = {
@@ -73,7 +73,7 @@ export function parseInfrastructure(section: Section, reporter: ParseReporter): 
     if (broker) {
       const engine = (broker[2] ?? 'kafka').toLowerCase();
       if (!(BROKER_ENGINES as readonly string[]).includes(engine)) {
-        reporter.error('AIL1502', `unknown broker engine "${engine}"`, span, `supported engines: ${BROKER_ENGINES.join(', ')}`);
+        reporter.error('HADL1502', `unknown broker engine "${engine}"`, span, `supported engines: ${BROKER_ENGINES.join(', ')}`);
         continue;
       }
       infrastructure.brokers.push({
@@ -88,7 +88,7 @@ export function parseInfrastructure(section: Section, reporter: ParseReporter): 
     if (cache) {
       const engine = (cache[2] ?? 'redis').toLowerCase();
       if (!(CACHE_ENGINES as readonly string[]).includes(engine)) {
-        reporter.error('AIL1503', `unknown cache engine "${engine}"`, span, `supported engines: ${CACHE_ENGINES.join(', ')}`);
+        reporter.error('HADL1503', `unknown cache engine "${engine}"`, span, `supported engines: ${CACHE_ENGINES.join(', ')}`);
         continue;
       }
       infrastructure.caches.push({ name: cache[1]!, engine: engine as (typeof CACHE_ENGINES)[number] });
@@ -99,7 +99,7 @@ export function parseInfrastructure(section: Section, reporter: ParseReporter): 
     if (store) {
       const engine = (store[2] ?? 's3').toLowerCase();
       if (!(STORE_ENGINES as readonly string[]).includes(engine)) {
-        reporter.error('AIL1504', `unknown object store "${engine}"`, span, `supported stores: ${STORE_ENGINES.join(', ')}`);
+        reporter.error('HADL1504', `unknown object store "${engine}"`, span, `supported stores: ${STORE_ENGINES.join(', ')}`);
         continue;
       }
       infrastructure.objectStores.push({ name: store[1]!, engine: engine as (typeof STORE_ENGINES)[number], public: Boolean(store[3]) });
@@ -117,7 +117,7 @@ export function parseInfrastructure(section: Section, reporter: ParseReporter): 
       for (const pair of splitList(environment[1])) {
         const index = pair.indexOf('=');
         if (index < 0) {
-          reporter.error('AIL1505', `expected "NAME = value" in environment entry "${pair}"`, span);
+          reporter.error('HADL1505', `expected "NAME = value" in environment entry "${pair}"`, span);
           continue;
         }
         infrastructure.environment[pair.slice(0, index).trim()] = pair.slice(index + 1).trim().replace(/^["']|["']$/g, '');
@@ -134,7 +134,7 @@ export function parseInfrastructure(section: Section, reporter: ParseReporter): 
       if (max) infrastructure.scaling.max = Number(max[1]);
       if (cpu) infrastructure.scaling.targetCpuPercent = Number(cpu[1]);
       if (infrastructure.scaling.max < infrastructure.scaling.min) {
-        reporter.error('AIL1506', 'scaling max must be greater than or equal to min', span);
+        reporter.error('HADL1506', 'scaling max must be greater than or equal to min', span);
       }
       continue;
     }
@@ -144,7 +144,7 @@ export function parseInfrastructure(section: Section, reporter: ParseReporter): 
       for (const target of splitList(deploy[1])) {
         const normalised = target.toLowerCase().replace(/\s+/g, '-');
         if (!(DEPLOY_TARGETS as readonly string[]).includes(normalised)) {
-          reporter.error('AIL1507', `unknown deployment target "${target}"`, span, `supported targets: ${DEPLOY_TARGETS.join(', ')}`);
+          reporter.error('HADL1507', `unknown deployment target "${target}"`, span, `supported targets: ${DEPLOY_TARGETS.join(', ')}`);
           continue;
         }
         infrastructure.deploy.push(normalised as DeployTarget);
@@ -163,7 +163,7 @@ export function parseInfrastructure(section: Section, reporter: ParseReporter): 
     }
 
     reporter.error(
-      'AIL1508',
+      'HADL1508',
       `"${text}" is not a recognised infrastructure setting`,
       span,
       'valid settings: port, database, broker, cache, storage, secrets, environment, scaling, deploy, observability',

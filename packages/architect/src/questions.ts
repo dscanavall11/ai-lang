@@ -5,22 +5,22 @@
  * decision open, the phase records the ambiguity, the question a human has to
  * answer, and the assumption taken so the pipeline can continue.
  */
-import type { DiagnosticBag, SourceSpan } from '@ai-lang/core';
+import type { DiagnosticBag, SourceSpan } from '@haic/core';
 import type { ArchitectState, OpenQuestion } from './types.js';
 
 export const QUESTION_CODES = {
-  storyWithoutBenefit: 'AIL3010',
-  capabilityWithoutCriteria: 'AIL3011',
-  actorWithoutCapability: 'AIL3012',
-  noCapabilities: 'AIL3013',
-  unclassifiedSubdomain: 'AIL3020',
-  thinContext: 'AIL3021',
-  noStackSignal: 'AIL3030',
-  duplicateRoute: 'AIL3031',
-  crossAggregateRule: 'AIL3040',
-  unmodelledRule: 'AIL3041',
-  entityReference: 'AIL3042',
-  assumedBroker: 'AIL3050',
+  storyWithoutBenefit: 'HADL3010',
+  capabilityWithoutCriteria: 'HADL3011',
+  actorWithoutCapability: 'HADL3012',
+  noCapabilities: 'HADL3013',
+  unclassifiedSubdomain: 'HADL3020',
+  thinContext: 'HADL3021',
+  noStackSignal: 'HADL3030',
+  duplicateRoute: 'HADL3031',
+  crossAggregateRule: 'HADL3040',
+  unmodelledRule: 'HADL3041',
+  entityReference: 'HADL3042',
+  assumedBroker: 'HADL3050',
 } as const;
 
 export interface QuestionDraft {

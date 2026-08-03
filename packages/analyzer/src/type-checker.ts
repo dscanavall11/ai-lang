@@ -25,8 +25,8 @@ import {
   type IRType,
   type ModuleIndex,
   type SourceSpan,
-} from '@ai-lang/core';
-import { camelCase } from '@ai-lang/core';
+} from '@haic/core';
+import { camelCase } from '@haic/core';
 import type { AnalysisContext } from './context.js';
 import { Scope, withSuggestion } from './context.js';
 
@@ -158,7 +158,7 @@ export class TypeChecker {
         continue;
       }
       this.error(
-        'AIL2154',
+        'HADL2154',
         `this list mixes ${typeToString(element)} with ${typeToString(type)}`,
         expression.span,
         { hint: 'every item of a list has the same type' },
@@ -184,7 +184,7 @@ export class TypeChecker {
 
         const declaration = this.lookup(head);
         if (declaration) {
-          this.error('AIL2149', `${declaration.kind} ${head} is a type, not a value`, expression.span, {
+          this.error('HADL2149', `${declaration.kind} ${head} is a type, not a value`, expression.span, {
             hint:
               'fields' in declaration
                 ? `build one with "${head} with <field> = ..." or "${head} from <source>"`
@@ -193,7 +193,7 @@ export class TypeChecker {
           return UNKNOWN;
         }
       }
-      this.error('AIL2101', `"${head}" is not defined here`, expression.span, {
+      this.error('HADL2101', `"${head}" is not defined here`, expression.span, {
         hint: withSuggestion('', head, scope.names()) ?? 'declare it with "let" or add it as a parameter',
       });
       return UNKNOWN;
@@ -202,7 +202,7 @@ export class TypeChecker {
     for (const part of rest) {
       const inner = unwrap(current);
       if (inner.kind !== 'named') {
-        this.error('AIL2102', `"${typeToString(inner)}" has no field "${part}"`, expression.span);
+        this.error('HADL2102', `"${typeToString(inner)}" has no field "${part}"`, expression.span);
         return UNKNOWN;
       }
       const fields = this.fieldsOf(inner.name);
@@ -213,12 +213,12 @@ export class TypeChecker {
           current = { kind: 'named', name: declaration.name };
           continue;
         }
-        this.error('AIL2103', `${inner.name} has no fields`, expression.span);
+        this.error('HADL2103', `${inner.name} has no fields`, expression.span);
         return UNKNOWN;
       }
       const field = fields.find((f) => f.name === part);
       if (!field) {
-        this.error('AIL2104', `${inner.name} has no field "${part}"`, expression.span, {
+        this.error('HADL2104', `${inner.name} has no field "${part}"`, expression.span, {
           hint: withSuggestion('', part, fields.map((f) => f.name)),
         });
         return UNKNOWN;
@@ -274,7 +274,7 @@ export class TypeChecker {
         this.expectOrderable(right, expression.span);
         if (!this.compatible(left, right) && !this.compatible(right, left)) {
           this.error(
-            'AIL2117',
+            'HADL2117',
             `cannot order ${typeToString(left)} against ${typeToString(right)}`,
             expression.span,
           );
@@ -285,7 +285,7 @@ export class TypeChecker {
       case 'not-equals':
         if (!this.compatible(left, right)) {
           this.error(
-            'AIL2105',
+            'HADL2105',
             `cannot compare ${typeToString(left)} with ${typeToString(right)}`,
             expression.span,
             { hint: 'both sides of a comparison must have the same type' },
@@ -296,7 +296,7 @@ export class TypeChecker {
       case 'contains': {
         const element = elementType(left);
         if (element && !this.compatible(element, right)) {
-          this.error('AIL2106', `${typeToString(left)} does not hold ${typeToString(right)}`, expression.span);
+          this.error('HADL2106', `${typeToString(left)} does not hold ${typeToString(right)}`, expression.span);
         }
         return BOOLEAN;
       }
@@ -315,7 +315,7 @@ export class TypeChecker {
     const element = elementType(collection);
     if (!element) {
       this.error(
-        'AIL2107',
+        'HADL2107',
         `"${expression.fn}" needs a list, but ${typeToString(collection)} is not one`,
         expression.span,
       );
@@ -340,7 +340,7 @@ export class TypeChecker {
     const collection = this.infer(expression.collection, scope);
     const element = elementType(collection);
     if (!element) {
-      this.error('AIL2107', `"${expression.fn}" needs a list, but ${typeToString(collection)} is not one`, expression.span);
+      this.error('HADL2107', `"${expression.fn}" needs a list, but ${typeToString(collection)} is not one`, expression.span);
       return UNKNOWN;
     }
 
@@ -372,11 +372,11 @@ export class TypeChecker {
   private inferConstruct(expression: Extract<IRExpression, { kind: 'construct' }>, scope: Scope): IRType {
     const declaration = this.lookup(expression.type);
     if (!declaration) {
-      this.error('AIL2108', `unknown type "${expression.type}"`, expression.span);
+      this.error('HADL2108', `unknown type "${expression.type}"`, expression.span);
       return UNKNOWN;
     }
     if (!('fields' in declaration)) {
-      this.error('AIL2109', `${declaration.kind} ${declaration.name} cannot be constructed with "with"`, expression.span);
+      this.error('HADL2109', `${declaration.kind} ${declaration.name} cannot be constructed with "with"`, expression.span);
       return UNKNOWN;
     }
     // A derived field is computed and a defaulted one fills itself in, so
@@ -413,13 +413,13 @@ export class TypeChecker {
     if (sourceType === UNKNOWN) return;
 
     if (sourceType.kind !== 'named') {
-      this.error('AIL2145', `"${path.join('.')}" is ${typeToString(sourceType)}, which has no fields to map from`, expression.span);
+      this.error('HADL2145', `"${path.join('.')}" is ${typeToString(sourceType)}, which has no fields to map from`, expression.span);
       return;
     }
     const source = this.lookup(sourceType.name);
     const sourceFields = source && 'fields' in source ? source.fields : null;
     if (!source || !sourceFields) {
-      this.error('AIL2146', `${sourceType.name} has no fields to map from`, expression.span);
+      this.error('HADL2146', `${sourceType.name} has no fields to map from`, expression.span);
       return;
     }
 
@@ -449,7 +449,7 @@ export class TypeChecker {
 
     if (unresolved.length > 0) {
       this.error(
-        'AIL2147',
+        'HADL2147',
         `${target.name} needs ${unresolved.map((n) => `"${n}"`).join(', ')}, which ${sourceType.name} does not provide`,
         expression.span,
         { hint: `add them explicitly: "with ${unresolved.map((n) => `${n} = ...`).join(', ')}"` },
@@ -458,7 +458,7 @@ export class TypeChecker {
     }
     if (resolved.length === 0) {
       this.warn(
-        'AIL2148',
+        'HADL2148',
         `"from ${path.join('.')}" maps nothing; every field of ${target.name} is already given`,
         expression.span,
         'drop the "from" clause',
@@ -471,7 +471,7 @@ export class TypeChecker {
   private inferCall(expression: Extract<IRExpression, { kind: 'call' }>, scope: Scope): IRType {
     const candidates = this.resolveCall(expression.operation);
     if (candidates.length === 0) {
-      this.error('AIL2110', `no operation named "${expression.operation}" is available here`, expression.span, {
+      this.error('HADL2110', `no operation named "${expression.operation}" is available here`, expression.span, {
         hint:
           withSuggestion('', expression.operation, this.knownPhrases()) ??
           'declare it on a port and add that port to the "uses" line of this service',
@@ -480,7 +480,7 @@ export class TypeChecker {
     }
     if (candidates.length > 1) {
       this.error(
-        'AIL2111',
+        'HADL2111',
         `"${expression.operation}" is ambiguous: ${candidates.map((c) => c.owner.name).join(', ')} all declare it`,
         expression.span,
         { hint: 'rename one of the operations so each phrase is unique in scope' },
@@ -513,7 +513,7 @@ export class TypeChecker {
       const target = expected.find((e) => e.name === argument.name);
       const actual = this.infer(argument.value, scope, expected.find((e) => e.name === argument.name)?.type);
       if (!target) {
-        this.error('AIL2112', `${label} has no parameter "${argument.name}"`, argument.value.span ?? span, {
+        this.error('HADL2112', `${label} has no parameter "${argument.name}"`, argument.value.span ?? span, {
           hint: withSuggestion('', argument.name, expected.map((e) => e.name)),
         });
         continue;
@@ -521,7 +521,7 @@ export class TypeChecker {
       provided.add(argument.name);
       if (!this.compatible(target.type, actual)) {
         this.error(
-          'AIL2113',
+          'HADL2113',
           `"${argument.name}" expects ${typeToString(target.type)} but received ${typeToString(actual)}`,
           argument.value.span ?? span,
         );
@@ -529,7 +529,7 @@ export class TypeChecker {
     }
     const missing = expected.filter((e) => e.required && !provided.has(e.name)).map((e) => e.name);
     if (missing.length > 0) {
-      this.error('AIL2114', `${label} is missing ${missing.map((m) => `"${m}"`).join(', ')}`, span, {
+      this.error('HADL2114', `${label} is missing ${missing.map((m) => `"${m}"`).join(', ')}`, span, {
         hint: `write "with ${missing.map((m) => `${m} = ...`).join(', ')}"`,
       });
     }
@@ -569,20 +569,20 @@ export class TypeChecker {
 
   private expect(actual: IRType, expected: IRType, span: SourceSpan | undefined, label: string): void {
     if (!this.compatible(expected, actual)) {
-      this.error('AIL2115', `${label} expects ${typeToString(expected)} but received ${typeToString(actual)}`, span);
+      this.error('HADL2115', `${label} expects ${typeToString(expected)} but received ${typeToString(actual)}`, span);
     }
   }
 
   private expectNumeric(type: IRType, span: SourceSpan | undefined, label: string): void {
     if (type === UNKNOWN) return;
     if (!isNumeric(type)) {
-      this.error('AIL2116', `${label} expects a number but received ${typeToString(type)}`, span);
+      this.error('HADL2116', `${label} expects a number but received ${typeToString(type)}`, span);
     }
   }
 
   private expectOrderable(type: IRType, span: SourceSpan | undefined): void {
     if (type === UNKNOWN || isOrderable(type)) return;
-    this.error('AIL2118', `${typeToString(type)} has no order, so it cannot be compared this way`, span, {
+    this.error('HADL2118', `${typeToString(type)} has no order, so it cannot be compared this way`, span, {
       hint: 'numbers, timestamps, dates and durations can be ordered; use "is" or "is not" for anything else',
     });
   }

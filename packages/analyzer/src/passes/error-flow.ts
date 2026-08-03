@@ -6,7 +6,7 @@
  * it. An unchecked error is a bug — it must never appear in a contract, because
  * declaring it invites callers to "handle" something they cannot fix.
  */
-import type { SourceSpan } from '@ai-lang/core';
+import type { SourceSpan } from '@haic/core';
 import type { AnalysisContext, SemanticPass } from '../context.js';
 
 export const errorFlowPass: SemanticPass = {
@@ -28,13 +28,13 @@ function checkUncheckedNotDeclared(context: AnalysisContext): void {
     for (const name of throws) {
       const declaration = context.index.get(name);
       if (declaration?.kind !== 'error') {
-        error(context, 'AIL2301', `${owner}.${phrase} declares "${name}", which is not a declared error`, span);
+        error(context, 'HADL2301', `${owner}.${phrase} declares "${name}", which is not a declared error`, span);
         continue;
       }
       if (!declaration.checked) {
         error(
           context,
-          'AIL2302',
+          'HADL2302',
           `${owner}.${phrase} declares the unchecked error ${name}`,
           span,
           'unchecked errors signal bugs and propagate on their own; either drop it from the contract or mark it "(checked)"',
@@ -54,7 +54,7 @@ function checkRaisedErrorsAreDeclared(context: AnalysisContext): void {
       if (throws.includes(name)) continue;
       error(
         context,
-        'AIL2303',
+        'HADL2303',
         `${owner}.${phrase} can raise ${name} but does not declare it`,
         span,
         `add it to the return type: "-> ... or ${[...throws, name].join(', ')}"`,
@@ -72,7 +72,7 @@ function checkDeclaredErrorsAreReachable(context: AnalysisContext): void {
       if (raised.has(name)) continue;
       warn(
         context,
-        'AIL2304',
+        'HADL2304',
         `${owner}.${phrase} declares ${name} but never raises it`,
         span,
         'remove it from the contract; callers are writing handling code that can never run',
@@ -96,7 +96,7 @@ function checkEndpointsHandleCheckedErrors(context: AnalysisContext): void {
       const status = declaration?.status ?? 400;
       error(
         context,
-        'AIL2305',
+        'HADL2305',
         `${endpoint.method} ${endpoint.path} does not say what happens when ${name} is raised`,
         endpoint.span,
         `add "responds ${status} when ${name}"`,
@@ -107,7 +107,7 @@ function checkEndpointsHandleCheckedErrors(context: AnalysisContext): void {
       if (operation.throws.includes(response.when)) continue;
       warn(
         context,
-        'AIL2306',
+        'HADL2306',
         `${endpoint.method} ${endpoint.path} maps ${response.when}, which ${service.name}.${operation.phrase} never raises`,
         endpoint.span,
       );
@@ -128,7 +128,7 @@ function checkCheckedErrorsHaveStatus(context: AnalysisContext): void {
     if (!declaration || declaration.status !== undefined) continue;
     warn(
       context,
-      'AIL2307',
+      'HADL2307',
       `checked error ${name} reaches an endpoint but has no status`,
       declaration.span,
       `write "## error ${name} (checked, status 409)"`,
@@ -145,7 +145,7 @@ function checkUnusedErrors(context: AnalysisContext): void {
     if (used.has(declaration.name)) continue;
     warn(
       context,
-      'AIL2308',
+      'HADL2308',
       `error ${declaration.name} is declared but never raised`,
       declaration.span,
       'delete it; an error nobody raises is code nobody can test',

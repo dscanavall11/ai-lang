@@ -1,9 +1,9 @@
 {
-  "name": "@ai-lang/iac",
-  "version": "0.1.1",
-  "description": "AI-Lang infrastructure generators: Docker, Kubernetes, Terraform and AWS.",
+  "name": "@haic/iac",
+  "version": "0.2.0",
+  "description": "HADL infrastructure generators: Docker, Kubernetes, Terraform and AWS.",
   "keywords": [
-    "ai-lang",
+    "hadl",
     "infrastructure-as-code",
     "docker",
     "kubernetes",
@@ -11,14 +11,14 @@
   ],
   "license": "Apache-2.0",
   "author": "dscanavall11",
-  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "homepage": "https://github.com/dscanavall11/hadl#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "url": "git+https://github.com/dscanavall11/hadl.git",
     "directory": "packages/iac"
   },
   "bugs": {
-    "url": "https://github.com/dscanavall11/ai-lang/issues"
+    "url": "https://github.com/dscanavall11/hadl/issues"
   },
   "engines": {
     "node": ">=20"
@@ -36,6 +36,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.1"
+    "@haic/core": "0.2.0"
   }
 }

@@ -7,7 +7,7 @@
  * cheap to write and expensive to keep, so the compiler names them out loud.
  *
  * Everything here is a warning, never an error: unused code is a smell, not a
- * contradiction. `ail check --strict` turns them into failures.
+ * contradiction. `haic check --strict` turns them into failures.
  */
 import {
   normalisePhrase,
@@ -16,7 +16,7 @@ import {
   type IRDeclaration,
   type IRField,
   type SourceSpan,
-} from '@ai-lang/core';
+} from '@haic/core';
 import type { AnalysisContext, SemanticPass } from '../context.js';
 import { typesOfDeclaration, walkExpressions, walkStatements } from '../walk.js';
 
@@ -108,7 +108,7 @@ function reportUnreachableDeclarations(context: AnalysisContext, referenced: Map
     if (declaration.kind === 'scenario') continue;
     context.diagnostics.warn(
       'ddd',
-      'AIL2501',
+      'HADL2501',
       `${declaration.kind} ${declaration.name} is never reached from an endpoint, handler or adapter`,
       declaration.span ?? fallback(context),
       { hint: 'delete it, or wire it into the flow it was written for' },
@@ -132,7 +132,7 @@ function reportDuplicateShapes(context: AnalysisContext): void {
     for (const duplicate of rest) {
       context.diagnostics.warn(
         'ddd',
-        'AIL2502',
+        'HADL2502',
         `${duplicate.kind} ${duplicate.name} has exactly the same fields as ${first!.kind} ${first!.name}`,
         duplicate.span ?? fallback(context),
         {
@@ -174,7 +174,7 @@ function reportPassThroughOperations(context: AnalysisContext): void {
 
       context.diagnostics.warn(
         'ddd',
-        'AIL2503',
+        'HADL2503',
         `${service.name}.${operation.phrase} only forwards "${call.operation}"`,
         operation.span ?? service.span ?? fallback(context),
         { hint: 'let the caller use the port directly, or add the rule this operation was meant to hold' },
@@ -198,7 +198,7 @@ function reportUnusedPorts(context: AnalysisContext): void {
     if ((callers.get(port.name)?.size ?? 0) > 0) continue;
     context.diagnostics.warn(
       'ddd',
-      'AIL2504',
+      'HADL2504',
       `port ${port.name} has no callers`,
       port.span ?? fallback(context),
       { hint: 'add it to the "uses" line of the service that needs it, or delete it' },
@@ -276,7 +276,7 @@ function reportSpeculativeFields(context: AnalysisContext, referenced: Map<strin
       if (mentionedPaths.has(field.name)) continue;
       context.diagnostics.info(
         'ddd',
-        'AIL2505',
+        'HADL2505',
         `${aggregate.name}.${field.name} is stored but never read or written`,
         field.span ?? aggregate.span ?? fallback(context),
         { hint: 'keep it only if something outside this module needs it' },

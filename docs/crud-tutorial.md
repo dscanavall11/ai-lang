@@ -6,33 +6,33 @@ you, that is a bug — please report it.
 ## Install
 
 ```bash
-npm install -g @ai-lang/cli
+npm install -g @haic/cli
 ```
 
-`ail` is now on your path:
+`haic` is now on your path:
 
 ```bash
-ail --version      # ail 0.1.0
-ail targets        # what this build can emit
+haic --version      # haic 0.2.0
+haic targets        # what this build can emit
 ```
 
-To uninstall later: `npm uninstall -g @ai-lang/cli`. To skip installing
-altogether, put `npx @ai-lang/cli` in place of `ail` in every command below.
+To uninstall later: `npm uninstall -g @haic/cli`. To skip installing
+altogether, put `npx @haic/cli` in place of `haic` in every command below.
 
 To work on the compiler itself, clone it instead:
 
 ```bash
-git clone https://github.com/dscanavall11/ai-lang.git
-cd ai-lang
+git clone https://github.com/dscanavall11/hadl.git
+cd hadl
 npm install
 npm run build
-npm link --workspace @ai-lang/cli
+npm link --workspace @haic/cli
 ```
 
 ## Run the worked example first
 
 ```bash
-ail check examples/crud
+haic check examples/crud
 ```
 
 ```
@@ -45,7 +45,7 @@ Bounded contexts
 Now compile and start it:
 
 ```bash
-ail build examples/crud --target typescript --out out
+haic build examples/crud --target typescript --out out
 cd out/typescript
 npm install
 npm run dev
@@ -84,7 +84,7 @@ curl localhost:8080/tasks/74afa342-…
 # → 404 {"code":"TASK_NOT_FOUND","message":"no task exists with id 74afa342-…"}
 ```
 
-The 404 body is the `message:` line from the `.ail` source, with `{taskId}`
+The 404 body is the `message:` line from the `.hadl` source, with `{taskId}`
 filled in. Nothing about that response was written by hand.
 
 Break a rule and the model refuses:
@@ -103,12 +103,12 @@ That came from `- title: text, required, min length 1, max length 200`.
 ## Write your own
 
 ```bash
-ail new inventory
+haic new inventory
 cd inventory
 ```
 
 The scaffold is a complete slice that already compiles. Open
-`src/inventory.ail` and replace it with your own. Here is the whole shape of a
+`src/inventory.hadl` and replace it with your own. Here is the whole shape of a
 CRUD, in the order the compiler wants it.
 
 ### 1. The thing you are storing
@@ -158,7 +158,7 @@ must map it to a status. The compiler enforces both.
 
 A command carries what the caller sends, which is deliberately less than the
 aggregate holds: no `id` on create, no `active` anywhere. If you find yourself
-copying every field, the compiler will tell you (`AIL2502`).
+copying every field, the compiler will tell you (`HADL2502`).
 
 ### 4. What you ask the outside world for
 
@@ -274,7 +274,7 @@ responds 404 when ProductNotFound
 Leave out one `responds ... when` and the compiler stops you:
 
 ```
-error[AIL2305]: DELETE /products/{id} does not say what happens when ProductNotFound is raised
+error[HADL2305]: DELETE /products/{id} does not say what happens when ProductNotFound is raised
   help: add "responds 404 when ProductNotFound"
 ```
 
@@ -290,15 +290,15 @@ deploy to docker
 ### Then
 
 ```bash
-ail check src
-ail build src --target typescript --out out
+haic check src
+haic build src --target typescript --out out
 cd out/typescript && npm install && npm run dev
 ```
 
 And when you want the infrastructure:
 
 ```bash
-ail deploy src --out out
+haic deploy src --out out
 docker compose -f out/docker/docker-compose.yml up
 ```
 
@@ -332,11 +332,11 @@ Nothing else in the project changes. That is the whole point of the port.
 Same source, different backend:
 
 ```bash
-ail build src --target java     # Spring Boot
-ail build src --target python   # FastAPI
-ail build src --target go       # Chi
-ail build src --target rust     # Axum
-ail build src --target all      # all five
+haic build src --target java     # Spring Boot
+haic build src --target python   # FastAPI
+haic build src --target go       # Chi
+haic build src --target rust     # Axum
+haic build src --target all      # all five
 ```
 
 Or let each bounded context choose its own with `target:` in the frontmatter.
@@ -345,7 +345,7 @@ Or let each bounded context choose its own with `target:` in the frontmatter.
 
 ## What this buys you over prompting for the code directly
 
-The tasks example is 132 lines of `.ail`. It produces 420 lines of TypeScript
+The tasks example is 132 lines of `.hadl`. It produces 420 lines of TypeScript
 across 12 files, or 606 lines of Java across 19 — before tests, and before you
 count the build files and the compose stack that come with them.
 
@@ -359,14 +359,14 @@ The compiler also refuses shapes that a model will happily produce and you will
 happily approve:
 
 ```
-warning[AIL2502]: dto ProductDto has exactly the same fields as aggregate Product
+warning[HADL2502]: dto ProductDto has exactly the same fields as aggregate Product
   help: a dto exists to carry less than the model; either drop fields or reuse Product
 
-warning[AIL2504]: port PricingGateway has no callers
+warning[HADL2504]: port PricingGateway has no callers
   help: add it to the "uses" line of the service that needs it, or delete it
 ```
 
-Run `ail explain AIL2502` for the reasoning behind any of them.
+Run `haic explain HADL2502` for the reasoning behind any of them.
 
 ---
 
@@ -389,7 +389,7 @@ then it fails with ConstraintViolation
 ```
 
 ```bash
-ail test src
+haic test src
 ```
 
 ```
@@ -406,7 +406,7 @@ does not hold you get both sides:
 ```
 ✗ updating changes the title
     this did not hold: "Ship it twice" equals "Ship it thrice"
-    src/tasks.ail:183
+    src/tasks.hadl:183
 ```
 
 Only once the scenarios pass is it worth spending the tokens to expand the

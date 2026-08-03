@@ -13,7 +13,7 @@ import {
   type IRType,
   type ModuleIndex,
   type UnaryOperator,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { LanguageEmitter } from '../../shared/emitter.js';
 
 const PRIMITIVES: Record<string, string> = {
@@ -293,7 +293,7 @@ export class PythonEmitter extends LanguageEmitter {
   }
 
   protected override todoComment(): string {
-    return '# no body declared in the .ail source';
+    return '# no body declared in the .hadl source';
   }
 
   /** Keyword arguments are named after the fields they fill. */

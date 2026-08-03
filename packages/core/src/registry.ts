@@ -23,10 +23,10 @@ export interface GenerationResult {
 }
 
 export interface CodeGenerator {
-  /** Stable id used on the command line: `ail build --target java`. */
+  /** Stable id used on the command line: `haic build --target java`. */
   readonly id: string;
   readonly displayName: string;
-  /** Framework the generated project is built on, shown in `ail targets`. */
+  /** Framework the generated project is built on, shown in `haic targets`. */
   readonly framework: string;
   /** Toolchain command used to verify the generated project, if available. */
   readonly verifyCommand?: readonly string[];

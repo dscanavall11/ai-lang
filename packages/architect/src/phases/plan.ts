@@ -6,7 +6,7 @@
  * edges wait for the application. Each task is sized to one aggregate feature,
  * because that is the unit a reviewer can hold in their head.
  */
-import type { DiagnosticBag } from '@ai-lang/core';
+import type { DiagnosticBag } from '@haic/core';
 import type { Phase } from '../phase.js';
 import type { ArchitectState, DddLayer, TaskPlan } from '../types.js';
 import { adapterName, repositoryName, serviceName } from '../naming.js';
@@ -123,7 +123,7 @@ export const planPhase: Phase = {
       if (aggregates.length === 0) {
         diagnostics.info(
           'architect',
-          'AIL3090',
+          'HADL3090',
           `bounded context ${context.name} produced no aggregates, so it has no tasks`,
           { file: state.input.path, start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } },
           { hint: 'the requirements may describe it only in passing; say what it owns, or drop it' },

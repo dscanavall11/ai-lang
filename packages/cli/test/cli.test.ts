@@ -31,11 +31,11 @@ async function run(argv: string[], cwd = repoRoot): Promise<{ code: number; out:
   }
 }
 
-describe('the ail command', () => {
+describe('the haic command', () => {
   it('reports usage when called with nothing', async () => {
     const { code, out } = await run([]);
     expect(code).toBe(2);
-    expect(out).toContain('the AI-Lang compiler');
+    expect(out).toContain('the HADL compiler');
   });
 
   it('checks the worked example without errors', async () => {
@@ -46,9 +46,9 @@ describe('the ail command', () => {
   });
 
   it('fails on a source with a broken design rule', async () => {
-    const { code, out } = await run(['check', 'packages/cli/test/fixtures/embeds-aggregate.ail']);
+    const { code, out } = await run(['check', 'packages/cli/test/fixtures/embeds-aggregate.hadl']);
     expect(code).toBe(1);
-    expect(out).toContain('AIL2207');
+    expect(out).toContain('HADL2207');
     expect(out).toContain('store the identity instead');
   });
 
@@ -65,7 +65,7 @@ describe('the ail command', () => {
     expect(created.code).toBe(0);
 
     const root = join(scratch, 'demo-service');
-    expect(readFileSync(join(root, 'ail.json'), 'utf8')).toContain('"defaultTarget": "typescript"');
+    expect(readFileSync(join(root, 'hadl.json'), 'utf8')).toContain('"defaultTarget": "typescript"');
 
     const checked = await run(['check', 'src'], root);
     expect(checked.out).not.toContain('error[');
@@ -85,7 +85,7 @@ describe('the ail command', () => {
   });
 
   it('explains the reasoning behind a design rule', async () => {
-    const { code, out } = await run(['explain', 'AIL2503']);
+    const { code, out } = await run(['explain', 'HADL2503']);
     expect(code).toBe(0);
     expect(out).toContain('A service operation that only forwards');
   });

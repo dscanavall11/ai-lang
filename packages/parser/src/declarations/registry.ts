@@ -4,7 +4,7 @@
  * Every declaration keyword is handled by one `DeclarationParser`. Supporting a
  * new keyword means registering another parser — nothing here changes.
  */
-import type { IRDeclaration } from '@ai-lang/core';
+import type { IRDeclaration } from '@haic/core';
 import type { ParseReporter } from '../reporter.js';
 import type { Section } from '../section.js';
 

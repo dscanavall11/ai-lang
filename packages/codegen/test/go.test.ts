@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { codeGenerators, generateProject } from '../src/index.js';
 import { projectFrom } from './helpers.js';
 
-const project = projectFrom(['examples/crud/tasks.ail'], 'tasks');
+const project = projectFrom(['examples/crud/tasks.hadl'], 'tasks');
 const result = generateProject(codeGenerators.require('go'), { project, outputDir: 'out/go', options: {} });
 const source = result.files.map((f) => f.contents).join('\n');
 

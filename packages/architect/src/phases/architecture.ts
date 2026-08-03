@@ -11,7 +11,7 @@
  *   3. a subdomain the requirements describe as unique or competitive is core,
  *      anything else is supporting.
  */
-import { pascalCase, snakeCase, type DiagnosticBag } from '@ai-lang/core';
+import { pascalCase, snakeCase, type DiagnosticBag } from '@haic/core';
 import { countMentions, mentions, plural, singular } from '../language.js';
 import { DIFFERENTIATOR_MARKERS, GENERIC_FAMILIES, matchMarker, type GenericFamily } from '../lexicon.js';
 import { contextMapDiagram } from '../mermaid.js';
@@ -291,7 +291,7 @@ function report(state: ArchitectState, diagnostics: DiagnosticBag): void {
       line: first.line,
       ambiguity: `${context.name} holds a single capability, so it may not deserve its own model.`,
       question: `Should ${context.name} stay a bounded context of its own, or move inside ${largest && largest.name !== context.name ? largest.name : 'a larger context'}?`,
-      assumption: `kept as a separate bounded context and emitted as ${context.module}.ail`,
+      assumption: `kept as a separate bounded context and emitted as ${context.module}.hadl`,
       evidence: first.name,
     });
   }

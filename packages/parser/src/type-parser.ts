@@ -7,7 +7,7 @@
  *   Money or nothing           optional
  *   Order or OrderNotFound     result carrying checked errors
  */
-import { PRIMITIVE_TYPES, type IRType, type PrimitiveType } from '@ai-lang/core';
+import { PRIMITIVE_TYPES, type IRType, type PrimitiveType } from '@haic/core';
 import type { ParseReporter } from './reporter.js';
 import { isTypeName, type TokenCursor } from './tokens.js';
 
@@ -56,7 +56,7 @@ function parseErrorTail(cursor: TokenCursor, reporter: ParseReporter, ok: IRType
     const token = cursor.peek();
     if (!isTypeName(token)) {
       reporter.error(
-        'AIL1210',
+        'HADL1210',
         `expected the name of a checked error after "or", found ${describe(token?.raw)}`,
         cursor.currentSpan(),
         'checked errors are declared with "## error <Name> (checked)" and their names start with a capital letter',
@@ -83,14 +83,14 @@ function parseCore(cursor: TokenCursor, reporter: ParseReporter): IRType {
   if (cursor.eatPhrase('map', 'from')) {
     const key = parseCore(cursor, reporter);
     if (!cursor.eatWord('to')) {
-      reporter.error('AIL1211', 'expected "to" in "map from <key> to <value>"', cursor.currentSpan());
+      reporter.error('HADL1211', 'expected "to" in "map from <key> to <value>"', cursor.currentSpan());
     }
     return { kind: 'map', key, value: parseCore(cursor, reporter) };
   }
 
   const token = cursor.peek();
   if (token?.kind !== 'word') {
-    reporter.error('AIL1212', `expected a type name, found ${describe(token?.raw)}`, cursor.currentSpan());
+    reporter.error('HADL1212', `expected a type name, found ${describe(token?.raw)}`, cursor.currentSpan());
     cursor.next();
     return { kind: 'primitive', name: 'json' };
   }
@@ -106,7 +106,7 @@ function parseCore(cursor: TokenCursor, reporter: ParseReporter): IRType {
 
   if (!isTypeName(token)) {
     reporter.error(
-      'AIL1213',
+      'HADL1213',
       `unknown type "${token.raw}"`,
       cursor.spanOf(token),
       `declared types start with a capital letter; built-in types are ${PRIMITIVE_TYPES.join(', ')}`,

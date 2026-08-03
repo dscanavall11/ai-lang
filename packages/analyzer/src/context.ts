@@ -5,7 +5,7 @@
  * the pipeline; no existing pass changes. Passes share the read-only module
  * index and report through the same diagnostic bag.
  */
-import type { DiagnosticBag, DiagnosticStage, IRModule, IRProject, IRType, ModuleIndex, SourceSpan } from '@ai-lang/core';
+import type { DiagnosticBag, DiagnosticStage, IRModule, IRProject, IRType, ModuleIndex, SourceSpan } from '@haic/core';
 
 export interface AnalysisContext {
   readonly project: IRProject;

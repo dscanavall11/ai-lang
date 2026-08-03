@@ -5,7 +5,7 @@
  * exported so the generated `02-architecture.md` can print the exact rule that
  * fired, and so adding a rule never means editing a phase.
  */
-import type { CodegenTarget, DeployTarget, PrimitiveType } from '@ai-lang/core';
+import type { CodegenTarget, DeployTarget, PrimitiveType } from '@haic/core';
 import type { VerbClass } from './types.js';
 
 export interface VerbGroup {

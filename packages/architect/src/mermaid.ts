@@ -3,7 +3,7 @@
  *
  * The diagrams are part of the review surface: a reader who will not open the
  * IR will look at the context map. They are built from the same state the
- * `.ail` files come from, so they can never drift.
+ * `.hadl` files come from, so they can never drift.
  */
 import type { AggregatePlan, BoundedContextPlan, ContextEdge, EntityPlan, ValueObjectPlan } from './types.js';
 

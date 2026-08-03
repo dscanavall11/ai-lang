@@ -5,7 +5,7 @@
  * module, an imported module, or a built-in. Duplicates are reported once at the
  * second declaration so the first stays the anchor.
  */
-import { referencedNames, type IRDeclaration, type SourceSpan } from '@ai-lang/core';
+import { referencedNames, type IRDeclaration, type SourceSpan } from '@haic/core';
 import type { AnalysisContext, SemanticPass } from '../context.js';
 import { withSuggestion } from '../context.js';
 import { typesReferencedBy } from '../walk.js';
@@ -27,7 +27,7 @@ function reportDuplicates(context: AnalysisContext): void {
     if (previous) {
       context.diagnostics.error(
         'resolve',
-        'AIL2001',
+        'HADL2001',
         `"${declaration.name}" is declared twice in module ${context.module.name}`,
         declaration.span ?? spanOf(context),
         {
@@ -46,7 +46,7 @@ function reportUnresolvedTypes(context: AnalysisContext): void {
   for (const { type, span, where } of typesReferencedBy(context.module)) {
     for (const name of referencedNames(type)) {
       if (known.has(name)) continue;
-      context.diagnostics.error('resolve', 'AIL2002', `unknown type "${name}" in ${where}`, span ?? spanOf(context), {
+      context.diagnostics.error('resolve', 'HADL2002', `unknown type "${name}" in ${where}`, span ?? spanOf(context), {
         hint:
           withSuggestion('', name, [...known]) ??
           'declare it in this module, or import the module that owns it in the frontmatter',
@@ -58,15 +58,15 @@ function reportUnresolvedTypes(context: AnalysisContext): void {
 function reportImportsOfUnknownModules(context: AnalysisContext): void {
   for (const entry of context.module.imports) {
     if (entry.module === context.module.name) {
-      context.diagnostics.error('resolve', 'AIL2003', `module ${context.module.name} imports itself`, spanOf(context));
+      context.diagnostics.error('resolve', 'HADL2003', `module ${context.module.name} imports itself`, spanOf(context));
       continue;
     }
     const sibling = context.siblings.get(entry.module);
     if (!sibling) {
-      context.diagnostics.error('resolve', 'AIL2004', `imported module "${entry.module}" was not found`, spanOf(context), {
+      context.diagnostics.error('resolve', 'HADL2004', `imported module "${entry.module}" was not found`, spanOf(context), {
         hint:
           withSuggestion('', entry.module, [...context.siblings.keys()]) ??
-          'imports name other .ail modules compiled in the same project',
+          'imports name other .hadl modules compiled in the same project',
       });
       continue;
     }
@@ -74,7 +74,7 @@ function reportImportsOfUnknownModules(context: AnalysisContext): void {
       if (!sibling.has(name)) {
         context.diagnostics.error(
           'resolve',
-          'AIL2005',
+          'HADL2005',
           `module "${entry.module}" does not declare "${name}"`,
           spanOf(context),
           { hint: withSuggestion('', name, sibling.module.declarations.map((d) => d.name)) },

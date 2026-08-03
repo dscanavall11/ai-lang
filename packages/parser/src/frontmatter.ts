@@ -9,7 +9,7 @@
  *     - catalog via anti-corruption-layer
  *   ---
  *
- * Only the flat subset AI-Lang needs is supported: scalars and lists of scalars.
+ * Only the flat subset HADL needs is supported: scalars and lists of scalars.
  * Anything deeper belongs in a declaration, not in the header.
  */
 import type { ParseReporter } from './reporter.js';
@@ -49,7 +49,7 @@ export function parseFrontmatter(file: SourceFile, reporter: ParseReporter): Fro
     const bullet = /^[-*]\s+(.*)$/.exec(line.text);
     if (bullet) {
       if (!currentList) {
-        reporter.error('AIL1601', 'list item outside of a frontmatter key', file.spanOf(line));
+        reporter.error('HADL1601', 'list item outside of a frontmatter key', file.spanOf(line));
         continue;
       }
       currentList.push(bullet[1]!.trim());
@@ -58,7 +58,7 @@ export function parseFrontmatter(file: SourceFile, reporter: ParseReporter): Fro
 
     const entry = /^([A-Za-z][\w-]*)\s*:\s*(.*)$/.exec(line.text);
     if (!entry) {
-      reporter.error('AIL1602', `expected "key: value" in frontmatter, found "${line.text}"`, file.spanOf(line));
+      reporter.error('HADL1602', `expected "key: value" in frontmatter, found "${line.text}"`, file.spanOf(line));
       continue;
     }
     const key = entry[1]!.toLowerCase();
@@ -75,7 +75,7 @@ export function parseFrontmatter(file: SourceFile, reporter: ParseReporter): Fro
   }
 
   if (index >= lines.length) {
-    reporter.error('AIL1603', 'frontmatter is not closed with "---"', file.spanOf(lines[0]!));
+    reporter.error('HADL1603', 'frontmatter is not closed with "---"', file.spanOf(lines[0]!));
     return { values, lists, origins, body: lines };
   }
 

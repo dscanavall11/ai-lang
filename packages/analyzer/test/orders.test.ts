@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { DiagnosticBag, formatDiagnostics, type IRModule } from '@ai-lang/core';
-import { parseModule } from '@ai-lang/parser';
+import { DiagnosticBag, formatDiagnostics, type IRModule } from '@haic/core';
+import { parseModule } from '@haic/parser';
 import { analyze } from '../src/index.js';
 
-const FILES = ['examples/orders/orders.ail', 'examples/orders/catalog.ail'];
+const FILES = ['examples/orders/orders.hadl', 'examples/orders/catalog.hadl'];
 
 const sources = new Map(
   FILES.map((path) => [path, readFileSync(fileURLToPath(new URL(`../../../${path}`, import.meta.url)), 'utf8')]),

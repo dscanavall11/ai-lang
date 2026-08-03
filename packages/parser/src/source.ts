@@ -1,11 +1,11 @@
 /**
  * Line scanning.
  *
- * AI-Lang is line-oriented: Markdown headings open declarations, indentation
+ * HADL is line-oriented: Markdown headings open declarations, indentation
  * opens bodies. The cursor below is the only thing that reads raw text; every
  * other parser works on `Line` values.
  */
-import type { SourcePosition, SourceSpan } from '@ai-lang/core';
+import type { SourcePosition, SourceSpan } from '@haic/core';
 
 export interface Line {
   /** 1-based line number in the original file. */

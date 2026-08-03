@@ -1,4 +1,4 @@
-/** Turns one `.ail` file into an IR module (before semantic analysis). */
+/** Turns one `.hadl` file into an IR module (before semantic analysis). */
 import {
   CODEGEN_TARGETS,
   IR_VERSION,
@@ -6,7 +6,7 @@ import {
   type DiagnosticBag,
   type IRDeclaration,
   type IRModule,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { behaviourParsers } from './declarations/behaviour.js';
 import { dataShapeParsers } from './declarations/data-shapes.js';
 import { queryParser } from './declarations/query.js';
@@ -46,7 +46,7 @@ export function parseModule(path: string, text: string, diagnostics: DiagnosticB
   const name = frontmatter.values.get('module') ?? inferModuleName(path);
   if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) {
     const origin = frontmatter.origins.get('module');
-    reporter.error('AIL1610', `"${name}" is not a valid module name`, origin ? file.spanOf(origin) : file.spanOf(file.lines[0]!));
+    reporter.error('HADL1610', `"${name}" is not a valid module name`, origin ? file.spanOf(origin) : file.spanOf(file.lines[0]!));
     return { module: null, file };
   }
 
@@ -58,7 +58,7 @@ export function parseModule(path: string, text: string, diagnostics: DiagnosticB
   for (const section of sections) {
     if (section.keyword === 'infrastructure' || section.keyword === 'infra') {
       if (infrastructure) {
-        reporter.error('AIL1611', 'a module can declare infrastructure only once', section.span);
+        reporter.error('HADL1611', 'a module can declare infrastructure only once', section.span);
         continue;
       }
       infrastructure = parseInfrastructure(section, reporter);
@@ -72,7 +72,7 @@ export function parseModule(path: string, text: string, diagnostics: DiagnosticB
     const parser = registry.get(section.keyword);
     if (!parser) {
       reporter.error(
-        'AIL1612',
+        'HADL1612',
         `unknown declaration "${section.keyword}"`,
         section.span,
         `known declarations: ${[...registry.keywords(), 'infrastructure', 'glossary'].join(', ')}`,
@@ -80,14 +80,14 @@ export function parseModule(path: string, text: string, diagnostics: DiagnosticB
       continue;
     }
     if (section.name === '' && section.keyword !== 'endpoint') {
-      reporter.error('AIL1613', `${section.keyword} needs a name`, section.span);
+      reporter.error('HADL1613', `${section.keyword} needs a name`, section.span);
       continue;
     }
     // One rule for every declaration kind. Infrastructure and glossary are left
     // out: the first reports unknown settings itself, the second is prose.
     for (const clause of unknownClauses(section)) {
       reporter.error(
-        'AIL1006',
+        'HADL1006',
         `"${clause.text}" is not a clause of ${section.keyword}`,
         file.spanOf(clause),
         'a line directly under the heading configures the declaration; write prose after a blank line',
@@ -119,7 +119,7 @@ export function parseModule(path: string, text: string, diagnostics: DiagnosticB
     else {
       const origin = frontmatter.origins.get('target');
       reporter.error(
-        'AIL1614',
+        'HADL1614',
         `unknown compilation target "${target}"`,
         origin ? file.spanOf(origin) : file.spanOf(file.lines[0]!),
         `supported targets: ${CODEGEN_TARGETS.join(', ')}`,
@@ -149,7 +149,7 @@ function parseImports(
     if (viaMatch) {
       const candidate = viaMatch[1]!.toLowerCase();
       if ((IMPORT_RELATIONSHIPS as readonly string[]).includes(candidate)) via = candidate as typeof via;
-      else reporter.error('AIL1615', `unknown import relationship "${candidate}"`, span, `supported: ${IMPORT_RELATIONSHIPS.join(', ')}`);
+      else reporter.error('HADL1615', `unknown import relationship "${candidate}"`, span, `supported: ${IMPORT_RELATIONSHIPS.join(', ')}`);
     }
     return {
       module: moduleName,

@@ -1,5 +1,5 @@
 /** Parsers for behaviour: port, adapter, service, handler, endpoint. */
-import { ADAPTER_TECHNOLOGIES, HTTP_METHODS, pascalCase, type IRDeclaration, type IREndpointDecl } from '@ai-lang/core';
+import { ADAPTER_TECHNOLOGIES, HTTP_METHODS, pascalCase, type IRDeclaration, type IREndpointDecl } from '@haic/core';
 import type { ParseReporter } from '../reporter.js';
 import type { Section } from '../section.js';
 import { parseStatements } from '../statement-parser.js';
@@ -16,7 +16,7 @@ export const portParser: DeclarationParser = {
     const direction = modifiers.includes('inbound') || modifiers.includes('driving') ? 'inbound' : 'outbound';
     if (!modifiers.includes('inbound') && !modifiers.includes('outbound') && !modifiers.includes('driving') && !modifiers.includes('driven')) {
       reporter.warn(
-        'AIL1020',
+        'HADL1020',
         `port ${section.name} does not declare a direction; assuming outbound`,
         section.span,
         'write "## port OrderRepository (outbound)" for repositories and gateways, "(inbound)" for use cases',
@@ -26,7 +26,7 @@ export const portParser: DeclarationParser = {
     const operations = signaturesOf(parsed, reporter);
     if (operations.length === 0) {
       reporter.error(
-        'AIL1021',
+        'HADL1021',
         `port ${section.name} declares no operations`,
         section.span,
         'list operations as "- find order by id (id: uuid) -> Order or OrderNotFound"',
@@ -54,7 +54,7 @@ function inlineAdapter(
 
   if (direction === 'inbound') {
     reporter.error(
-      'AIL1031',
+      'HADL1031',
       `inbound port ${section.name} cannot name a technology`,
       section.span,
       'an inbound port is fulfilled by a service; only outbound ports need an adapter',
@@ -65,7 +65,7 @@ function inlineAdapter(
   const technologyWord = declared.split(/\s/)[0]!.toLowerCase();
   if (!(ADAPTER_TECHNOLOGIES as readonly string[]).includes(technologyWord)) {
     reporter.error(
-      'AIL1032',
+      'HADL1032',
       `unknown adapter technology "${technologyWord}"`,
       section.span,
       `supported technologies: ${ADAPTER_TECHNOLOGIES.join(', ')}`,
@@ -93,7 +93,7 @@ export const adapterParser: DeclarationParser = {
     const implemented = singleAttribute(parsed, /^implements\s+/i) ?? matchModifier(section, /implements\s+([A-Z][A-Za-z0-9_]*)/);
     if (!implemented) {
       reporter.error(
-        'AIL1022',
+        'HADL1022',
         `adapter ${section.name} does not say which port it implements`,
         section.span,
         'write "## adapter PostgresOrderRepository implements OrderRepository using sql"',
@@ -107,7 +107,7 @@ export const adapterParser: DeclarationParser = {
       : 'in-memory';
     if (technology === 'in-memory' && technologyWord !== 'in-memory') {
       reporter.error(
-        'AIL1023',
+        'HADL1023',
         `unknown adapter technology "${technologyWord}"`,
         section.span,
         `supported technologies: ${ADAPTER_TECHNOLOGIES.join(', ')}`,
@@ -139,7 +139,7 @@ export const serviceParser: DeclarationParser = {
     const operations = operationsOf(parsed, reporter);
     if (operations.length === 0) {
       reporter.error(
-        'AIL1024',
+        'HADL1024',
         `service ${section.name} declares no operations`,
         section.span,
         'write "operation place order (command: PlaceOrder) -> OrderPlaced:" followed by an indented body',
@@ -168,7 +168,7 @@ export const handlerParser: DeclarationParser = {
     const schedule = singleAttribute(parsed, /^schedule\s+/i);
     if (!on && !schedule) {
       reporter.error(
-        'AIL1025',
+        'HADL1025',
         `handler ${section.name} does not say what triggers it`,
         section.span,
         'write "## handler NotifyCustomer on OrderPlaced" or add a "schedule 0 3 * * *" line',
@@ -211,7 +211,7 @@ export const endpointParser: DeclarationParser = {
     const match = ENDPOINT_HEADING.exec(headingTail);
     if (!match) {
       reporter.error(
-        'AIL1026',
+        'HADL1026',
         `endpoint heading must be "<METHOD> <path>", found "${headingTail}"`,
         section.span,
         'write "## endpoint POST /orders/{orderId}/place"',
@@ -224,7 +224,7 @@ export const endpointParser: DeclarationParser = {
     const handledBy = singleAttribute(parsed, /^handled\s+by\s+/i);
     if (!handledBy) {
       reporter.error(
-        'AIL1027',
+        'HADL1027',
         `endpoint ${method} ${path} does not say which service handles it`,
         section.span,
         'add a line "handled by PlaceOrderService.place order"',
@@ -233,14 +233,14 @@ export const endpointParser: DeclarationParser = {
     }
     const dot = handledBy.indexOf('.');
     if (dot < 0) {
-      reporter.error('AIL1028', `expected "<Service>.<operation>" in "handled by ${handledBy}"`, section.span);
+      reporter.error('HADL1028', `expected "<Service>.<operation>" in "handled by ${handledBy}"`, section.span);
       return null;
     }
 
     const responses = parseResponses(section, parsed, reporter);
     if (responses.length === 0) {
       reporter.error(
-        'AIL1029',
+        'HADL1029',
         `endpoint ${method} ${path} declares no responses`,
         section.span,
         'add "responds 200 with OrderPlaced" and one line per checked error',
@@ -295,7 +295,7 @@ function parseResponses(section: Section, parsed: ReturnType<typeof read>, repor
       continue;
     }
     reporter.error(
-      'AIL1030',
+      'HADL1030',
       `expected "with <type>" or "when <Error>" after "responds ${status}"`,
       section.file.spanOf(line),
     );

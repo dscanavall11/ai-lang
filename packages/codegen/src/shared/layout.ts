@@ -5,7 +5,7 @@
  * file tree: `domain` imports nothing, `application` imports `domain`,
  * `infrastructure` and `interface` import `application`.
  */
-import { kebabCase, type IRModule } from '@ai-lang/core';
+import { kebabCase, type IRModule } from '@haic/core';
 
 export type Layer = 'domain' | 'application' | 'infrastructure' | 'interface' | 'shared';
 

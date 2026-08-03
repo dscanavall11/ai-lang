@@ -1,22 +1,22 @@
 {
-  "name": "@ai-lang/parser",
-  "version": "0.1.1",
-  "description": "Hand-written lexer and recursive-descent parser for AI-Lang.",
+  "name": "@haic/parser",
+  "version": "0.2.0",
+  "description": "Hand-written lexer and recursive-descent parser for HADL.",
   "keywords": [
-    "ai-lang",
+    "hadl",
     "parser",
     "lexer"
   ],
   "license": "Apache-2.0",
   "author": "dscanavall11",
-  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "homepage": "https://github.com/dscanavall11/hadl#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "url": "git+https://github.com/dscanavall11/hadl.git",
     "directory": "packages/parser"
   },
   "bugs": {
-    "url": "https://github.com/dscanavall11/ai-lang/issues"
+    "url": "https://github.com/dscanavall11/hadl/issues"
   },
   "engines": {
     "node": ">=20"
@@ -34,6 +34,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.1"
+    "@haic/core": "0.2.0"
   }
 }

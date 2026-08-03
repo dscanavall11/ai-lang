@@ -11,7 +11,7 @@
  * `given` and `when` reuse the `let` form exactly, so a scenario reads like the
  * body it exercises rather than like a testing framework.
  */
-import { pascalCase, type IRDeclaration, type IRExpression } from '@ai-lang/core';
+import { pascalCase, type IRDeclaration, type IRExpression } from '@haic/core';
 import { parseExpression } from '../expression-parser.js';
 import type { ParseReporter } from '../reporter.js';
 import type { Line } from '../source.js';
@@ -42,7 +42,7 @@ export const scenarioParser: DeclarationParser = {
       if (cursor.eatWord('when')) {
         if (when) {
           reporter.error(
-            'AIL1050',
+            'HADL1050',
             `scenario ${section.name} has more than one "when"`,
             span,
             'a scenario exercises exactly one operation; split it into two scenarios',
@@ -71,7 +71,7 @@ export const scenarioParser: DeclarationParser = {
 
     if (!when) {
       reporter.error(
-        'AIL1051',
+        'HADL1051',
         `scenario ${section.name} never says what it exercises`,
         section.span,
         'add a line "when <operation> with <arguments>"',
@@ -80,7 +80,7 @@ export const scenarioParser: DeclarationParser = {
     }
     if (expectations.length === 0) {
       reporter.error(
-        'AIL1052',
+        'HADL1052',
         `scenario ${section.name} asserts nothing`,
         section.span,
         'add "then <condition>", "then it fails with <Error>" or "then it publishes <Event>"',
@@ -127,7 +127,7 @@ function binding(
   cursor.reset(start);
   const value = parseExpression(cursor, reporter);
   if (value.kind === 'literal' && value.value === null) {
-    reporter.error('AIL1053', `scenario ${scenario} has an empty step`, cursor.spanOf(cursor.peek()), 'write "given <name> be <value>"');
+    reporter.error('HADL1053', `scenario ${scenario} has an empty step`, cursor.spanOf(cursor.peek()), 'write "given <name> be <value>"');
     return null;
   }
   void line;
@@ -140,7 +140,7 @@ function parseExpectation(cursor: TokenCursor, reporter: ParseReporter, span: Sc
   if (cursor.eatPhrase('it', 'fails', 'with') || cursor.eatPhrase('it', 'fails')) {
     const token = cursor.peek();
     if (!isTypeName(token)) {
-      reporter.error('AIL1054', 'expected the name of a declared error after "fails with"', cursor.currentSpan());
+      reporter.error('HADL1054', 'expected the name of a declared error after "fails with"', cursor.currentSpan());
       return null;
     }
     cursor.next();
@@ -149,7 +149,7 @@ function parseExpectation(cursor: TokenCursor, reporter: ParseReporter, span: Sc
   if (cursor.eatPhrase('it', 'publishes') || cursor.eatPhrase('it', 'emits')) {
     const token = cursor.peek();
     if (!isTypeName(token)) {
-      reporter.error('AIL1055', 'expected the name of a declared event after "publishes"', cursor.currentSpan());
+      reporter.error('HADL1055', 'expected the name of a declared event after "publishes"', cursor.currentSpan());
       return null;
     }
     cursor.next();

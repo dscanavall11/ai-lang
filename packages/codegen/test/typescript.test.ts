@@ -107,11 +107,11 @@ describe('queries', () => {
   it('compiles a declared query into SQL built at call time', async () => {
     const { readFileSync } = await import('node:fs');
     const { fileURLToPath } = await import('node:url');
-    const { DiagnosticBag } = await import('@ai-lang/core');
-    const { parseModule } = await import('@ai-lang/parser');
-    const { analyze } = await import('@ai-lang/analyzer');
+    const { DiagnosticBag } = await import('@haic/core');
+    const { parseModule } = await import('@haic/parser');
+    const { analyze } = await import('@haic/analyzer');
 
-    const path = 'examples/crud/tasks.ail';
+    const path = 'examples/crud/tasks.hadl';
     const text = readFileSync(fileURLToPath(new URL(`../../../${path}`, import.meta.url)), 'utf8');
     const bag = new DiagnosticBag();
     const { module } = parseModule(path, text, bag);
