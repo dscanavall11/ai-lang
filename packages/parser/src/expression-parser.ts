@@ -14,7 +14,7 @@
  *   - a word starting with a lower-case letter is a **value**;
  *   - two or more lower-case words in a row form an **operation phrase**.
  */
-import type { BinaryOperator, IRArgument, IRExpression, IRType, SourceSpan } from '@ai-lang/core';
+import type { BinaryOperator, IRArgument, IRExpression, IRType, SourceSpan } from '@haic/core';
 import type { ParseReporter } from './reporter.js';
 import { isTypeName, type Token, type TokenCursor } from './tokens.js';
 
@@ -139,14 +139,14 @@ const AGGREGATE_WORDS: Record<string, 'sum' | 'count' | 'min' | 'max' | 'average
 function parsePrimary(cursor: TokenCursor, reporter: ParseReporter): IRExpression {
   const token = cursor.peek();
   if (!token) {
-    reporter.error('AIL1301', 'expected an expression, found end of line', cursor.currentSpan());
+    reporter.error('HADL1301', 'expected an expression, found end of line', cursor.currentSpan());
     return { kind: 'literal', value: null, type: { kind: 'primitive', name: 'nothing' } };
   }
 
   if (cursor.atPunct('(')) {
     cursor.next();
     const inner = parseExpression(cursor, reporter);
-    if (!cursor.eatPunct(')')) reporter.error('AIL1302', 'unclosed "(" in expression', cursor.currentSpan());
+    if (!cursor.eatPunct(')')) reporter.error('HADL1302', 'unclosed "(" in expression', cursor.currentSpan());
     return inner;
   }
 
@@ -160,7 +160,7 @@ function parsePrimary(cursor: TokenCursor, reporter: ParseReporter): IRExpressio
         if (!cursor.eatPunct(',')) break;
       }
     }
-    if (!cursor.eatPunct(']')) reporter.error('AIL1311', 'unclosed "[" in list', cursor.currentSpan());
+    if (!cursor.eatPunct(']')) reporter.error('HADL1311', 'unclosed "[" in list', cursor.currentSpan());
     return { kind: 'list', items, span: cursor.spanOf(token) };
   }
 
@@ -181,7 +181,7 @@ function parsePrimary(cursor: TokenCursor, reporter: ParseReporter): IRExpressio
   }
 
   if (token.kind !== 'word') {
-    reporter.error('AIL1303', `unexpected "${token.raw}" in expression`, cursor.spanOf(token));
+    reporter.error('HADL1303', `unexpected "${token.raw}" in expression`, cursor.spanOf(token));
     cursor.next();
     return { kind: 'literal', value: null, type: { kind: 'primitive', name: 'nothing' } };
   }
@@ -214,7 +214,7 @@ function parsePrimary(cursor: TokenCursor, reporter: ParseReporter): IRExpressio
     cursor.next();
     const collection = cursor.withStops(['by'], () => parseUnary(cursor, reporter));
     if (!cursor.eatWord('by')) {
-      reporter.error('AIL1112', '"each of" needs "by"', cursor.currentSpan(), 'write "each of items by productId"');
+      reporter.error('HADL1112', '"each of" needs "by"', cursor.currentSpan(), 'write "each of items by productId"');
       return collection;
     }
     return { kind: 'project', fn: 'each', collection, of: parseMultiplicative(cursor, reporter), span: cursor.spanOf(token) };
@@ -225,7 +225,7 @@ function parsePrimary(cursor: TokenCursor, reporter: ParseReporter): IRExpressio
     cursor.next();
     const collection = cursor.withStops(['where'], () => parseUnary(cursor, reporter));
     if (!cursor.eatWord('where')) {
-      reporter.error('AIL1113', '"only" needs "where"', cursor.currentSpan(), 'write "only items where quantity is at least 2"');
+      reporter.error('HADL1113', '"only" needs "where"', cursor.currentSpan(), 'write "only items where quantity is at least 2"');
       return collection;
     }
     return { kind: 'project', fn: 'only', collection, of: parseExpression(cursor, reporter), span: cursor.spanOf(token) };
@@ -270,7 +270,7 @@ function parsePrimary(cursor: TokenCursor, reporter: ParseReporter): IRExpressio
 function parseConstruct(cursor: TokenCursor, reporter: ParseReporter): IRExpression {
   const nameToken = cursor.next();
   if (!nameToken || !isTypeName(nameToken)) {
-    reporter.error('AIL1304', 'expected a type name after "new"', cursor.currentSpan());
+    reporter.error('HADL1304', 'expected a type name after "new"', cursor.currentSpan());
     return { kind: 'literal', value: null, type: { kind: 'primitive', name: 'nothing' } };
   }
 
@@ -291,7 +291,7 @@ function parseSourcePath(cursor: TokenCursor, reporter: ParseReporter): string[]
   const head = cursor.peek();
   if (head?.kind !== 'word' || isTypeName(head)) {
     reporter.error(
-      'AIL1309',
+      'HADL1309',
       'expected the name of a value after "from"',
       cursor.currentSpan(),
       'write "OrderSummary from order" where "order" is a local or a parameter',
@@ -304,7 +304,7 @@ function parseSourcePath(cursor: TokenCursor, reporter: ParseReporter): string[]
     cursor.next();
     const part = cursor.peek();
     if (part?.kind !== 'word') {
-      reporter.error('AIL1310', 'expected a field name after "."', cursor.currentSpan());
+      reporter.error('HADL1310', 'expected a field name after "."', cursor.currentSpan());
       break;
     }
     cursor.next();
@@ -329,7 +329,7 @@ function parseCall(cursor: TokenCursor, reporter: ParseReporter, anchor: Token):
     words.push(cursor.next()!.raw);
   }
   if (words.length === 0) {
-    reporter.error('AIL1305', 'expected the name of an operation to call', cursor.currentSpan());
+    reporter.error('HADL1305', 'expected the name of an operation to call', cursor.currentSpan());
   }
   const args = cursor.eatWord('with') ? parseArguments(cursor, reporter) : [];
   return { kind: 'call', receiver, operation: words.join(' '), arguments: args, span: cursor.spanOf(anchor) };
@@ -345,7 +345,7 @@ function parseReferenceOrCall(cursor: TokenCursor, reporter: ParseReporter): IRE
     cursor.next();
     const part = cursor.peek();
     if (part?.kind !== 'word') {
-      reporter.error('AIL1306', 'expected a field name after "."', cursor.currentSpan());
+      reporter.error('HADL1306', 'expected a field name after "."', cursor.currentSpan());
       break;
     }
     cursor.next();
@@ -369,13 +369,13 @@ export function parseArguments(cursor: TokenCursor, reporter: ParseReporter): IR
   for (;;) {
     const nameToken = cursor.peek();
     if (nameToken?.kind !== 'word') {
-      if (args.length === 0) reporter.error('AIL1307', 'expected an argument name after "with"', cursor.currentSpan());
+      if (args.length === 0) reporter.error('HADL1307', 'expected an argument name after "with"', cursor.currentSpan());
       break;
     }
     cursor.next();
     if (!cursor.eatPunct('=') && !cursor.eatWord('as', 'is')) {
       reporter.error(
-        'AIL1308',
+        'HADL1308',
         `expected "=" after the argument name "${nameToken.raw}"`,
         cursor.spanOf(nameToken),
         'arguments are written as "with amount = 10, currency = \\"EUR\\""',

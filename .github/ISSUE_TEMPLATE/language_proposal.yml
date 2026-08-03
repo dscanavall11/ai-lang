@@ -13,7 +13,7 @@ body:
     id: cannot
     attributes:
       label: What you cannot express today
-      description: Show the `.ail` you tried to write and what the compiler said.
+      description: Show the `.hadl` you tried to write and what the compiler said.
       render: markdown
     validations:
       required: true

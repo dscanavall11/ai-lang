@@ -5,7 +5,7 @@
  * item keeps the line it came from, so the whole model can be traced back to
  * the sentence a human wrote.
  */
-import type { DiagnosticBag } from '@ai-lang/core';
+import type { DiagnosticBag } from '@haic/core';
 import type { DocumentLine, RequirementsDocument } from '../document.js';
 import { contentWords, headNoun, mainClause, mentions, singular, whenClause } from '../language.js';
 import { classifyVerb } from '../lexicon.js';

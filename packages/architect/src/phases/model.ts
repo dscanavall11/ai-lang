@@ -7,7 +7,7 @@
  * sentence names it. Rules that cannot be expressed inside one aggregate become
  * open questions rather than invented structure.
  */
-import type { DiagnosticBag, PrimitiveType } from '@ai-lang/core';
+import type { DiagnosticBag, PrimitiveType } from '@haic/core';
 import type { Statement } from '../document.js';
 import { fieldName, firstSentence, mentions, singular, typeName } from '../language.js';
 import {

@@ -1,5 +1,5 @@
 /** Structural traversal helpers. Passes describe *what* to check; this file knows *where* to look. */
-import type { IRDeclaration, IRExpression, IRModule, IRStatement, IRType, SourceSpan } from '@ai-lang/core';
+import type { IRDeclaration, IRExpression, IRModule, IRStatement, IRType, SourceSpan } from '@haic/core';
 
 export interface TypeUse {
   type: IRType;

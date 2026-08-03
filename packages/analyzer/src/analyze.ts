@@ -11,7 +11,7 @@ import {
   type IRModule,
   type IRProject,
   type ModuleIndex,
-} from '@ai-lang/core';
+} from '@haic/core';
 import type { AnalysisContext, SemanticPass } from './context.js';
 import { architecturePass } from './passes/architecture.js';
 import { dddPass } from './passes/ddd.js';
@@ -37,7 +37,7 @@ export interface AnalyzeOptions {
   projectName?: string;
   defaultTarget?: CodegenTarget;
   passes?: readonly SemanticPass[];
-  /** Promotes warnings to errors. Used by `ail check --strict`. */
+  /** Promotes warnings to errors. Used by `haic check --strict`. */
   strict?: boolean;
 }
 
@@ -51,7 +51,7 @@ export function analyze(modules: readonly IRModule[], options: AnalyzeOptions = 
   const diagnostics = new DiagnosticBag();
   const project: IRProject = {
     irVersion: IR_VERSION,
-    name: options.projectName ?? 'ai-lang-project',
+    name: options.projectName ?? 'hadl-project',
     contexts: buildContexts(modules, options.defaultTarget),
     contextMap: buildContextMap(modules),
     modules: [...modules],
@@ -97,7 +97,7 @@ function reportDuplicateModules(modules: readonly IRModule[], diagnostics: Diagn
     if (previous) {
       diagnostics.error(
         'resolve',
-        'AIL2010',
+        'HADL2010',
         `two files declare the module "${module.name}"`,
         spanOf(module),
         {
@@ -169,7 +169,7 @@ function validateAgainstSchema(project: IRProject, diagnostics: DiagnosticBag): 
     const result = ModuleSchema.safeParse(module);
     if (result.success) continue;
     for (const issue of result.error.issues) {
-      diagnostics.error('ir', 'AIL2900', `invalid IR at ${issue.path.join('.')}: ${issue.message}`, spanOf(module), {
+      diagnostics.error('ir', 'HADL2900', `invalid IR at ${issue.path.join('.')}: ${issue.message}`, spanOf(module), {
         hint: 'this is a compiler bug; please report the source that produced it',
       });
     }
@@ -179,7 +179,7 @@ function validateAgainstSchema(project: IRProject, diagnostics: DiagnosticBag): 
     for (const issue of result.error.issues) {
       diagnostics.error(
         'ir',
-        'AIL2901',
+        'HADL2901',
         `invalid project IR at ${issue.path.join('.')}: ${issue.message}`,
         { file: '<project>', start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } },
       );

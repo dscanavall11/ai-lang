@@ -1,18 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { DiagnosticBag, formatDiagnostics, indexModule } from '@ai-lang/core';
+import { DiagnosticBag, formatDiagnostics, indexModule } from '@haic/core';
 import { parseModule } from '../src/index.js';
 
-const examplePath = fileURLToPath(new URL('../../../examples/orders/orders.ail', import.meta.url));
+const examplePath = fileURLToPath(new URL('../../../examples/orders/orders.hadl', import.meta.url));
 
 describe('the orders example', () => {
   const text = readFileSync(examplePath, 'utf8');
   const diagnostics = new DiagnosticBag();
-  const { module } = parseModule('examples/orders/orders.ail', text, diagnostics);
+  const { module } = parseModule('examples/orders/orders.hadl', text, diagnostics);
 
   it('parses without errors', () => {
-    expect(formatDiagnostics(diagnostics.errors, new Map([['examples/orders/orders.ail', text]]))).toBe('');
+    expect(formatDiagnostics(diagnostics.errors, new Map([['examples/orders/orders.hadl', text]]))).toBe('');
     expect(module).not.toBeNull();
   });
 

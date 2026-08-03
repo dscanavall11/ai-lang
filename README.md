@@ -1,4 +1,4 @@
-# AI-Lang
+# HADL
 
 A programming language for AI to write software in.
 
@@ -41,23 +41,23 @@ TypeScript, and Python — will happily accept all of it. The language has no
 opinion, so the only thing holding the design together is taste, and taste does
 not survive a large enough prompt.
 
-AI-Lang has opinions, and the compiler enforces them:
+HADL has opinions, and the compiler enforces them:
 
 ```
-warning[AIL2503]: PlaceOrderService.fetch order only forwards "find order by id"
-  --> src/orders.ail:88:3
+warning[HADL2503]: PlaceOrderService.fetch order only forwards "find order by id"
+  --> src/orders.hadl:88:3
   help: let the caller use the port directly, or add the rule this operation was meant to hold
 
-warning[AIL2502]: dto OrderDto has exactly the same fields as aggregate Order
-  --> src/orders.ail:41:1
+warning[HADL2502]: dto OrderDto has exactly the same fields as aggregate Order
+  --> src/orders.hadl:41:1
   help: a dto exists to carry less than the model; either drop fields or reuse Order
 
-error[AIL2207]: aggregate Order embeds aggregate Customer in field "customer"
-  --> src/orders.ail:52:3
+error[HADL2207]: aggregate Order embeds aggregate Customer in field "customer"
+  --> src/orders.hadl:52:3
   help: store the identity instead: "- customerId: uuid, required"
 ```
 
-Run `ail explain AIL2503` for the reasoning behind any of them.
+Run `haic explain HADL2503` for the reasoning behind any of them.
 
 ---
 
@@ -72,20 +72,20 @@ Run `ail explain AIL2503` for the reasoning behind any of them.
 | **Simplicity** | Unreachable declarations, duplicate shapes, pass-through operations, ports with no callers, fields nothing reads |
 
 The first four are errors. The last family is warnings and notes — unused code is
-a smell, not a contradiction. `ail check --strict` promotes them.
+a smell, not a contradiction. `haic check --strict` promotes them.
 
 ---
 
 ## Getting started
 
 ```bash
-npm install -g @ai-lang/cli
+npm install -g @haic/cli
 ```
 
-The command is `ail`:
+The command is `haic`:
 
 ```bash
-ail new my-store
+haic new my-store
 ```
 
 That writes a complete slice — one aggregate with a real invariant, a port, a
@@ -93,28 +93,28 @@ service, an endpoint and two scenarios — which compiles as written:
 
 ```bash
 cd my-store
-ail check src     # parse, type-check and audit the design
-ail test src      # run the scenarios, ~1s, nothing generated
-ail build src --target typescript --out out
+haic check src     # parse, type-check and audit the design
+haic test src      # run the scenarios, ~1s, nothing generated
+haic build src --target typescript --out out
 ```
 
-Without installing, `npx @ai-lang/cli new my-store` does the same thing.
+Without installing, `npx @haic/cli new my-store` does the same thing.
 
 To work on the compiler itself, clone instead:
 
 ```bash
-git clone https://github.com/dscanavall11/ai-lang.git
-cd ai-lang
+git clone https://github.com/dscanavall11/hadl.git
+cd hadl
 npm install
 npm run build
-npm link --workspace @ai-lang/cli
+npm link --workspace @haic/cli
 ```
 
 Either way, compile the worked CRUD and run it:
 
 ```bash
-ail check examples/crud
-ail build examples/crud --target typescript --out out
+haic check examples/crud
+haic build examples/crud --target typescript --out out
 cd out/typescript && npm install && npm run dev
 ```
 
@@ -140,7 +140,7 @@ That 422 came from one modifier in the source:
 Before generating anything, run the design:
 
 ```bash
-ail test examples/crud
+haic test examples/crud
 ```
 
 ```
@@ -159,12 +159,12 @@ run**, never as a pass.
 
 **→ [Build your own CRUD](docs/crud-tutorial.md)** — the whole path, step by step.
 
-`ail new <name>` scaffolds a complete slice — one aggregate with a real
+`haic new <name>` scaffolds a complete slice — one aggregate with a real
 invariant, one port, one service, one endpoint — that compiles as written.
 
 ## Why write this instead of prompting for the code
 
-The tasks example is **132 lines** of `.ail`. It produces **420 lines of
+The tasks example is **132 lines** of `.hadl`. It produces **420 lines of
 TypeScript** across 12 files, or **606 lines of Java** across 19 — before tests,
 build files, or the compose stack that come with them.
 
@@ -180,15 +180,15 @@ nothing and reviewing it is a diff, not a re-read.
 
 | Command | Does |
 | --- | --- |
-| `ail new <name>` | Scaffold a project |
-| `ail check [paths]` | Parse, type-check and audit the design |
-| `ail test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
-| `ail build [paths] --target <lang>` | Generate the service |
-| `ail deploy [paths] --target <platform>` | Generate the infrastructure |
-| `ail architect <requirements.md>` | Turn a requirements document into a reviewable spec and draft sources |
-| `ail ir [paths]` | Print the typed IR as JSON |
-| `ail explain <code>` | Explain the reasoning behind a diagnostic |
-| `ail targets` | List available targets |
+| `haic new <name>` | Scaffold a project |
+| `haic check [paths]` | Parse, type-check and audit the design |
+| `haic test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
+| `haic build [paths] --target <lang>` | Generate the service |
+| `haic deploy [paths] --target <platform>` | Generate the infrastructure |
+| `haic architect <requirements.md>` | Turn a requirements document into a reviewable spec and draft sources |
+| `haic ir [paths]` | Print the typed IR as JSON |
+| `haic explain <code>` | Explain the reasoning behind a diagnostic |
+| `haic targets` | List available targets |
 
 ---
 
@@ -204,8 +204,8 @@ paste it. It is about 2,000 tokens and complete on its own.
 
 [`llms.txt`](llms.txt) indexes the rest for tools that follow that convention.
 
-The loop is what makes this work. `ail check` reports exact spans and stable
-codes, `ail explain <code>` explains any of them, and `ail test` runs the
+The loop is what makes this work. `haic check` reports exact spans and stable
+codes, `haic explain <code>` explains any of them, and `haic test` runs the
 declared scenarios in about a second without generating anything. A model can
 correct itself against a real compiler instead of guessing — which is the
 difference between a language an AI can use and a prompt it can only follow.
@@ -223,7 +223,7 @@ extensions directory, or package it:
 npx @vscode/vsce package
 ```
 
-AI-Lang has almost no punctuation, so colour carries more of the load than in a
+HADL has almost no punctuation, so colour carries more of the load than in a
 curly-brace language: it is what separates a declaration from the prose beside
 it. The grammar uses standard TextMate scopes, so whatever theme you already run
 will colour it without knowing the language exists.
@@ -237,7 +237,7 @@ source spans, so that is the obvious next step — see
 ## How it fits together
 
 ```
- .ail sources
+ .hadl sources
       │
       ▼
    parser ──────────► AST            hand-written, line-oriented, no build step
@@ -272,13 +272,13 @@ writes a reviewable `.ai-spec/` directory rather than code.
 | `packages/codegen` | One backend per target language |
 | `packages/iac` | One generator per deployment platform |
 | `packages/architect` | Requirements → bounded contexts → domain model → draft sources |
-| `packages/cli` | The `ail` command |
+| `packages/cli` | The `haic` command |
 | `editors/vscode` | Grammar, indentation and snippets for Visual Studio Code |
 
 - [CRUD tutorial](docs/crud-tutorial.md)
 - [Branching](docs/branching.md)
 - [Language reference](docs/language-reference.md)
-- [Worked example](examples/orders/orders.ail)
+- [Worked example](examples/orders/orders.hadl)
 
 ---
 

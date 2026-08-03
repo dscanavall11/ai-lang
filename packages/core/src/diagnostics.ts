@@ -26,7 +26,7 @@ export type DiagnosticStage = 'lex' | 'parse' | 'resolve' | 'type' | 'ddd' | 'er
 export interface Diagnostic {
   severity: DiagnosticSeverity;
   stage: DiagnosticStage;
-  /** e.g. `AIL2101`. Stable across versions; documented in the reference manual. */
+  /** e.g. `HADL2101`. Stable across versions; documented in the reference manual. */
   code: string;
   message: string;
   span: SourceSpan;

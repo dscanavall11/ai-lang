@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { DiagnosticBag, formatDiagnostics } from '@ai-lang/core';
-import { analyze } from '@ai-lang/analyzer';
-import { parseModule } from '@ai-lang/parser';
+import { DiagnosticBag, formatDiagnostics } from '@haic/core';
+import { analyze } from '@haic/analyzer';
+import { parseModule } from '@haic/parser';
 import { runArchitect } from '../src/index.js';
 
 const path = 'examples/requirements/library.md';
@@ -11,7 +11,7 @@ const requirements = readFileSync(fileURLToPath(new URL(`../../../${path}`, impo
 const result = runArchitect({ requirements, path, projectName: 'library' });
 
 function drafts(): Array<{ path: string; contents: string }> {
-  return result.files.filter((f) => f.path.endsWith('.ail'));
+  return result.files.filter((f) => f.path.endsWith('.hadl'));
 }
 
 describe('the architect', () => {
@@ -51,7 +51,7 @@ describe('the architect', () => {
     }
   });
 
-  it('drafts at least one .ail module', () => {
+  it('drafts at least one .hadl module', () => {
     expect(drafts().length).toBeGreaterThan(0);
   });
 

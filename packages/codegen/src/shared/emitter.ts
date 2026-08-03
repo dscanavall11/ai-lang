@@ -18,7 +18,7 @@ import {
   type IRType,
   type ModuleIndex,
   type UnaryOperator,
-} from '@ai-lang/core';
+} from '@haic/core';
 
 export interface EmitterOptions {
   index: ModuleIndex;
@@ -100,7 +100,7 @@ export abstract class LanguageEmitter {
   }
 
   protected todoComment(): string {
-    return '// no body declared in the .ail source';
+    return '// no body declared in the .hadl source';
   }
 
   emitStatement(writer: CodeWriter, statement: IRStatement): void {

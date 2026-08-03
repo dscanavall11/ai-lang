@@ -1,6 +1,6 @@
 {
-  "name": "@ai-lang/cli",
-  "version": "0.1.1",
+  "name": "haic",
+  "version": "0.2.0",
   "description": "A natural-language programming language for AI to write software in. Compiles to Java, TypeScript, Python and Go, plus Docker, Kubernetes, Terraform and AWS.",
   "keywords": [
     "programming-language",
@@ -15,14 +15,14 @@
   ],
   "license": "Apache-2.0",
   "author": "dscanavall11",
-  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "homepage": "https://github.com/dscanavall11/hadl#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "url": "git+https://github.com/dscanavall11/hadl.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/dscanavall11/ai-lang/issues"
+    "url": "https://github.com/dscanavall11/hadl/issues"
   },
   "engines": {
     "node": ">=20"
@@ -31,7 +31,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "ail": "dist/bin.js"
+    "haic": "dist/bin.js"
   },
   "exports": {
     ".": "./dist/index.js"
@@ -43,11 +43,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/analyzer": "0.1.1",
-    "@ai-lang/architect": "0.1.1",
-    "@ai-lang/codegen": "0.1.1",
-    "@ai-lang/core": "0.1.1",
-    "@ai-lang/iac": "0.1.1",
-    "@ai-lang/parser": "0.1.1"
+    "@haic/analyzer": "0.2.0",
+    "@haic/architect": "0.2.0",
+    "@haic/codegen": "0.2.0",
+    "@haic/core": "0.2.0",
+    "@haic/iac": "0.2.0",
+    "@haic/parser": "0.2.0"
   }
 }

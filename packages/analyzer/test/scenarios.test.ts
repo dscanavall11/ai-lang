@@ -1,21 +1,21 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { DiagnosticBag, formatDiagnostics, type IRModule } from '@ai-lang/core';
-import { parseModule } from '@ai-lang/parser';
+import { DiagnosticBag, formatDiagnostics, type IRModule } from '@haic/core';
+import { parseModule } from '@haic/parser';
 import { analyze, runScenarios } from '../src/index.js';
 
 /** Parses and analyses a module, then runs whatever scenarios it declares. */
 function run(body: string) {
   const source = `---\nmodule: test\ncontext: Test\n---\n\n${body}`;
   const bag = new DiagnosticBag();
-  const { module } = parseModule('test.ail', source, bag);
+  const { module } = parseModule('test.hadl', source, bag);
   if (bag.hasErrors || !module) {
-    throw new Error(`unexpected parse errors:\n${formatDiagnostics(bag.items, new Map([['test.ail', source]]))}`);
+    throw new Error(`unexpected parse errors:\n${formatDiagnostics(bag.items, new Map([['test.hadl', source]]))}`);
   }
   const analysis = analyze([module], { projectName: 'test' });
   const errors = analysis.diagnostics.filter((d) => d.severity === 'error');
-  if (errors.length > 0) throw new Error(formatDiagnostics(errors, new Map([['test.ail', source]])));
+  if (errors.length > 0) throw new Error(formatDiagnostics(errors, new Map([['test.hadl', source]])));
   return runScenarios([module]);
 }
 
@@ -179,7 +179,7 @@ then it publishes TaskFinished
 
 describe('the worked CRUD example', () => {
   it('passes every scenario it declares', () => {
-    const path = 'examples/crud/tasks.ail';
+    const path = 'examples/crud/tasks.hadl';
     const text = readFileSync(fileURLToPath(new URL(`../../../${path}`, import.meta.url)), 'utf8');
     const bag = new DiagnosticBag();
     const modules: IRModule[] = [];

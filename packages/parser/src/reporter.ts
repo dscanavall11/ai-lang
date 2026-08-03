@@ -1,5 +1,5 @@
 /** Thin wrapper that stamps every parser diagnostic with the `parse` stage. */
-import type { DiagnosticBag, SourceSpan } from '@ai-lang/core';
+import type { DiagnosticBag, SourceSpan } from '@haic/core';
 
 export class ParseReporter {
   constructor(private readonly bag: DiagnosticBag) {}

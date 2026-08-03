@@ -1,9 +1,9 @@
-# Writing AI-Lang
+# Writing HADL
 
-You are writing `.ail` files. This is the whole language. Read it once and you
+You are writing `.hadl` files. This is the whole language. Read it once and you
 can write it; you do not need the rest of the repository.
 
-AI-Lang describes a system — its data, its rules, its boundaries — and compiles
+HADL describes a system — its data, its rules, its boundaries — and compiles
 that description into Java, TypeScript, Python or Go, plus Docker, Kubernetes,
 Terraform or AWS. You write the design. The compiler writes the code.
 
@@ -15,25 +15,25 @@ writing something a compiler could have written, delete it.
 
 ## The loop
 
-This is the part that matters most. Never hand back `.ail` you have not checked.
+This is the part that matters most. Never hand back `.hadl` you have not checked.
 
 ```bash
-ail check .          # parses, type-checks, audits the architecture
-ail test .           # runs the scenarios against the IR — no code, no tokens
-ail build . --target typescript --out out
+haic check .          # parses, type-checks, audits the architecture
+haic test .           # runs the scenarios against the IR — no code, no tokens
+haic build . --target typescript --out out
 ```
 
-`ail check` is not a linter. It is a compiler front-end that reports exact
+`haic check` is not a linter. It is a compiler front-end that reports exact
 spans and stable codes:
 
 ```
-examples/orders/orders.ail:44:3  AIL2147  cannot resolve `customer` from `order`
+examples/orders/orders.hadl:44:3  HADL2147  cannot resolve `customer` from `order`
 ```
 
 When a code is unclear, ask the compiler rather than guessing:
 
 ```bash
-ail explain AIL2147
+haic explain HADL2147
 ```
 
 Codes in the `AIL25xx` family are warnings about over-design — an unused
@@ -41,7 +41,7 @@ declaration, a port with one implementation and one caller, a service that only
 forwards. They are advice, not errors. Take them seriously anyway; they exist to
 stop you rebuilding the ceremony this language was written to remove.
 
-Iterate until `ail check` is silent and `ail test` is green. Only then compile.
+Iterate until `haic check` is silent and `haic test` is green. Only then compile.
 
 ---
 
@@ -70,7 +70,7 @@ line, are clauses: `identified by`, `contains`, `emits`, `uses`, `implements`,
 `using`, `topic`, `config:`, and so on. Prose starts after the first blank line.
 
 A line in the clause zone whose first word is not a clause the language knows is
-`AIL1006`, not documentation. `primaryKey id` is an error; it does not silently
+`HADL1006`, not documentation. `primaryKey id` is an error; it does not silently
 become a comment while the identity falls back to convention.
 
 Declaration kinds: `enum` `value object` `entity` `aggregate` `dto` `command`
@@ -85,7 +85,7 @@ declared. There is no `undefined`; absence is `optional`.
 
 ## Data
 
-```ail
+```hadl
 ## enum OrderStatus
 - Draft
 - Placed
@@ -118,7 +118,7 @@ object` has no identity.
 
 ### Messages
 
-```ail
+```hadl
 ## command PlaceOrder targets Order
 - orderId: uuid, required
 
@@ -137,7 +137,7 @@ topic order-placed
 
 Two kinds, and the distinction is the point.
 
-```ail
+```hadl
 ## error OrderNotFound (checked, status 404)
 message: "no order exists with id {orderId}"
 
@@ -155,7 +155,7 @@ are unchecked.
 
 ## Boundaries
 
-```ail
+```hadl
 ## port OrderRepository (outbound)
 using in-memory
 
@@ -169,13 +169,13 @@ your system — never put `using` on an inbound port.
 `using <tech>` builds the adapter for you: `in-memory`, `sql`, `http-client`,
 `queue`. Prefer it. Write a separate `## adapter` only when it needs config:
 
-```ail
+```hadl
 ## adapter PostgresOrderRepository implements OrderRepository using sql
 config:
   table = orders
 ```
 
-```ail
+```hadl
 ## port PlaceOrderUseCase (inbound)
 
 - place order (command: PlaceOrder) -> OrderPlaced or OrderNotFound, EmptyOrder
@@ -187,7 +187,7 @@ Return type is `Result or Error1, Error2`. `nothing` is a valid result.
 
 ## Behaviour
 
-```ail
+```hadl
 ## service PlaceOrderService
 uses OrderRepository
 implements PlaceOrderUseCase
@@ -223,14 +223,14 @@ Operators are spelled: `is` `is not` `and` `or` `not` `plus` `minus` `times`
 
 Two forms keep the list instead of collapsing it. Reach for them before a loop:
 
-```ail
+```hadl
 each of items by productId                 -- list of uuid
 only items where quantity is at least 2    -- list of OrderItem
 ```
 
 They compose, with each other and with the aggregates:
 
-```ail
+```hadl
 sum of only items where quantity is greater than 1 by unitPrice.amount
 ```
 
@@ -238,7 +238,7 @@ Inside a `by` or a `where`, a bare name is a field of the element; anything the
 element does not declare comes from the enclosing scope, so a parameter still
 means itself:
 
-```ail
+```hadl
 operation heavy lines (threshold: integer) -> list of OrderItem:
   return only items where quantity is greater than threshold
 ```
@@ -248,7 +248,7 @@ projection returning a list per element still needs `for each`.
 
 **Never map a DTO field by field.** Use `from`:
 
-```ail
+```hadl
 return OrderSummary from order with itemCount = count of order.items
 ```
 
@@ -258,7 +258,7 @@ exact over-coding this language exists to prevent.
 
 Narrow an optional before reading it:
 
-```ail
+```hadl
 when order.total is present:
   return order.total.amount
 ```
@@ -268,20 +268,20 @@ touches two fields must be ordered to never break the rule half-way. Given
 `invariant "a placed order has a total": status is not Placed or total is
 present`, set the total first:
 
-```ail
+```hadl
 set order.total to total     # still Draft, so the rule holds
 set order.status to Placed   # total is present, so it holds again
 ```
 
 The reverse order fails with an `InvariantViolation` between the two lines.
-`ail test` catches this; the compiler cannot.
+`haic test` catches this; the compiler cannot.
 
-An aggregate operation may not call a port (`AIL2213`). Aggregates decide;
+An aggregate operation may not call a port (`HADL2213`). Aggregates decide;
 services fetch and save.
 
 ### Reacting to events
 
-```ail
+```hadl
 ## handler NotifyOnPlacement on OrderPlaced
 uses CustomerNotifier
 retries 5
@@ -300,7 +300,7 @@ Use `schedule 0 3 * * *` instead of `on <Event>` for a cron handler.
 One criterion per filter, never one repository method per combination. An absent
 optional drops its criterion, so a single query covers every subset.
 
-```ail
+```hadl
 ## query OrderSearch over Order
 
 - status: OrderStatus, optional
@@ -317,14 +317,14 @@ The subject binds to the aggregate's camelCase name. Every `match` must mention
 it.
 
 `sort by` needs a type that has an order — a number, a `timestamp` or a `date`.
-Sorting by `text` or by an enum is `AIL2152`. If an aggregate has nothing
+Sorting by `text` or by an enum is `HADL2152`. If an aggregate has nothing
 ordered to sort on, give it `createdAt: timestamp, required`.
 
 ---
 
 ## Edges
 
-```ail
+```hadl
 ## endpoint POST /orders/{orderId}/place
 handled by PlaceOrderService.place order
 request PlaceOrder
@@ -349,7 +349,7 @@ Write these. They run in one second against the IR, with no code generated and
 no tokens spent, and they are the only way to know a design works before
 compiling it.
 
-```ail
+```hadl
 ## scenario placing an order that has no items
 
 given order be Order with id = "o-1", status = Draft, items = []
@@ -403,7 +403,7 @@ asserts. Assertions: `then x.field is value` · `then it fails with Error` ·
 
 ## Full worked sources
 
-- `examples/crud/tasks.ail` — the five CRUD operations and nothing else
-- `examples/orders/orders.ail` — aggregates, events, handlers, DTO projection
-- `examples/billing/subscriptions.ail` — adapters with config, scheduled work
+- `examples/crud/tasks.hadl` — the five CRUD operations and nothing else
+- `examples/orders/orders.hadl` — aggregates, events, handlers, DTO projection
+- `examples/billing/subscriptions.hadl` — adapters with config, scheduled work
 - `docs/language-reference.md` — every construct, exhaustively

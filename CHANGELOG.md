@@ -7,20 +7,20 @@ while the major is `0`, the minor carries breaking changes.
 
 ## 0.1.1
 
-The command-line package is `@ai-lang/cli`, not `ai-lang`.
+The command-line package is `@haic/cli`, not `hadl`.
 
 npm refused the unscoped name: it normalises punctuation away when comparing,
-so `ai-lang` collides with the pre-existing `ailang` and is rejected as a
+so `hadl` collides with the pre-existing `ailang` and is rejected as a
 possible typosquat. That check only runs at publish time — the registry answers
 404 for the name right up until it refuses to give it to you.
 
 So `0.1.0` reached npm as six libraries with no command-line tool. This release
 is the same code under a name that can actually be published. Install it with
-`npm install -g @ai-lang/cli`; the command is still `ail`.
+`npm install -g @haic/cli`; the command is still `haic`.
 
 ## 0.1.0
 
-Six packages — `@ai-lang/core`, `parser`, `codegen`, `iac`, `analyzer` and
+Six packages — `@haic/core`, `parser`, `codegen`, `iac`, `analyzer` and
 `architect` — published. The CLI did not; see 0.1.1. Use 0.1.1 instead.
 
 First release. The language works end to end: a design compiles to a service
@@ -45,17 +45,17 @@ that starts and answers correctly, and the compiler has 249 tests.
 
 ### Tools
 
-- `ail check` — six semantic passes, reporting exact spans and stable codes.
-  `ail explain <code>` gives the reasoning behind any of them.
-- `ail test` — runs the scenarios a design declares against the IR itself, in
+- `haic check` — six semantic passes, reporting exact spans and stable codes.
+  `haic explain <code>` gives the reasoning behind any of them.
+- `haic test` — runs the scenarios a design declares against the IR itself, in
   about a second, generating nothing. A scenario the interpreter cannot execute
   is reported as **could not run**, never as a pass.
-- `ail build` — TypeScript, Java, Python and Go, each built by its real compiler
+- `haic build` — TypeScript, Java, Python and Go, each built by its real compiler
   in CI on every commit.
-- `ail deploy` — Docker, Kubernetes, Terraform and AWS.
-- `ail architect` — turns a requirements document into a reviewable spec and
+- `haic deploy` — Docker, Kubernetes, Terraform and AWS.
+- `haic architect` — turns a requirements document into a reviewable spec and
   draft sources that satisfy the compiler that wrote them.
-- `ail new` — a starter that compiles as written and whose scenarios are green.
+- `haic new` — a starter that compiles as written and whose scenarios are green.
 
 ### Known limitations
 

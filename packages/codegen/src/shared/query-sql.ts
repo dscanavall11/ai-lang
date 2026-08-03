@@ -5,7 +5,7 @@
  * once here. A backend only decides how to bind a parameter and how to append a
  * guarded fragment — a dozen lines each, instead of a query compiler each.
  */
-import { snakeCase, type BinaryOperator, type IRExpression, type IRQueryDecl } from '@ai-lang/core';
+import { snakeCase, type BinaryOperator, type IRExpression, type IRQueryDecl } from '@haic/core';
 
 export interface SqlFragment {
   /** `customer_id = ?` with one placeholder per bound parameter. */

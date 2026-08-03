@@ -16,7 +16,7 @@ import {
   type IRType,
   type ModuleIndex,
   type UnaryOperator,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { LanguageEmitter } from '../../shared/emitter.js';
 
 const PRIMITIVES: Record<string, string> = {
@@ -99,7 +99,7 @@ const NO_STATEMENT: StatementShape = { fallible: false, discards: false, pointer
 /**
  * Every name the body reads.
  *
- * Go refuses to compile a local nobody uses, and AI-Lang has a legitimate reason
+ * Go refuses to compile a local nobody uses, and HADL has a legitimate reason
  * to write one: `let task be find task by id` binds a value only so the missing
  * case can fail. Knowing which names are read lets that binding be discarded
  * instead of declared.

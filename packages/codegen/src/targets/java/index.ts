@@ -39,7 +39,7 @@ import {
   type IRStatement,
   type IRType,
   type ModuleIndex,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { ProjectLayout, type Layer } from '../../shared/layout.js';
 import { JavaEmitter, fieldsOf, enumConstant, type JavaEmitterOptions } from './emitter.js';
 
@@ -923,7 +923,7 @@ function invariantViolation(layout: JavaLayout): GeneratedFile {
  */
 function ordering(layout: JavaLayout): GeneratedFile {
   const writer = body();
-  writer.line('/** Ordering comparisons for every type AI-Lang considers ordered. */');
+  writer.line('/** Ordering comparisons for every type HADL considers ordered. */');
   writer.line('public final class Ordering {');
   writer.blank();
   writer.block(() => {
@@ -1024,7 +1024,7 @@ function readme(context: GenerationContext): GeneratedFile {
   const lines = [
     `# ${context.project.name}`,
     '',
-    'Generated from AI-Lang sources. Edit the `.ail` files and recompile; everything here is overwritten.',
+    'Generated from HADL sources. Edit the `.hadl` files and recompile; everything here is overwritten.',
     '',
     '## Layout',
     '',
@@ -1406,7 +1406,7 @@ function fieldDoc(writer: CodeWriter, field: IRField): void {
 function signatureDoc(writer: CodeWriter, operation: IROperationSignature): void {
   const lines: string[] = [];
   if (operation.description) lines.push(operation.description);
-  lines.push(`Declared in AI-Lang as "${operation.phrase}".`);
+  lines.push(`Declared in HADL as "${operation.phrase}".`);
   for (const name of operation.throws) lines.push(`@throws ${pascalCase(name)}`);
   writer.line('/**');
   for (const line of lines) writer.line(` * ${line}`);

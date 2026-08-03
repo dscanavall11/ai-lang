@@ -1,10 +1,10 @@
 /**
  * Code generator registry.
  *
- * `ail build --target <id>` looks the backend up here. Registering a new one is
+ * `haic build --target <id>` looks the backend up here. Registering a new one is
  * the only change needed to support another language.
  */
-import { Registry, type CodeGenerator, type GenerationContext, type GenerationResult } from '@ai-lang/core';
+import { Registry, type CodeGenerator, type GenerationContext, type GenerationResult } from '@haic/core';
 import { goGenerator } from './targets/go/index.js';
 import { javaGenerator } from './targets/java/index.js';
 import { pythonGenerator } from './targets/python/index.js';

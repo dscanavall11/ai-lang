@@ -33,7 +33,7 @@ import {
   type IRStatement,
   type IRType,
   type ModuleIndex,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { ProjectLayout } from '../../shared/layout.js';
 import { RustEmitter } from './emitter.js';
 
@@ -46,7 +46,7 @@ type RustLayer = (typeof LAYERS)[number];
 export const rustGenerator: CodeGenerator = {
   id: 'rust',
   // Said here as well as in the README, because someone choosing a target from
-  // `ail targets` never reads the README first.
+  // `haic targets` never reads the README first.
   displayName: 'Rust (experimental — does not compile yet)',
   framework: 'Axum',
   verifyCommand: ['cargo', 'check'],
@@ -231,7 +231,7 @@ function errorsFile(module: IRModule, index: ModuleIndex): GeneratedFile {
 
   writer.line(`impl ${name} {`);
   writer.block(() => {
-    writer.line('/// HTTP status declared for this error in the .ail source.');
+    writer.line('/// HTTP status declared for this error in the .hadl source.');
     writer.line('pub fn status(&self) -> u16 {');
     writer.block(() => {
       writer.line('match self {');
@@ -246,7 +246,7 @@ function errorsFile(module: IRModule, index: ModuleIndex): GeneratedFile {
     });
     writer.line('}');
     writer.blank();
-    writer.line('/// Stable machine-readable code, mirroring the AI-Lang error name.');
+    writer.line('/// Stable machine-readable code, mirroring the HADL error name.');
     writer.line('pub fn code(&self) -> &\'static str {');
     writer.block(() => {
       writer.line('match self {');
@@ -279,7 +279,7 @@ function errorsFile(module: IRModule, index: ModuleIndex): GeneratedFile {
   const unchecked = index.errors.filter((e) => !e.checked);
   if (unchecked.length > 0) {
     writer.blank();
-    writer.lines_(comment(`Unchecked in the .ail source, so they panic instead of joining this enum: ${unchecked.map((e) => e.name).join(', ')}.`));
+    writer.lines_(comment(`Unchecked in the .hadl source, so they panic instead of joining this enum: ${unchecked.map((e) => e.name).join(', ')}.`));
   }
   return file(modulePath('domain', module, 'errors'), writer.toString());
 }
@@ -641,7 +641,7 @@ function routesFile(module: IRModule, index: ModuleIndex): GeneratedFile | null 
   writer.line('}');
   writer.blank();
 
-  writer.line('/// Checked errors answer with the status declared in the .ail source.');
+  writer.line('/// Checked errors answer with the status declared in the .hadl source.');
   writer.line(`impl IntoResponse for ${errorEnum(module)} {`);
   writer.block(() => {
     writer.line('fn into_response(self) -> axum::response::Response {');
@@ -891,9 +891,9 @@ function sharedErrors(): GeneratedFile {
   );
   writer.line('pub trait DomainError {');
   writer.block(() => {
-    writer.line('/// HTTP status declared for the error in the .ail source.');
+    writer.line('/// HTTP status declared for the error in the .hadl source.');
     writer.line('fn status(&self) -> u16;');
-    writer.line('/// Stable machine-readable code, mirroring the AI-Lang error name.');
+    writer.line('/// Stable machine-readable code, mirroring the HADL error name.');
     writer.line("fn code(&self) -> &'static str;");
   });
   writer.line('}');
@@ -952,7 +952,7 @@ function sharedValidation(): GeneratedFile {
 }
 
 function dotEnvExample(context: GenerationContext): GeneratedFile {
-  const lines = ['# Generated from the infrastructure blocks of the .ail sources.'];
+  const lines = ['# Generated from the infrastructure blocks of the .hadl sources.'];
   for (const module of context.project.modules) {
     const infrastructure = module.infrastructure;
     if (!infrastructure) continue;
@@ -974,7 +974,7 @@ function readme(context: GenerationContext): GeneratedFile {
   const lines = [
     `# ${context.project.name}`,
     '',
-    'Generated from AI-Lang sources. Edit the `.ail` files and recompile; everything here is overwritten.',
+    'Generated from HADL sources. Edit the `.hadl` files and recompile; everything here is overwritten.',
     '',
     '## Layout',
     '',
@@ -1273,7 +1273,7 @@ function docComment(writer: CodeWriter, text: string | undefined): void {
 
 function signatureDoc(writer: CodeWriter, operation: IROperationSignature): void {
   if (operation.description) docComment(writer, operation.description);
-  writer.line(`/// Declared in AI-Lang as "${operation.phrase}".`);
+  writer.line(`/// Declared in HADL as "${operation.phrase}".`);
   for (const name of operation.throws) writer.line(`/// Returns \`${pascalCase(name)}\` when the rule it names is broken.`);
 }
 

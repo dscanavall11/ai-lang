@@ -21,7 +21,7 @@ import {
   type IRProject,
   type ModuleIndex,
   type SourceSpan,
-} from '@ai-lang/core';
+} from '@haic/core';
 
 export type IRDatabase = IRInfrastructure['databases'][number];
 export type IRBroker = IRInfrastructure['brokers'][number];

@@ -1,4 +1,4 @@
-import { DiagnosticBag, formatDiagnostics, type IRModule } from '@ai-lang/core';
+import { DiagnosticBag, formatDiagnostics, type IRModule } from '@haic/core';
 import { parseModule } from '../src/index.js';
 
 export interface ParsedFixture {
@@ -8,7 +8,7 @@ export interface ParsedFixture {
 }
 
 /** Parses `source` and fails loudly if the parser reported an error. */
-export function parseOk(source: string, path = 'test.ail'): ParsedFixture {
+export function parseOk(source: string, path = 'test.hadl'): ParsedFixture {
   const diagnostics = new DiagnosticBag();
   const { module } = parseModule(path, source, diagnostics);
   if (diagnostics.hasErrors || module === null) {
@@ -18,7 +18,7 @@ export function parseOk(source: string, path = 'test.ail'): ParsedFixture {
 }
 
 /** Parses `source` expecting at least one error, and returns the codes reported. */
-export function parseErrors(source: string, path = 'test.ail'): string[] {
+export function parseErrors(source: string, path = 'test.hadl'): string[] {
   const diagnostics = new DiagnosticBag();
   parseModule(path, source, diagnostics);
   return diagnostics.errors.map((d) => d.code);

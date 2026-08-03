@@ -1,4 +1,4 @@
-# Contributing to AI-Lang
+# Contributing to HADL
 
 Thanks for looking. This project is early enough that a good bug report is worth
 as much as a patch.
@@ -6,8 +6,8 @@ as much as a patch.
 ## The short version
 
 ```bash
-git clone https://github.com/dscanavall11/ai-lang.git
-cd ai-lang
+git clone https://github.com/dscanavall11/hadl.git
+cd hadl
 npm install
 npm run build
 npm test
@@ -30,7 +30,7 @@ node packages/cli/dist/bin.js build examples --target typescript --out out
 | `packages/codegen` | one backend per target language | a language's output is wrong |
 | `packages/iac` | one generator per deployment platform | infrastructure output is wrong |
 | `packages/architect` | requirements → contexts → model → drafts | the elicitation heuristics change |
-| `packages/cli` | the `ail` command | a command or flag changes |
+| `packages/cli` | the `haic` command | a command or flag changes |
 
 ## The rules this codebase holds itself to
 
@@ -74,7 +74,7 @@ that it looks right — that `mvn compile`, `go build`, `cargo check` pass in CI
    [the language reference](docs/language-reference.md#7-diagnostic-codes).
 3. **Every diagnostic needs an actionable hint.** "X is invalid" is not a
    diagnostic; "X is invalid, write Y instead" is.
-4. Design rules that a reader might argue with go in the `ail explain` catalogue
+4. Design rules that a reader might argue with go in the `haic explain` catalogue
    at `packages/cli/src/commands/explain.ts`, with the reasoning, not a slogan.
 5. Add a test to `packages/analyzer/test/design-rules.test.ts` proving it fires,
    and one proving it does *not* fire on the correct shape. The second matters
@@ -126,13 +126,13 @@ Commit messages: imperative mood, one line, lower case after the prefix —
 - Output that does not compile with the target's own toolchain.
 - A rule without a hint, or with a hint that restates the error.
 - An abstraction with one implementation and no second caller in sight.
-- Configuration for something the `.ail` source already states. See
+- Configuration for something the `.hadl` source already states. See
   [ADR-009](docs/decisions.md).
 - Generated code that guesses. If the compiler cannot know, it says so in the
   output, at the line where a human has to act.
 
 ## Reporting a bug
 
-Include the `.ail` source that reproduces it — the smallest one you can get to —
-and what you expected instead. A failing `.ail` file is a better bug report than
+Include the `.hadl` source that reproduces it — the smallest one you can get to —
+and what you expected instead. A failing `.hadl` file is a better bug report than
 any description of it.

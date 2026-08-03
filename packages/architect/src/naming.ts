@@ -4,7 +4,7 @@
  * Three phases need the same names for the same thing, so the rules live here
  * once. Every name is a pure function of words the requirements already used.
  */
-import { pascalCase } from '@ai-lang/core';
+import { pascalCase } from '@haic/core';
 import { fieldName, kebab, pastParticiple, plural, routeName, singular, typeName } from './language.js';
 import type { Capability } from './types.js';
 

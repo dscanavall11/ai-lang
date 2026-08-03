@@ -4,7 +4,7 @@
  * The state is one plain, JSON-serialisable object: `.ai-spec/architecture.json`
  * is literally this structure, so a reviewer reads exactly what the phases saw.
  */
-import type { CodegenTarget, Diagnostic, GeneratedFile } from '@ai-lang/core';
+import type { CodegenTarget, Diagnostic, GeneratedFile } from '@haic/core';
 import type { RequirementsDocument } from './document.js';
 
 export interface ArchitectInput {
@@ -30,7 +30,7 @@ export interface Traced {
 
 export interface OpenQuestion extends Traced {
   id: string;
-  /** Stable diagnostic code, e.g. `AIL3010`. */
+  /** Stable diagnostic code, e.g. `HADL3010`. */
   code: string;
   phase: string;
   /** What the requirements left open. */
@@ -129,7 +129,7 @@ export interface Subdomain {
 
 export interface BoundedContextPlan {
   name: string;
-  /** `.ail` module name, snake_case of `name`. */
+  /** `.hadl` module name, snake_case of `name`. */
   module: string;
   kind: SubdomainKind;
   subdomains: string[];
@@ -204,7 +204,7 @@ export interface DesignResult {
 
 export interface FieldPlan {
   name: string;
-  /** AI-Lang type expression, e.g. `list of Copy`. */
+  /** HADL type expression, e.g. `list of Copy`. */
   type: string;
   required: boolean;
   identity: boolean;
@@ -215,7 +215,7 @@ export interface FieldPlan {
 
 export interface InvariantPlan {
   description: string;
-  /** AI-Lang boolean expression. */
+  /** HADL boolean expression. */
   condition: string;
   line: number;
 }

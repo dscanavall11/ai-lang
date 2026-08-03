@@ -3,7 +3,7 @@
  * could not decide. Phases never call each other: the pipeline order is the
  * only coupling, so a new phase is added to the array and nothing else changes.
  */
-import type { DiagnosticBag } from '@ai-lang/core';
+import type { DiagnosticBag } from '@haic/core';
 import type { ArchitectState } from './types.js';
 
 export interface Phase {

@@ -1,11 +1,11 @@
-# AI-Lang for Visual Studio Code
+# HADL for Visual Studio Code
 
-Syntax highlighting, indentation and snippets for [AI-Lang](https://github.com/dscanavall11/ai-lang) — a
+Syntax highlighting, indentation and snippets for [HADL](https://github.com/dscanavall11/hadl) — a
 programming language written in natural language, which compiles to Java, TypeScript, Python and Go.
 
 ## What it colours
 
-AI-Lang has almost no punctuation, so the highlighting carries more weight than
+HADL has almost no punctuation, so the highlighting carries more weight than
 usual: it is what tells a declaration apart from the prose around it.
 
 | Part of the language | Example | Scope |
@@ -23,7 +23,7 @@ usual: it is what tells a declaration apart from the prose around it.
 | Message interpolation | `"no task with id {taskId}"` | `variable.other.member` |
 
 Because the scopes are the standard ones, every theme you already use will
-colour AI-Lang without knowing it exists.
+colour HADL without knowing it exists.
 
 ## Indentation
 
@@ -32,7 +32,7 @@ spaces. The extension sets that per language, so a project-wide tab setting does
 not fight it:
 
 ```json
-"[ail]": {
+"[hadl]": {
   "editor.insertSpaces": true,
   "editor.tabSize": 2,
   "editor.detectIndentation": false
@@ -55,7 +55,7 @@ Type the prefix and press Tab.
 | `service` | a service wired to both, with its first operation |
 | `query` | a specification with criteria, sort and limit |
 | `endpoint` | one HTTP route bound to one operation |
-| `scenario` | a runnable example for `ail test` |
+| `scenario` | a runnable example for `haic test` |
 | `infrastructure` | port, database and deployment target |
 
 ## Installing
@@ -63,13 +63,13 @@ Type the prefix and press Tab.
 Not on the Marketplace yet. To use it now:
 
 ```bash
-git clone https://github.com/dscanavall11/ai-lang
+git clone https://github.com/dscanavall11/hadl
 ```
 
 Then copy `editors/vscode` into your extensions folder and reload the window:
 
-- Linux / macOS: `~/.vscode/extensions/ai-lang`
-- Windows: `%USERPROFILE%\.vscode\extensions\ai-lang`
+- Linux / macOS: `~/.vscode/extensions/hadl`
+- Windows: `%USERPROFILE%\.vscode\extensions\hadl`
 
 Or package it, which is tidier:
 
@@ -77,13 +77,13 @@ Or package it, which is tidier:
 npx @vscode/vsce package
 ```
 
-That writes `ai-lang-0.1.0.vsix`, which installs with **Extensions → … → Install
+That writes `hadl-0.1.0.vsix`, which installs with **Extensions → … → Install
 from VSIX**.
 
 ## What it does not do yet
 
 No diagnostics, no go-to-definition, no completion. The compiler already
-produces precise diagnostics with source spans — `ail check` — so a language
+produces precise diagnostics with source spans — `haic check` — so a language
 server is the obvious next step and the one that would change how the language
 feels to write. It is not built yet.
 

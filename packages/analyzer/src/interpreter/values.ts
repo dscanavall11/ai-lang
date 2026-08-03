@@ -5,7 +5,7 @@
  * tagged with their declared type, enums are their member name, and a timestamp
  * is a `Date`. Nothing here needs to serialise, so nothing here is clever.
  */
-import type { IRType } from '@ai-lang/core';
+import type { IRType } from '@haic/core';
 
 export interface RecordValue {
   /** Declaration this record was built from. */

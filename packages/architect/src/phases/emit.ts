@@ -6,7 +6,7 @@
  * name, one use case per capability, and nothing else. A thin draft that
  * compiles is a better starting point than a thick one that has to be pruned.
  */
-import { CodeWriter, file, type DiagnosticBag, type GeneratedFile } from '@ai-lang/core';
+import { CodeWriter, file, type DiagnosticBag, type GeneratedFile } from '@haic/core';
 import type { Phase } from '../phase.js';
 import { fieldName, quoted } from '../language.js';
 import { identityField, notFoundName, repositoryName, serviceName, tableName } from '../naming.js';
@@ -39,14 +39,14 @@ export const emitPhase: Phase = {
       if (source === null) {
         diagnostics.info(
           'architect',
-          'AIL3091',
+          'HADL3091',
           `bounded context ${context.name} has no aggregate, so no module was drafted`,
           { file: state.input.path, start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } },
           { hint: 'name the thing this context owns, and what happens to it' },
         );
         continue;
       }
-      files.push(file(`src/${context.module}.ail`, source));
+      files.push(file(`src/${context.module}.hadl`, source));
     }
 
     state.emit = { files };

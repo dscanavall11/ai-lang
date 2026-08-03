@@ -12,7 +12,7 @@ import {
   type Diagnostic,
   type GeneratedFile,
   type InfrastructureGenerator,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { IAC_CODE, iacWarning, noContextRequests } from '../shared/diagnostics.js';
 import {
   baseEnvironment,
@@ -140,7 +140,7 @@ function values(plan: InfrastructurePlan, deployable: ContextPlan): string {
       targetCPUUtilizationPercentage: deployable.scaling.targetCpuPercent,
     };
   }
-  return yamlDocument(document, ['Values come from the `## infrastructure` block of the AI-Lang sources.']);
+  return yamlDocument(document, ['Values come from the `## infrastructure` block of the HADL sources.']);
 }
 
 /** `/orders/{orderId}/place` and `/orders` share the `/orders` ingress prefix. */

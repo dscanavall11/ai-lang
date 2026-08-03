@@ -5,7 +5,7 @@
  * replayed. Every function here is pure and total, so the same requirements
  * document always produces the same names.
  */
-import { pascalCase, pluralize } from '@ai-lang/core';
+import { pascalCase, pluralize } from '@haic/core';
 
 /** Words that never carry domain meaning, so they never become nouns or names. */
 export const STOP_WORDS: ReadonlySet<string> = new Set([

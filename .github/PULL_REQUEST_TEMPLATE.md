@@ -22,7 +22,7 @@
 
 - [ ] The message says what is wrong, the hint says what to write instead
 - [ ] A test proves it fires, and a test proves it does **not** fire on the correct shape
-- [ ] Added to `ail explain` if a reader might reasonably disagree with the rule
+- [ ] Added to `haic explain` if a reader might reasonably disagree with the rule
 
 ## If it adds a backend
 

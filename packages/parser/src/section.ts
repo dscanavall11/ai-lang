@@ -8,7 +8,7 @@
  *   ## error OrderNotFound (checked, status 404)
  *      ^^^^^ keyword       ^^^^^^^^^^^^^^^^^^^^ modifiers
  */
-import type { SourceSpan } from '@ai-lang/core';
+import type { SourceSpan } from '@haic/core';
 import type { ParseReporter } from './reporter.js';
 import { isBullet } from './field-parser.js';
 import type { Line, SourceFile } from './source.js';
@@ -116,7 +116,7 @@ function headingToSection(file: SourceFile, heading: Line, text: string, level: 
       modifiers = modifiers.length > 0 ? `${modifiers}, ${trailing}` : trailing;
     }
     if (name.length > 0 && !/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) {
-      reporter.error('AIL1001', `"${name}" is not a valid declaration name`, file.spanOf(heading));
+      reporter.error('HADL1001', `"${name}" is not a valid declaration name`, file.spanOf(heading));
     }
   }
 

@@ -1,6 +1,6 @@
-/** `ail deploy` — lower the same IR into infrastructure. */
-import type { GenerationContext } from '@ai-lang/core';
-import { generateInfrastructure, infrastructureGenerators } from '@ai-lang/iac';
+/** `haic deploy` — lower the same IR into infrastructure. */
+import type { GenerationContext } from '@haic/core';
+import { generateInfrastructure, infrastructureGenerators } from '@haic/iac';
 import { flagBoolean, flagString } from '../args.js';
 import { EXIT_FAILURE, EXIT_OK, type Command } from '../command.js';
 import { loadProject, renderDiagnostics } from '../driver.js';
@@ -9,7 +9,7 @@ import { dim, error, heading, info, listFiles, success, summarise, warn, writeFi
 export const deployCommand: Command = {
   name: 'deploy',
   summary: 'Generate infrastructure as code from the same sources',
-  usage: 'ail deploy [paths...] [--target <platform>] [--out <dir>]',
+  usage: 'haic deploy [paths...] [--target <platform>] [--out <dir>]',
   flags: [
     { name: '--target <ids>', description: 'Comma-separated platforms, or "all". Defaults to what the sources declare' },
     { name: '--out <dir>', description: 'Output directory (default: ./out)' },
@@ -20,7 +20,7 @@ export const deployCommand: Command = {
   run({ args, cwd }) {
     const loaded = loadProject(args.positional, cwd, {
       strict: flagBoolean(args, 'strict'),
-      projectName: flagString(args, 'project', 'ai-lang-project'),
+      projectName: flagString(args, 'project', 'hadl-project'),
     });
 
     if (loaded.diagnostics.length > 0) info(renderDiagnostics(loaded));

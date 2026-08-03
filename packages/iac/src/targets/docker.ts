@@ -13,7 +13,7 @@ import {
   type Diagnostic,
   type GeneratedFile,
   type InfrastructureGenerator,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { IAC_CODE, noContextRequests, unsupportedEngine } from '../shared/diagnostics.js';
 import {
   baseEnvironment,
@@ -31,7 +31,7 @@ import {
 } from '../shared/plan.js';
 import { yamlDocument } from '../shared/yaml.js';
 
-const NETWORK = 'ai-lang';
+const NETWORK = 'hadl';
 const PLATFORM = 'Docker';
 
 export const dockerGenerator: InfrastructureGenerator = {

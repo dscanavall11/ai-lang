@@ -10,7 +10,7 @@ import {
   type IRType,
   type ModuleIndex,
   type UnaryOperator,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { LanguageEmitter } from '../../shared/emitter.js';
 
 const PRIMITIVES: Record<string, string> = {
@@ -270,7 +270,7 @@ export class TypeScriptEmitter extends LanguageEmitter {
     writer.line('}');
   }
 
-  /** Renders a documentation line describing the AI-Lang type it came from. */
+  /** Renders a documentation line describing the HADL type it came from. */
   describeType(type: IRType): string {
     return typeToString(type);
   }

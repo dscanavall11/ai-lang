@@ -6,7 +6,7 @@
  *   - status: OrderStatus, default Draft
  *   - find order by id (id: uuid) -> Order or OrderNotFound
  */
-import type { IRConstraint, IRField, IROperationSignature, IRParameter, IRType } from '@ai-lang/core';
+import type { IRConstraint, IRField, IROperationSignature, IRParameter, IRType } from '@haic/core';
 import type { ParseReporter } from './reporter.js';
 import type { Line, LineCursor, SourceFile } from './source.js';
 import { tokenize, TokenCursor } from './tokens.js';
@@ -47,7 +47,7 @@ export function parseFieldLine(file: SourceFile, line: Line, reporter: ParseRepo
   const colon = code.indexOf(':');
   if (colon < 0) {
     reporter.error(
-      'AIL1101',
+      'HADL1101',
       `expected "<name>: <type>" in field declaration, found "${code}"`,
       file.spanOf(line),
       'fields are written as "- amount: decimal, required, min 0"',
@@ -56,7 +56,7 @@ export function parseFieldLine(file: SourceFile, line: Line, reporter: ParseRepo
   }
   const name = code.slice(0, colon).trim();
   if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) {
-    reporter.error('AIL1102', `"${name}" is not a valid field name`, file.spanOf(line));
+    reporter.error('HADL1102', `"${name}" is not a valid field name`, file.spanOf(line));
     return null;
   }
 
@@ -79,7 +79,7 @@ export function parseFieldLine(file: SourceFile, line: Line, reporter: ParseRepo
     applyModifier(cursor, field, reporter);
   }
   if (!cursor.atEnd) {
-    reporter.error('AIL1103', `unexpected "${cursor.peek()!.raw}" after the field type`, cursor.currentSpan(), 'separate modifiers with commas');
+    reporter.error('HADL1103', `unexpected "${cursor.peek()!.raw}" after the field type`, cursor.currentSpan(), 'separate modifiers with commas');
   }
   return field;
 }
@@ -133,7 +133,7 @@ function applyModifier(cursor: TokenCursor, field: IRField, reporter: ParseRepor
   if (cursor.eatWord('pattern', 'matching')) {
     const token = cursor.peek();
     if (token?.kind !== 'string') {
-      reporter.error('AIL1104', 'expected a quoted regular expression after "pattern"', cursor.currentSpan());
+      reporter.error('HADL1104', 'expected a quoted regular expression after "pattern"', cursor.currentSpan());
       return;
     }
     cursor.next();
@@ -156,7 +156,7 @@ function applyModifier(cursor: TokenCursor, field: IRField, reporter: ParseRepor
     cursor.eatWord('to');
     const token = cursor.peek();
     if (!token) {
-      reporter.error('AIL1105', 'expected a value after "default"', cursor.currentSpan());
+      reporter.error('HADL1105', 'expected a value after "default"', cursor.currentSpan());
       return;
     }
     cursor.next();
@@ -178,7 +178,7 @@ function applyModifier(cursor: TokenCursor, field: IRField, reporter: ParseRepor
 
   const unexpected = cursor.peek();
   reporter.error(
-    'AIL1106',
+    'HADL1106',
     `unknown field modifier "${unexpected?.raw ?? 'end of line'}"`,
     cursor.currentSpan(),
     'valid modifiers: required, optional, identity, derived, unique, immutable, min, max, min length, max length, length, pattern, one of, default',
@@ -189,7 +189,7 @@ function applyModifier(cursor: TokenCursor, field: IRField, reporter: ParseRepor
 function pushNumeric(cursor: TokenCursor, field: IRField, kind: IRConstraint['kind'], reporter: ParseReporter): void {
   const token = cursor.peek();
   if (token?.kind !== 'number') {
-    reporter.error('AIL1107', `expected a number after "${kind.replace('-', ' ')}"`, cursor.currentSpan());
+    reporter.error('HADL1107', `expected a number after "${kind.replace('-', ' ')}"`, cursor.currentSpan());
     return;
   }
   cursor.next();
@@ -206,7 +206,7 @@ export function parseOperationSignature(file: SourceFile, line: Line, text: stri
   const close = findMatching(code, open);
   if (open < 0 || close < 0) {
     reporter.error(
-      'AIL1108',
+      'HADL1108',
       `expected a parameter list in operation "${code}"`,
       file.spanOf(line),
       'operations are written as "find order by id (id: uuid) -> Order or OrderNotFound"',
@@ -216,7 +216,7 @@ export function parseOperationSignature(file: SourceFile, line: Line, text: stri
 
   const phrase = code.slice(0, open).trim();
   if (phrase.length === 0) {
-    reporter.error('AIL1109', 'an operation needs a name before its parameter list', file.spanOf(line));
+    reporter.error('HADL1109', 'an operation needs a name before its parameter list', file.spanOf(line));
     return null;
   }
 
@@ -227,7 +227,7 @@ export function parseOperationSignature(file: SourceFile, line: Line, text: stri
   if (tail.length > 0) {
     const arrow = tail.startsWith('->') ? 2 : tail.toLowerCase().startsWith('returns') ? 7 : -1;
     if (arrow < 0) {
-      reporter.error('AIL1110', `expected "->" before the return type in "${code}"`, file.spanOf(line));
+      reporter.error('HADL1110', `expected "->" before the return type in "${code}"`, file.spanOf(line));
     } else {
       const cursor = subCursor(file, line, tail.slice(arrow), close + 1 + arrow);
       returns = parseType(cursor, reporter);
@@ -255,7 +255,7 @@ function parseParameters(file: SourceFile, line: Line, text: string, reporter: P
   for (const part of splitTopLevel(trimmed, ',')) {
     const colon = part.indexOf(':');
     if (colon < 0) {
-      reporter.error('AIL1111', `expected "<name>: <type>" in parameter "${part.trim()}"`, file.spanOf(line));
+      reporter.error('HADL1111', `expected "<name>: <type>" in parameter "${part.trim()}"`, file.spanOf(line));
       continue;
     }
     const name = part.slice(0, colon).trim();

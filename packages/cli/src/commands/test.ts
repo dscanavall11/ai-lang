@@ -1,10 +1,10 @@
 /**
- * `ail test` — run the scenarios against the IR itself.
+ * `haic test` — run the scenarios against the IR itself.
  *
  * No code is generated, no toolchain is needed and no tokens are spent: the
  * design is exercised before it is expanded.
  */
-import { runScenarios } from '@ai-lang/analyzer';
+import { runScenarios } from '@haic/analyzer';
 import { flagBoolean, flagString } from '../args.js';
 import { EXIT_FAILURE, EXIT_OK, type Command } from '../command.js';
 import { loadProject, renderDiagnostics } from '../driver.js';
@@ -13,14 +13,14 @@ import { dim, error, heading, info, summarise, warn } from '../output.js';
 export const testCommand: Command = {
   name: 'test',
   summary: 'Run the scenarios declared in the sources, without generating anything',
-  usage: 'ail test [paths...] [--only <name>]',
+  usage: 'haic test [paths...] [--only <name>]',
   flags: [
     { name: '--only <text>', description: 'Run only scenarios whose name contains this text' },
     { name: '--quiet', description: 'Print only the summary line' },
   ],
 
   run({ args, cwd }) {
-    const loaded = loadProject(args.positional, cwd, { projectName: flagString(args, 'project', 'ai-lang-project') });
+    const loaded = loadProject(args.positional, cwd, { projectName: flagString(args, 'project', 'hadl-project') });
 
     if (!loaded.ok) {
       info(renderDiagnostics(loaded));

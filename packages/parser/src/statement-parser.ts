@@ -13,7 +13,7 @@
  *   publish OrderPlaced with orderId = order.id, placedAt = now
  *   return OrderPlaced with orderId = order.id
  */
-import type { IRArgument, IRStatement, SourceSpan } from '@ai-lang/core';
+import type { IRArgument, IRStatement, SourceSpan } from '@haic/core';
 import { parseArguments, parseExpression } from './expression-parser.js';
 import type { ParseReporter } from './reporter.js';
 import type { Line, LineCursor } from './source.js';
@@ -59,7 +59,7 @@ function parseStatement(lines: LineCursor, reporter: ParseReporter): IRStatement
   if (value.kind === 'call') return { kind: 'perform', value, span };
 
   reporter.error(
-    'AIL1401',
+    'HADL1401',
     `"${line.text}" is not a statement`,
     span,
     'statements start with let, set, when, for each, add, remove, publish, fail, perform or return',
@@ -70,12 +70,12 @@ function parseStatement(lines: LineCursor, reporter: ParseReporter): IRStatement
 function parseLet(cursor: TokenCursor, reporter: ParseReporter, span: SourceSpan): IRStatement | null {
   const nameToken = cursor.peek();
   if (nameToken?.kind !== 'word' || isTypeName(nameToken)) {
-    reporter.error('AIL1402', 'expected a lower-case variable name after "let"', cursor.currentSpan());
+    reporter.error('HADL1402', 'expected a lower-case variable name after "let"', cursor.currentSpan());
     return null;
   }
   cursor.next();
   if (!cursor.eatWord('be') && !cursor.eatPunct('=')) {
-    reporter.error('AIL1403', `expected "be" after "let ${nameToken.raw}"`, cursor.currentSpan(), 'write "let total be sum of items by amount"');
+    reporter.error('HADL1403', `expected "be" after "let ${nameToken.raw}"`, cursor.currentSpan(), 'write "let total be sum of items by amount"');
     return null;
   }
   return { kind: 'let', name: nameToken.raw, value: parseExpression(cursor, reporter), span };
@@ -85,7 +85,7 @@ function parseSet(cursor: TokenCursor, reporter: ParseReporter, span: SourceSpan
   const target = parsePath(cursor, reporter);
   if (target.length === 0) return null;
   if (!cursor.eatWord('to') && !cursor.eatPunct('=')) {
-    reporter.error('AIL1404', `expected "to" after "set ${target.join('.')}"`, cursor.currentSpan());
+    reporter.error('HADL1404', `expected "to" after "set ${target.join('.')}"`, cursor.currentSpan());
     return null;
   }
   return { kind: 'set', target, value: parseExpression(cursor, reporter), span };
@@ -128,12 +128,12 @@ function parseForEach(
 ): IRStatement | null {
   const itemToken = cursor.peek();
   if (itemToken?.kind !== 'word') {
-    reporter.error('AIL1405', 'expected a loop variable after "for each"', cursor.currentSpan());
+    reporter.error('HADL1405', 'expected a loop variable after "for each"', cursor.currentSpan());
     return null;
   }
   cursor.next();
   if (!cursor.eatWord('in', 'of')) {
-    reporter.error('AIL1406', `expected "in" after "for each ${itemToken.raw}"`, cursor.currentSpan());
+    reporter.error('HADL1406', `expected "in" after "for each ${itemToken.raw}"`, cursor.currentSpan());
     return null;
   }
   const collection = parseExpression(cursor, reporter);
@@ -147,7 +147,7 @@ function parseFail(cursor: TokenCursor, reporter: ParseReporter, span: SourceSpa
   const errorToken = cursor.peek();
   if (!isTypeName(errorToken)) {
     reporter.error(
-      'AIL1407',
+      'HADL1407',
       'expected the name of a declared error after "fail with"',
       cursor.currentSpan(),
       'errors are declared with "## error OrderNotFound (checked, status 404)"',
@@ -162,7 +162,7 @@ function parseFail(cursor: TokenCursor, reporter: ParseReporter, span: SourceSpa
 function parsePublish(cursor: TokenCursor, reporter: ParseReporter, span: SourceSpan): IRStatement | null {
   const eventToken = cursor.peek();
   if (!isTypeName(eventToken)) {
-    reporter.error('AIL1408', 'expected the name of a declared event after "publish"', cursor.currentSpan());
+    reporter.error('HADL1408', 'expected the name of a declared event after "publish"', cursor.currentSpan());
     return null;
   }
   cursor.next();
@@ -173,7 +173,7 @@ function parsePublish(cursor: TokenCursor, reporter: ParseReporter, span: Source
 function parseAppend(cursor: TokenCursor, reporter: ParseReporter, span: SourceSpan): IRStatement | null {
   const value = cursor.withStops(['to'], () => parseExpression(cursor, reporter));
   if (!cursor.eatWord('to')) {
-    reporter.error('AIL1409', 'expected "to <collection>" after "add"', cursor.currentSpan());
+    reporter.error('HADL1409', 'expected "to <collection>" after "add"', cursor.currentSpan());
     return null;
   }
   const collection = parsePath(cursor, reporter);
@@ -184,7 +184,7 @@ function parseAppend(cursor: TokenCursor, reporter: ParseReporter, span: SourceS
 function parseRemove(cursor: TokenCursor, reporter: ParseReporter, span: SourceSpan): IRStatement | null {
   const value = cursor.withStops(['from'], () => parseExpression(cursor, reporter));
   if (!cursor.eatWord('from')) {
-    reporter.error('AIL1410', 'expected "from <collection>" after "remove"', cursor.currentSpan());
+    reporter.error('HADL1410', 'expected "from <collection>" after "remove"', cursor.currentSpan());
     return null;
   }
   const collection = parsePath(cursor, reporter);
@@ -216,14 +216,14 @@ function parseInlineStatement(
   if (cursor.eatWord('perform', 'do', 'call')) return { kind: 'perform', value: parseExpression(cursor, reporter), span };
   const value = parseExpression(cursor, reporter);
   if (value.kind === 'call') return { kind: 'perform', value, span };
-  reporter.error('AIL1411', 'expected a statement after "then"', span);
+  reporter.error('HADL1411', 'expected a statement after "then"', span);
   return null;
 }
 
 function parsePath(cursor: TokenCursor, reporter: ParseReporter): string[] {
   const first = cursor.peek();
   if (first?.kind !== 'word') {
-    reporter.error('AIL1412', 'expected a field path', cursor.currentSpan());
+    reporter.error('HADL1412', 'expected a field path', cursor.currentSpan());
     return [];
   }
   cursor.next();
@@ -232,7 +232,7 @@ function parsePath(cursor: TokenCursor, reporter: ParseReporter): string[] {
     cursor.next();
     const part = cursor.peek();
     if (part?.kind !== 'word') {
-      reporter.error('AIL1413', 'expected a field name after "."', cursor.currentSpan());
+      reporter.error('HADL1413', 'expected a field name after "."', cursor.currentSpan());
       break;
     }
     cursor.next();

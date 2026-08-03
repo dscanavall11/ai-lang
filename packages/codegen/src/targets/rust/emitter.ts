@@ -13,7 +13,7 @@ import {
   type IRType,
   type ModuleIndex,
   type UnaryOperator,
-} from '@ai-lang/core';
+} from '@haic/core';
 import { LanguageEmitter } from '../../shared/emitter.js';
 
 const PRIMITIVES: Record<string, string> = {
@@ -324,7 +324,7 @@ export class RustEmitter extends LanguageEmitter {
     else if (!unit) writer.line('Default::default()');
   }
 
-  /** Renders a documentation line describing the AI-Lang type it came from. */
+  /** Renders a documentation line describing the HADL type it came from. */
   describeType(type: IRType): string {
     return typeToString(type);
   }

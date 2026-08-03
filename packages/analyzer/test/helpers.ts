@@ -1,15 +1,15 @@
 import { expect } from 'vitest';
-import { DiagnosticBag, formatDiagnostics, type Diagnostic, type IRModule } from '@ai-lang/core';
-import { parseModule } from '@ai-lang/parser';
+import { DiagnosticBag, formatDiagnostics, type Diagnostic, type IRModule } from '@haic/core';
+import { parseModule } from '@haic/parser';
 import { analyze, type AnalyzeOptions } from '../src/index.js';
 
 /** Parses and analyses one module, failing loudly on a parse error. */
 export function check(body: string, options: AnalyzeOptions = {}): Diagnostic[] {
   const source = `---\nmodule: test\ncontext: Test\n---\n\n${body}`;
   const bag = new DiagnosticBag();
-  const { module } = parseModule('test.ail', source, bag);
+  const { module } = parseModule('test.hadl', source, bag);
   if (bag.hasErrors || !module) {
-    throw new Error(`unexpected parse errors:\n${formatDiagnostics(bag.items, new Map([['test.ail', source]]))}`);
+    throw new Error(`unexpected parse errors:\n${formatDiagnostics(bag.items, new Map([['test.hadl', source]]))}`);
   }
   return analyze([module], { projectName: 'test', ...options }).diagnostics;
 }
@@ -18,7 +18,7 @@ export function checkModules(sources: readonly string[], options: AnalyzeOptions
   const bag = new DiagnosticBag();
   const modules: IRModule[] = [];
   sources.forEach((source, i) => {
-    const { module } = parseModule(`test${i}.ail`, source, bag);
+    const { module } = parseModule(`test${i}.hadl`, source, bag);
     if (module) modules.push(module);
   });
   expect(bag.errors).toEqual([]);

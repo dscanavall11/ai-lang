@@ -1,4 +1,4 @@
-# AI-Lang
+# HADL
 
 A programming language for AI to write software in.
 
@@ -6,8 +6,8 @@ Not an IDE. Not an agent. A language — with its own syntax, its own type syste
 its own compiler, and its own opinions about what good software looks like.
 
 ```bash
-npm install -g @ai-lang/cli
-ail new my-store
+npm install -g @haic/cli
+haic new my-store
 ```
 
 ## What the source looks like
@@ -42,15 +42,15 @@ entity field for field, a service layer that forwards every call unchanged, and
 an error hierarchy nobody throws. The problem is not that the model writes bad
 Java — it is that Java will happily accept all of it.
 
-AI-Lang has opinions, and the compiler enforces them:
+HADL has opinions, and the compiler enforces them:
 
 ```
-warning[AIL2503]: PlaceOrderService.fetch order only forwards "find order by id"
-  --> src/orders.ail:88:3
+warning[HADL2503]: PlaceOrderService.fetch order only forwards "find order by id"
+  --> src/orders.hadl:88:3
   help: let the caller use the port directly, or add the rule this operation was meant to hold
 
-error[AIL2207]: aggregate Order embeds aggregate Customer in field "customer"
-  --> src/orders.ail:52:3
+error[HADL2207]: aggregate Order embeds aggregate Customer in field "customer"
+  --> src/orders.hadl:52:3
   help: store the identity instead: "- customerId: uuid, required"
 ```
 
@@ -58,15 +58,15 @@ error[AIL2207]: aggregate Order embeds aggregate Customer in field "customer"
 
 | Command | Does |
 | --- | --- |
-| `ail new <name>` | Scaffold a project that compiles as written |
-| `ail check [paths]` | Parse, type-check and audit the design |
-| `ail test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
-| `ail build [paths] --target <lang>` | Generate the service |
-| `ail deploy [paths] --target <platform>` | Generate the infrastructure |
-| `ail architect <requirements.md>` | Turn a requirements document into a reviewable spec |
-| `ail explain <code>` | Explain the reasoning behind a diagnostic |
+| `haic new <name>` | Scaffold a project that compiles as written |
+| `haic check [paths]` | Parse, type-check and audit the design |
+| `haic test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
+| `haic build [paths] --target <lang>` | Generate the service |
+| `haic deploy [paths] --target <platform>` | Generate the infrastructure |
+| `haic architect <requirements.md>` | Turn a requirements document into a reviewable spec |
+| `haic explain <code>` | Explain the reasoning behind a diagnostic |
 
-`ail test` is the one worth knowing about. It runs the operations against the
+`haic test` is the one worth knowing about. It runs the operations against the
 IR itself — about a second, no code generated, no toolchain, no tokens — so a
 design can be exercised before it is ever expanded.
 
@@ -78,8 +78,8 @@ and does not compile yet** — the emitter does not model ownership.
 
 ## More
 
-- [Repository, docs and worked examples](https://github.com/dscanavall11/ai-lang)
-- [Build your own CRUD](https://github.com/dscanavall11/ai-lang/blob/main/docs/crud-tutorial.md)
-- [The whole language, written for a model to read](https://github.com/dscanavall11/ai-lang/blob/main/AGENTS.md)
+- [Repository, docs and worked examples](https://github.com/dscanavall11/hadl)
+- [Build your own CRUD](https://github.com/dscanavall11/hadl/blob/main/docs/crud-tutorial.md)
+- [The whole language, written for a model to read](https://github.com/dscanavall11/hadl/blob/main/AGENTS.md)
 
 Apache-2.0.

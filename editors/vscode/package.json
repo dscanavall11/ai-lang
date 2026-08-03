@@ -1,7 +1,7 @@
 {
-  "name": "ai-lang",
-  "displayName": "AI-Lang",
-  "description": "Syntax highlighting and editing support for AI-Lang, a natural-language programming language that compiles to Java, TypeScript, Python and Go.",
+  "name": "hadl",
+  "displayName": "HADL",
+  "description": "Syntax highlighting and editing support for HADL, a natural-language programming language that compiles to Java, TypeScript, Python and Go.",
   "version": "0.1.0",
   "publisher": "dscanavall11",
   "license": "Apache-2.0",
@@ -13,50 +13,50 @@
     "Snippets"
   ],
   "keywords": [
-    "ail",
-    "ai-lang",
+    "hadl",
+    "hadl",
     "natural language",
     "domain-driven design",
     "hexagonal architecture"
   ],
-  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "homepage": "https://github.com/dscanavall11/hadl#readme",
   "bugs": {
-    "url": "https://github.com/dscanavall11/ai-lang/issues"
+    "url": "https://github.com/dscanavall11/hadl/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "url": "git+https://github.com/dscanavall11/hadl.git",
     "directory": "editors/vscode"
   },
   "contributes": {
     "languages": [
       {
-        "id": "ail",
+        "id": "hadl",
         "aliases": [
-          "AI-Lang",
-          "ail"
+          "HADL",
+          "hadl"
         ],
         "extensions": [
-          ".ail"
+          ".hadl"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "ail",
-        "scopeName": "source.ail",
-        "path": "./syntaxes/ail.tmLanguage.json"
+        "language": "hadl",
+        "scopeName": "source.hadl",
+        "path": "./syntaxes/hadl.tmLanguage.json"
       }
     ],
     "snippets": [
       {
-        "language": "ail",
-        "path": "./snippets/ail.json"
+        "language": "hadl",
+        "path": "./snippets/hadl.json"
       }
     ],
     "configurationDefaults": {
-      "[ail]": {
+      "[hadl]": {
         "editor.insertSpaces": true,
         "editor.tabSize": 2,
         "editor.detectIndentation": false,

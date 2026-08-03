@@ -1,23 +1,23 @@
 {
-  "name": "@ai-lang/architect",
-  "version": "0.1.1",
-  "description": "Turns a requirements document into a reviewable AI-Lang spec and draft sources.",
+  "name": "@haic/architect",
+  "version": "0.2.0",
+  "description": "Turns a requirements document into a reviewable HADL spec and draft sources.",
   "keywords": [
-    "ai-lang",
+    "hadl",
     "requirements",
     "bounded-context",
     "domain-modelling"
   ],
   "license": "Apache-2.0",
   "author": "dscanavall11",
-  "homepage": "https://github.com/dscanavall11/ai-lang#readme",
+  "homepage": "https://github.com/dscanavall11/hadl#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscanavall11/ai-lang.git",
+    "url": "git+https://github.com/dscanavall11/hadl.git",
     "directory": "packages/architect"
   },
   "bugs": {
-    "url": "https://github.com/dscanavall11/ai-lang/issues"
+    "url": "https://github.com/dscanavall11/hadl/issues"
   },
   "engines": {
     "node": ">=20"
@@ -35,8 +35,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.1",
-    "@ai-lang/parser": "0.1.1",
-    "@ai-lang/analyzer": "0.1.1"
+    "@haic/core": "0.2.0",
+    "@haic/parser": "0.2.0",
+    "@haic/analyzer": "0.2.0"
   }
 }
