@@ -180,6 +180,8 @@ function collectReferences(statements: readonly IRStatement[]): Set<string> {
 const ADDRESSABLE = /^[A-Za-z_][A-Za-z0-9_.]*$/;
 
 export class GoEmitter extends LanguageEmitter {
+  readonly target = 'go' as const;
+
   private returns: ReturnShape = { zero: '', fallible: true };
   private statement: StatementShape = NO_STATEMENT;
   /** Element type of the collection the aggregate being rendered folds over. */

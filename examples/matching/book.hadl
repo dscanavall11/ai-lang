@@ -1,0 +1,234 @@
+---
+module: matching
+context: Matching
+target: typescript
+---
+
+# Continuous Order Matching
+
+A limit order book. Orders rest until something crosses them, and the engine
+fills the best price first, oldest first at the same price.
+
+This is the shape of system HADL is worst at describing and best at surrounding.
+The rules — a book never crosses itself, a resting order always has quantity
+left, a fill never invents a price — are design decisions, and they belong in
+the language. The loop that walks the far side of the book and takes liquidity
+off it is not a design decision; it is an algorithm, and the only honest way to
+write it is to write it. So it lives in a fenced block, and everything around it
+stays HADL.
+
+## enum Side
+- Buy
+- Sell
+
+## value object Trade
+
+One fill. Price comes from the resting order, never from the incoming one: the
+side that waited set the terms.
+
+- buyOrderId: uuid, required
+- sellOrderId: uuid, required
+- price: decimal, required, min 0
+- quantity: integer, required, min 1
+
+## entity RestingOrder
+identified by id
+belongs to OrderBook
+
+- id: uuid, required
+- side: Side, required
+- limitPrice: decimal, required, min 0
+- quantity: integer, required, min 1
+- placedAt: timestamp, required
+
+invariant "a resting order still has something left to fill":
+  quantity is greater than 0
+
+## aggregate OrderBook
+identified by symbol
+contains RestingOrder
+emits OrdersMatched
+
+The consistency boundary is one instrument. Two symbols never share a lock, and
+nothing in this design tempts them to.
+
+- symbol: text, required, min length 1
+- bids: list of RestingOrder, required
+- asks: list of RestingOrder, required
+- lastTradePrice: decimal, optional
+
+invariant "the book never crosses itself":
+  bids is empty or asks is empty or max of bids by limitPrice is at most min of asks by limitPrice
+
+Price-time priority: best price first, and at one price the order that has been
+waiting longest. Filling is destructive — a fully filled order leaves the book —
+so this is a loop over a mutable collection, and writing it as anything else
+would be a translation of a translation.
+
+operation match incoming (side: Side, limitPrice: decimal, quantity: integer, orderId: uuid) -> list of Trade:
+  ```typescript
+  const buying = side === Side.Buy;
+  const resting = buying ? this.asks : this.bids;
+  const crosses = (price: number): boolean => (buying ? price <= limitPrice : price >= limitPrice);
+
+  // Best price first; at one price, the order that has waited longest.
+  resting.sort((a, b) =>
+    a.limitPrice === b.limitPrice
+      ? a.placedAt.getTime() - b.placedAt.getTime()
+      : buying
+        ? a.limitPrice - b.limitPrice
+        : b.limitPrice - a.limitPrice,
+  );
+
+  const trades: Trade[] = [];
+  let remaining = quantity;
+  while (remaining > 0 && resting.length > 0 && crosses(resting[0]!.limitPrice)) {
+    const top = resting[0]!;
+    const taken = Math.min(remaining, top.quantity);
+    trades.push(
+      new Trade({
+        buyOrderId: buying ? orderId : top.id,
+        sellOrderId: buying ? top.id : orderId,
+        price: top.limitPrice,
+        quantity: taken,
+      }),
+    );
+    remaining -= taken;
+    top.quantity -= taken;
+    if (top.quantity === 0) resting.shift();
+    this.lastTradePrice = top.limitPrice;
+  }
+
+  return trades;
+  ```
+
+  ```python
+  buying = side == Side.Buy
+  resting = self.asks if buying else self.bids
+
+  def crosses(price: float) -> bool:
+      return price <= limit_price if buying else price >= limit_price
+
+  # Best price first; at one price, the order that has waited longest.
+  resting.sort(key=lambda o: (o.limit_price if buying else -o.limit_price, o.placed_at))
+
+  trades: list[Trade] = []
+  remaining = quantity
+  while remaining > 0 and resting and crosses(resting[0].limit_price):
+      top = resting[0]
+      taken = min(remaining, top.quantity)
+      trades.append(
+          Trade(
+              buy_order_id=order_id if buying else top.id,
+              sell_order_id=top.id if buying else order_id,
+              price=top.limit_price,
+              quantity=taken,
+          )
+      )
+      remaining -= taken
+      top.quantity -= taken
+      if top.quantity == 0:
+          resting.pop(0)
+      self.last_trade_price = top.limit_price
+
+  return trades
+  ```
+
+Cancelling is a filter, and a filter is one line of HADL. Nothing here needs a
+block, so nothing here gets one.
+
+operation cancel resting (cancelledId: uuid) -> nothing:
+  set bids to only bids where id is not cancelledId
+  set asks to only asks where id is not cancelledId
+
+## command SubmitOrder targets OrderBook
+- symbol: text, required, min length 1
+- orderId: uuid, required
+- side: Side, required
+- limitPrice: decimal, required, min 0
+- quantity: integer, required, min 1
+
+## event OrdersMatched from OrderBook
+topic orders-matched
+
+- symbol: text, required
+- takerOrderId: uuid, required
+- filled: integer, required
+
+## dto ExecutionReport projects OrderBook
+
+What the submitter is told: how much of their order traded, and at what.
+
+- takerOrderId: uuid, required
+- filled: integer, required
+- trades: list of Trade, required
+
+## error BookNotNoticed (checked, status 404)
+message: "no book is open for {symbol}"
+
+- symbol: text, required
+
+## error OrderRejected (checked, status 422)
+message: "order {orderId} was rejected: {reason}"
+
+- orderId: uuid, required
+- reason: text, required
+
+## port OrderBookRepository (outbound)
+using in-memory
+
+- find order book by id (id: text) -> OrderBook or BookNotNoticed
+- save order book (orderBook: OrderBook) -> nothing
+
+## port SubmitOrderUseCase (inbound)
+
+- submit order (command: SubmitOrder) -> ExecutionReport or BookNotNoticed, OrderRejected
+
+## service MatchingService
+uses OrderBookRepository
+implements SubmitOrderUseCase
+
+Loads the book, rejects what should never reach the engine, runs the match, and
+saves what came out of it. Everything it decides is a rule; nothing it decides
+is an algorithm.
+
+operation submit order (command: SubmitOrder) -> ExecutionReport or BookNotNoticed, OrderRejected:
+  when command.limitPrice is at most 0:
+    fail with OrderRejected using orderId = command.orderId, reason = "limit price must be positive"
+  let book be find order book by id with id = command.symbol
+  let trades be match incoming with orderBook = book, side = command.side, limitPrice = command.limitPrice, quantity = command.quantity, orderId = command.orderId
+  perform save order book with orderBook = book
+  let filled be sum of trades by quantity
+  publish OrdersMatched with symbol = command.symbol, takerOrderId = command.orderId, filled = filled
+  return ExecutionReport with takerOrderId = command.orderId, filled = filled, trades = trades
+
+## endpoint POST /books/{symbol}/orders
+handled by MatchingService.submit order
+request SubmitOrder
+auth bearer
+responds 200 with ExecutionReport
+responds 404 when BookNotNoticed
+responds 422 when OrderRejected
+
+## scenario rejecting an order that names no price
+
+A quantity below one is caught by the command's own constraint, before any
+service runs. A limit price of zero is not: zero is a number, and only the
+domain knows it is not a price.
+
+given book be OrderBook with symbol = "ACME", bids = [], asks = []
+when submit order with command = SubmitOrder with symbol = "ACME", orderId = "o-1", side = Buy, limitPrice = 0, quantity = 5
+then it fails with OrderRejected
+
+## scenario cancelling lifts the order out of the book
+
+given first be RestingOrder with id = "r-1", side = Buy, limitPrice = 10, quantity = 5, placedAt = now
+and second be RestingOrder with id = "r-2", side = Buy, limitPrice = 9, quantity = 3, placedAt = now
+and book be OrderBook with symbol = "ACME", bids = [first, second], asks = []
+when cancel resting with orderBook = book, cancelledId = "r-1"
+then count of book.bids is 1
+
+## infrastructure
+port 8080
+database matchingdb using postgres version 16
+deploy to docker

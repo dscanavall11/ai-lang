@@ -154,3 +154,44 @@ two descriptions drift, and the whole premise is that they cannot.
 **Revisit if** a real project needs environment-specific overrides. The answer
 would be environment values injected at deploy time, not a second source of
 truth at build time.
+
+---
+
+## ADR-010 — One escape hatch: a fenced block, per operation, per target
+
+**Decision.** An operation body may be a fenced code block naming a target
+language. The block is emitted verbatim into that backend and nowhere else.
+Statements may be written beside it; when they are, they remain the reference
+implementation that `haic test` runs. Everything the choice costs is reported:
+an operation with only a block is `HADL2602`, a target with no body for it is
+`HADL3060`, and a scenario that reaches one is inconclusive, never green.
+
+**Deviates from** the earlier stated position that there is no target-language
+escape hatch at all.
+
+**Why.** The premise of the language is that a compiler should write the code a
+design implies. That premise holds for structure — layering, mapping, wiring,
+validation — and it holds for rules, which is why invariants and checked errors
+belong in the source. It does not hold for algorithms. A price-time matching
+loop, a great-circle distance, a sum that must be exact in minor units: each has
+one correct form, already written down somewhere, and expressing it in design
+vocabulary produces a translation nobody can check against the original.
+
+Without a hatch, that logic does not disappear. It moves into a hand-edited file
+next to the generated ones, where the compiler cannot see it, cannot regenerate
+around it, and cannot tell anyone it exists. A declared hole is better than an
+undeclared one.
+
+The rules exist to keep the hole a hole rather than a second language living
+inside the first. It attaches to an operation, so the signature, the checked
+errors and the invariants stay the compiler's. It names its target, so building
+another one fails loudly instead of emitting a method that quietly does nothing.
+And the compiler keeps saying, on every check, which parts of the design it can
+no longer run.
+
+**Rules out.** Blocks in handlers, invariants and scenarios; more than one block
+per target on one operation; any promise that a design using them is portable.
+
+**Revisit if** the escape hatch starts carrying orchestration rather than
+algorithms. That would mean the language is missing something structural, and
+the answer is to add it to the language rather than to widen the hatch.

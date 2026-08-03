@@ -15,6 +15,7 @@
  */
 import type { IRArgument, IRStatement, SourceSpan } from '@haic/core';
 import { parseArguments, parseExpression } from './expression-parser.js';
+import { isFenceOpener } from './native-parser.js';
 import type { ParseReporter } from './reporter.js';
 import type { Line, LineCursor } from './source.js';
 import { isTypeName, TokenCursor } from './tokens.js';
@@ -52,6 +53,19 @@ function parseStatement(lines: LineCursor, reporter: ParseReporter): IRStatement
   if (cursor.eatWord('return') || cursor.eatWord('answer') || cursor.eatPhrase('give', 'back')) return parseReturn(cursor, reporter, span);
   if (cursor.eatWord('perform') || cursor.eatWord('do') || cursor.eatWord('call')) {
     return { kind: 'perform', value: parseExpression(cursor, reporter), span };
+  }
+
+  // A fence reaching this parser means it was opened somewhere a native body is
+  // not accepted — a handler, an invariant, a scenario. Saying so beats
+  // reporting that ```typescript is not a statement.
+  if (isFenceOpener(line)) {
+    reporter.error(
+      'HADL1424',
+      'a code fence is only allowed inside an operation body',
+      span,
+      'move the code into "operation <phrase> (...) -> <type>:" and call that operation from here',
+    );
+    return null;
   }
 
   // Bare expression statement: an operation call written without a keyword.

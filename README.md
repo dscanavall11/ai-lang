@@ -163,6 +163,51 @@ run**, never as a pass.
 
 ---
 
+## When the design is not the whole story
+
+Some logic is not a design decision. A price-time matching loop, a great-circle
+distance, a sum that has to be exact in cents — each has one correct form, and
+restating it in design vocabulary produces a translation nobody can check
+against the original.
+
+So an operation body can be the fence Markdown already has:
+
+````
+operation match incoming (side: Side, limitPrice: decimal, quantity: integer, orderId: uuid) -> list of Trade:
+  ```typescript
+  const resting = side === Side.Buy ? this.asks : this.bids;
+  resting.sort((a, b) => (a.limitPrice === b.limitPrice ? +a.placedAt - +b.placedAt : a.limitPrice - b.limitPrice));
+  ...
+  ```
+````
+
+That code is copied into the generated project unchanged. Everything around it
+stays the compiler's: the signature, the checked errors, the invariant that says
+a book never crosses itself, the service that loads and saves, the endpoint, the
+status codes.
+
+Write statements beside the block and they become the reference implementation —
+`haic test` runs those, the block is what ships. Write no statements and the
+compiler says so:
+
+```
+warning[HADL2602]: no scenario can exercise OrderBook.match incoming: its only body is typescript
+```
+
+Blocks can name more than one language, and `--language` decides which backend
+runs, whatever the source declared:
+
+```bash
+haic build src --language js       # the ```typescript block
+haic build src --language python   # the ```python block
+haic build src --language go       # error[HADL3060]: no body for go
+```
+
+Three systems in [`examples/`](examples) are built around this: an order book, a
+double-entry ledger, and courier dispatch. None of them is CRUD.
+
+---
+
 ## Why write this instead of prompting for the code
 
 The tasks example is **144 lines** of `.hadl`. It produces **411 lines of
@@ -184,7 +229,7 @@ nothing and reviewing it is a diff, not a re-read.
 | `haic new <name>` | Scaffold a project |
 | `haic check [paths]` | Parse, type-check and audit the design |
 | `haic test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
-| `haic build [paths] --target <lang>` | Generate the service |
+| `haic build [paths] --language <lang>` | Generate the service, in the language you name |
 | `haic deploy [paths] --target <platform>` | Generate the infrastructure |
 | `haic architect <requirements.md>` | Turn a requirements document into a reviewable spec and draft sources |
 | `haic ir [paths]` | Print the typed IR as JSON |
@@ -244,8 +289,8 @@ source spans, so that is the obvious next step — see
    parser ──────────► AST            hand-written, line-oriented, no build step
       │
       ▼
-  analyzer ─────────► diagnostics    six passes: symbols, architecture, types,
-      │                              error flow, DDD, simplicity
+  analyzer ─────────► diagnostics    seven passes: symbols, architecture, types,
+      │                              error flow, DDD, simplicity, native bodies
       ▼
   typed IR (JSON)                    the single source of truth, diffable and reviewable
       │
@@ -269,7 +314,7 @@ writes a reviewable `.ai-spec/` directory rather than code.
 | --- | --- |
 | `packages/core` | IR schema, diagnostics, naming, emission primitives, registries |
 | `packages/parser` | Lexer, expression and statement parsers, declaration parsers |
-| `packages/analyzer` | The six semantic passes and the type checker |
+| `packages/analyzer` | The seven semantic passes and the type checker |
 | `packages/codegen` | One backend per target language |
 | `packages/iac` | One generator per deployment platform |
 | `packages/architect` | Requirements → bounded contexts → domain model → draft sources |
@@ -287,8 +332,8 @@ writes a reviewable `.ai-spec/` directory rather than code.
 
 Working end to end, and early.
 
-Five worked example modules compile to every backend and all four platforms, and
-the compiler itself has 261 tests.
+Eight worked example modules compile to every backend and all four platforms, and
+the compiler itself has 310 tests.
 
 Whether the emitted project then satisfies its own toolchain is a separate
 question, so CI builds every one of them with the real compiler on every push:

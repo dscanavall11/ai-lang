@@ -427,7 +427,7 @@ function emitAdapterBody(
       writer.block(() => {
         writer.line('`INSERT INTO ${this.table} (data, id) VALUES ($1, $2)');
         writer.line('  ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`,');
-        writer.line(`[JSON.stringify(${camelCase(parameter)}), ${camelCase(parameter)}.id],`);
+        writer.line(`[JSON.stringify(${camelCase(parameter)}), ${identityAccess(index, operation, camelCase(parameter))}],`);
       });
       writer.line(');');
       return;
@@ -461,7 +461,7 @@ function emitAdapterBody(
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       const parameter = camelCase(operation.parameters[0]?.name ?? 'entity');
-      writer.line(`this.rows.set(String(${parameter}.id), ${parameter});`);
+      writer.line(`this.rows.set(String(${identityAccess(index, operation, parameter)}), ${parameter});`);
       return;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
@@ -477,6 +477,20 @@ function emitAdapterBody(
   writer.line(
     `throw new Error('${operation.phrase} has no generated implementation for a ${technology} adapter; write it here.');`,
   );
+}
+
+/**
+ * How to read the key off the value being saved.
+ *
+ * `identified by symbol` is a real thing to write, so a repository cannot assume
+ * the identity is called `id` — it used to, and the generated adapter then read
+ * a field the aggregate never declared.
+ */
+function identityAccess(index: ModuleIndex, operation: IROperationSignature, parameter: string): string {
+  const type = operation.parameters[0]?.type;
+  const named = type && type.kind === 'named' ? index.get(type.name) : undefined;
+  const identity = named && 'identity' in named ? named.identity[0] : undefined;
+  return `${parameter}.${camelCase(identity ?? 'id')}`;
 }
 
 /**
@@ -1024,7 +1038,7 @@ function emitOperation(writer: CodeWriter, emitter: TypeScriptEmitter, operation
   const prefix = options.async ? 'async ' : '';
   const wrapped = options.async ? `Promise<${returns}>` : returns;
   writer.line(`${prefix}${camelCase(operation.phrase)}(${parameterObject(operation, emitter)}): ${wrapped} {`);
-  writer.block(() => emitter.emitBlock(writer, operation.body));
+  writer.block(() => emitter.emitImplementation(writer, operation));
   writer.line('}');
 }
 

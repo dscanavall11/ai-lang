@@ -28,6 +28,8 @@ const PRIMITIVES: Record<string, string> = {
 };
 
 export class TypeScriptEmitter extends LanguageEmitter {
+  readonly target = 'typescript' as const;
+
   constructor(
     index: ModuleIndex,
     /** Ports the enclosing class holds, mapped from port name to field name. */
@@ -75,8 +77,13 @@ export class TypeScriptEmitter extends LanguageEmitter {
     return escapeReserved(camelCase(name), 'typescript');
   }
 
+  /**
+   * Only the head can be a binding, so only the head is escaped. A property
+   * named `symbol` or `type` is perfectly legal after a dot, and renaming it
+   * there would name something the emitted interface does not declare.
+   */
   member(path: readonly string[]): string {
-    return path.map((part, index) => (index === 0 ? this.head(part) : this.identifier(part))).join('.');
+    return path.map((part, index) => (index === 0 ? this.head(part) : camelCase(part))).join('.');
   }
 
   /** The first segment may be a field of `this`, a local, or an enum member. */
@@ -86,7 +93,7 @@ export class TypeScriptEmitter extends LanguageEmitter {
       if (owner) return `${pascalCase(owner.name)}.${name}`;
       return pascalCase(name);
     }
-    if (this.selfFields.has(name)) return `this.${this.identifier(name)}`;
+    if (this.selfFields.has(name)) return `this.${camelCase(name)}`;
     return this.identifier(name);
   }
 

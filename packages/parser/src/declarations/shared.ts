@@ -4,6 +4,7 @@ import { bulletBody, parseFieldLine, parseOperationSignature, splitTopLevel, sub
 import { parseExpression } from '../expression-parser.js';
 import type { ParseReporter } from '../reporter.js';
 import { readBody, type Section, type SectionBody } from '../section.js';
+import { splitNativeBlocks } from '../native-parser.js';
 import { parseStatements } from '../statement-parser.js';
 import type { Line } from '../source.js';
 import { TokenCursor } from '../tokens.js';
@@ -116,8 +117,13 @@ export function operationsOf(parsed: ParsedSection, reporter: ParseReporter): IR
     const header = block.header.text.replace(/^operation\s*/i, '').replace(/:$/, '');
     const signature = parseOperationSignature(parsed.section.file, block.header, header, reporter);
     if (!signature) continue;
-    const body = parseStatements(block.body, reporter);
-    operations.push({ ...signature, body, effectful: isEffectful(body) });
+
+    // Fenced blocks are lifted out first: what remains is HADL, and the two
+    // read as one body in the source without either having to quote the other.
+    const owner = `${parsed.section.name}.${signature.phrase}`;
+    const split = splitNativeBlocks(parsed.section.file, block.body, owner, reporter);
+    const body = parseStatements(split.statements, reporter);
+    operations.push({ ...signature, body, native: split.natives, effectful: isEffectful(body) });
   }
   return operations;
 }

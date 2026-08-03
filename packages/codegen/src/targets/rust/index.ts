@@ -183,7 +183,7 @@ function modelFile(module: IRModule, index: ModuleIndex): GeneratedFile | null {
         const receiver = mutatesSelf(operation.body) ? '&mut self' : '&self';
         const parameters = [receiver, ...operation.parameters.map((p) => `${emitter.identifier(p.name)}: ${emitter.typeName(p.type)}`)];
         writer.line(`pub fn ${emitter.methodName(operation.phrase)}(${parameters.join(', ')}) -> ${emitter.resultType(operation.returns)} {`);
-        writer.block(() => emitter.emitOperationBody(writer, operation.body, operation.returns, true));
+        writer.block(() => emitter.emitOperationImplementation(writer, operation, true));
         writer.line('}');
       }
     });
@@ -389,7 +389,7 @@ function servicesFile(module: IRModule, index: ModuleIndex): GeneratedFile | nul
         writer.blank();
         signatureDoc(writer, operation);
         writer.line(`pub async fn ${signature(operation, emitter)} {`);
-        writer.block(() => emitter.emitOperationBody(writer, operation.body, operation.returns, true));
+        writer.block(() => emitter.emitOperationImplementation(writer, operation, true));
         writer.line('}');
       }
     });

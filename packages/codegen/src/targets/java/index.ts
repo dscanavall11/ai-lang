@@ -480,8 +480,8 @@ function adapterFiles(module: IRModule, index: ModuleIndex, layout: JavaLayout):
         );
         writer.block(() => {
           const declared = adapter.operations.find((o) => normalisePhrase(o.phrase) === normalisePhrase(operation.phrase));
-          if (declared && declared.body.length > 0) {
-            operationEmitter(index, declared, {}).emitBlock(writer, declared.body);
+          if (declared && (declared.body.length > 0 || declared.native.length > 0)) {
+            operationEmitter(index, declared, {}).emitImplementation(writer, declared);
             return;
           }
           emitAdapterBody(writer, adapter, operation, index, entity);
@@ -1068,7 +1068,7 @@ function emitOperation(writer: CodeWriter, index: ModuleIndex, operation: IROper
   writer.line(
     `public ${emitter.typeName(operation.returns)} ${camelCase(operation.phrase)}(${parameters(operation, emitter)})${throwsClause(operation.throws, index)} {`,
   );
-  writer.block(() => emitter.emitBlock(writer, operation.body));
+  writer.block(() => emitter.emitImplementation(writer, operation));
   writer.line('}');
 }
 

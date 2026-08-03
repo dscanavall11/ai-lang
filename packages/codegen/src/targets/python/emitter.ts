@@ -45,6 +45,8 @@ export function methodName(phrase: string): string {
 }
 
 export class PythonEmitter extends LanguageEmitter {
+  readonly target = 'python' as const;
+
   /** Names bound by the operation being emitted; anything else may belong to `self`. */
   private readonly locals = new Set<string>();
 
@@ -294,6 +296,10 @@ export class PythonEmitter extends LanguageEmitter {
 
   protected override todoComment(): string {
     return '# no body declared in the .hadl source';
+  }
+
+  protected override commentPrefix(): string {
+    return '# ';
   }
 
   /** Keyword arguments are named after the fields they fill. */

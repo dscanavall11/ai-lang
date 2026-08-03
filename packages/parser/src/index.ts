@@ -4,6 +4,7 @@ export { ParseReporter } from './reporter.js';
 export { parseType } from './type-parser.js';
 export { parseExpression, parseArguments } from './expression-parser.js';
 export { parseStatements } from './statement-parser.js';
+export { splitNativeBlocks, isFenceOpener, type SplitBody } from './native-parser.js';
 export { parseFieldLine, parseOperationSignature, splitTopLevel, subCursor, toIdentifier } from './field-parser.js';
 export { splitSections, readBody, type Section, type SectionBody } from './section.js';
 export { parseFrontmatter, type Frontmatter } from './frontmatter.js';

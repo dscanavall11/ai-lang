@@ -24,6 +24,18 @@ Source files end in `.hadl`. Start with the guide; it is complete on its own.
 - [tasks.hadl](https://github.com/dscanavall11/hadl/blob/main/examples/crud/tasks.hadl): the five CRUD operations and nothing else.
 - [orders.hadl](https://github.com/dscanavall11/hadl/blob/main/examples/orders/orders.hadl): aggregates, events, handlers, DTO projection.
 - [subscriptions.hadl](https://github.com/dscanavall11/hadl/blob/main/examples/billing/subscriptions.hadl): adapters with config, scheduled work.
+- [book.hadl](https://github.com/dscanavall11/hadl/blob/main/examples/matching/book.hadl): an order book, with the matching loop in a fenced TypeScript block and the rules around it in HADL.
+- [ledger.hadl](https://github.com/dscanavall11/hadl/blob/main/examples/ledger/ledger.hadl): double-entry bookkeeping, with a block and the statements it is checked against side by side.
+- [dispatch.hadl](https://github.com/dscanavall11/hadl/blob/main/examples/dispatch/dispatch.hadl): courier assignment, a distance formula and a greedy sweep surrounded by design.
+
+## When statements are not enough
+
+An operation body may be a fenced code block whose info string names a target
+language (`typescript`, `py`, `go`, and the other backend names), and the
+compiler emits the code inside it verbatim into that backend. Use it for algorithms, never for structure. Write statements beside the
+block when you can: they stay the reference implementation `haic test` runs, and
+an operation with only a block is reported as one no scenario can reach.
+`haic build --language <name>` chooses the backend, whatever the source declares.
 
 ## Checking your work
 

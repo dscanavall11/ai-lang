@@ -129,8 +129,13 @@ const AGGREGATE_WORDS: Record<string, 'sum' | 'count' | 'min' | 'max' | 'average
   total: 'sum',
   count: 'count',
   number: 'count',
+  // `min of` and `max of` are what AGENTS.md tells a writer to use, and what a
+  // writer reaches for unprompted; they were the only two spellings in the
+  // guide the parser did not accept.
+  min: 'min',
   minimum: 'min',
   smallest: 'min',
+  max: 'max',
   maximum: 'max',
   largest: 'max',
   average: 'average',

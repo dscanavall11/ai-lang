@@ -105,6 +105,21 @@ const CATALOGUE: Record<string, Explanation> = {
     why: 'A stored field that no rule, projection or contract mentions still costs a column, a migration and a place for stale data to accumulate.',
     fix: 'Keep it only if something outside this module needs it.',
   },
+  HADL2602: {
+    title: 'An operation no scenario can reach',
+    why: 'A fenced block is target-language source, so `haic test` has nothing to run: the design stops being executable exactly where the logic got interesting enough to write by hand. That is the code most worth exercising before it ships.',
+    fix: 'Write the HADL statements beside the block. They stay the reference implementation the scenarios run, and the block still wins for its own target.',
+  },
+  HADL2603: {
+    title: 'A body written for another language',
+    why: 'A design compiles to whatever target is asked for. An operation implemented only in TypeScript quietly makes that one target the real source, and the first build for another one finds a hole where a body should be.',
+    fix: 'Add HADL statements as the portable body, add a block for the other target, or say plainly that this module is single-target.',
+  },
+  HADL3060: {
+    title: 'No body for the target being built',
+    why: 'The compiler will not invent an implementation, and will not emit a project with a method that silently does nothing. Every other file in that build would look finished.',
+    fix: 'Add a block for this target, add HADL statements, or build the language the operation was written for with "--language".',
+  },
 };
 
 export const explainCommand: Command = {
