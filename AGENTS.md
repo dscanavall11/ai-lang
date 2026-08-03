@@ -36,7 +36,7 @@ When a code is unclear, ask the compiler rather than guessing:
 haic explain HADL2147
 ```
 
-Codes in the `AIL25xx` family are warnings about over-design — an unused
+Codes in the `HADL25xx` family are warnings about over-design — an unused
 declaration, a port with one implementation and one caller, a service that only
 forwards. They are advice, not errors. Take them seriously anyway; they exist to
 stop you rebuilding the ceremony this language was written to remove.

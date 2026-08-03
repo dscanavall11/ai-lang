@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 447" width="800" height="447" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12">
+<title>HADL: the compiler catches a design mistake, the scenarios run without generating anything, then it compiles.</title>
+<style>
+.r0{animation:r0 17s infinite}@keyframes r0{0%,2.35%{opacity:0}2.75%,95%{opacity:1}97%,100%{opacity:0}}
+.r1{animation:r1 17s infinite}@keyframes r1{0%,6.47%{opacity:0}6.87%,95%{opacity:1}97%,100%{opacity:0}}
+.r2{animation:r2 17s infinite}@keyframes r2{0%,7.35%{opacity:0}7.75%,95%{opacity:1}97%,100%{opacity:0}}
+.r3{animation:r3 17s infinite}@keyframes r3{0%,8.24%{opacity:0}8.64%,95%{opacity:1}97%,100%{opacity:0}}
+.r4{animation:r4 17s infinite}@keyframes r4{0%,8.82%{opacity:0}9.22%,95%{opacity:1}97%,100%{opacity:0}}
+.r5{animation:r5 17s infinite}@keyframes r5{0%,9.41%{opacity:0}9.81%,95%{opacity:1}97%,100%{opacity:0}}
+.r6{animation:r6 17s infinite}@keyframes r6{0%,11.18%{opacity:0}11.58%,95%{opacity:1}97%,100%{opacity:0}}
+.r7{animation:r7 17s infinite}@keyframes r7{0%,25.88%{opacity:0}26.28%,95%{opacity:1}97%,100%{opacity:0}}
+.r8{animation:r8 17s infinite}@keyframes r8{0%,29.41%{opacity:0}29.81%,95%{opacity:1}97%,100%{opacity:0}}
+.r9{animation:r9 17s infinite}@keyframes r9{0%,37.65%{opacity:0}38.05%,95%{opacity:1}97%,100%{opacity:0}}
+.r10{animation:r10 17s infinite}@keyframes r10{0%,41.18%{opacity:0}41.58%,95%{opacity:1}97%,100%{opacity:0}}
+.r11{animation:r11 17s infinite}@keyframes r11{0%,42.94%{opacity:0}43.34%,95%{opacity:1}97%,100%{opacity:0}}
+.r12{animation:r12 17s infinite}@keyframes r12{0%,45.29%{opacity:0}45.69%,95%{opacity:1}97%,100%{opacity:0}}
+.r13{animation:r13 17s infinite}@keyframes r13{0%,54.12%{opacity:0}54.52%,95%{opacity:1}97%,100%{opacity:0}}
+.r14{animation:r14 17s infinite}@keyframes r14{0%,60.00%{opacity:0}60.40%,95%{opacity:1}97%,100%{opacity:0}}
+.r15{animation:r15 17s infinite}@keyframes r15{0%,62.35%{opacity:0}62.75%,95%{opacity:1}97%,100%{opacity:0}}
+.caret{animation:blink 1.1s steps(1) infinite}@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+</style>
+<rect width="800" height="447" rx="10" fill="#0d1117" stroke="#30363d"/>
+<rect width="800" height="34" rx="10" fill="#161b22"/>
+<rect y="24" width="800" height="10" fill="#161b22"/>
+<line x1="0" y1="34" x2="800" y2="34" stroke="#30363d"/>
+<circle cx="20" cy="17" r="5" fill="#ff5f57"/><circle cx="38" cy="17" r="5" fill="#febc2e"/><circle cx="56" cy="17" r="5" fill="#28c840"/>
+<text x="400" y="21" fill="#6e7681" text-anchor="middle" font-size="11">haic — the HADL compiler</text>
+<g class="r0"><text x="22.0" y="62" fill="#7ee787" font-weight="600">$ </text><text x="36.4" y="62" fill="#c9d1d9">haic check src</text></g>
+<g class="r1"><text x="22.0" y="91.45" fill="#ff7b72" font-weight="600">error</text><text x="58.1" y="91.45" fill="#ff7b72" font-weight="600">[HADL2207]</text><text x="130.3" y="91.45" fill="#c9d1d9">: aggregate Order embeds aggregate Customer</text></g>
+<g class="r2"><text x="22.0" y="110.45" fill="#6e7681">  --&gt; </text><text x="65.3" y="110.45" fill="#6e7681">src/orders.hadl:12:3</text></g>
+<g class="r3"><text x="22.0" y="129.45" fill="#6e7681">   |</text></g>
+<g class="r4"><text x="22.0" y="148.45" fill="#6e7681">12 | </text><text x="58.1" y="148.45" fill="#c9d1d9">- customer: Customer, required</text></g>
+<g class="r5"><text x="22.0" y="167.45" fill="#6e7681">   |   </text><text x="72.5" y="167.45" fill="#ff7b72">^^^^^^^^^^^^^^^^^^^^^^^^^^^^</text></g>
+<g class="r6"><text x="22.0" y="186.45" fill="#d29922">  help: </text><text x="79.8" y="186.45" fill="#c9d1d9">store the identity instead: "- customerId: uuid, required"</text></g>
+<g class="r7"><text x="22.0" y="215.89999999999998" fill="#7ee787" font-weight="600">$ </text><text x="36.4" y="215.89999999999998" fill="#c9d1d9">haic check src</text></g>
+<g class="r8"><text x="22.0" y="245.34999999999997" fill="#3fb950">no problems found in 1 module, 1 bounded context</text></g>
+<g class="r9"><text x="22.0" y="274.79999999999995" fill="#7ee787" font-weight="600">$ </text><text x="36.4" y="274.79999999999995" fill="#c9d1d9">haic test src</text></g>
+<g class="r10"><text x="22.0" y="304.24999999999994" fill="#3fb950">  ✓ </text><text x="50.9" y="304.24999999999994" fill="#c9d1d9">placing an order freezes it</text></g>
+<g class="r11"><text x="22.0" y="323.24999999999994" fill="#3fb950">  ✓ </text><text x="50.9" y="323.24999999999994" fill="#c9d1d9">an empty order cannot be placed</text></g>
+<g class="r12"><text x="22.0" y="342.24999999999994" fill="#3fb950" font-weight="600">  2 passed</text><text x="94.2" y="342.24999999999994" fill="#6e7681">   — no code generated, no tokens spent</text></g>
+<g class="r13"><text x="22.0" y="371.69999999999993" fill="#7ee787" font-weight="600">$ </text><text x="36.4" y="371.69999999999993" fill="#c9d1d9">haic build src --target typescript</text></g>
+<g class="r14"><text x="22.0" y="390.69999999999993" fill="#58a6ff">✓ 16 files → </text><text x="115.9" y="390.69999999999993" fill="#c9d1d9">out/typescript</text></g>
+<g class="r15"><text x="22.0" y="409.69999999999993" fill="#6e7681">  verify with: cd out/typescript &amp;&amp; npm run build</text></g>
+<rect class="caret" x="22" y="418.69999999999993" width="7" height="13" fill="#c9d1d9"/>
+</svg>
