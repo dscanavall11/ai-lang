@@ -6,7 +6,7 @@
  * parser, the highlighting quietly stops recognising it, and nobody notices
  * because nothing fails. These tests fail instead.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { defaultDeclarationRegistry } from '../src/module-parser.js';
@@ -25,6 +25,32 @@ function highlightsWord(word: string): boolean {
   const alternatives = [rule('operator'), rule('constant'), rule('clause'), rule('statement')];
   return alternatives.some((pattern) => pattern.test(` ${word} `));
 }
+
+describe('the editor manifest', () => {
+  // A rename that moves a file but not the reference to it leaves an extension
+  // that installs and silently does nothing. That is how snippets/hadl.json
+  // came to point at a file called snippets/ail.json.
+  it('references only files that exist', () => {
+    const root = new URL('../../../editors/vscode/', import.meta.url);
+    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('package.json', root)), 'utf8')) as {
+      contributes: {
+        languages?: Array<{ configuration?: string }>;
+        grammars?: Array<{ path: string }>;
+        snippets?: Array<{ path: string }>;
+      };
+    };
+
+    const referenced = [
+      ...(manifest.contributes.languages ?? []).map((l) => l.configuration),
+      ...(manifest.contributes.grammars ?? []).map((g) => g.path),
+      ...(manifest.contributes.snippets ?? []).map((s) => s.path),
+    ].filter((path): path is string => typeof path === 'string');
+
+    expect(referenced.length).toBeGreaterThan(0);
+    const missing = referenced.filter((path) => !existsSync(fileURLToPath(new URL(path, root))));
+    expect(missing).toEqual([]);
+  });
+});
 
 describe('the editor grammar', () => {
   it('compiles every pattern it declares', () => {

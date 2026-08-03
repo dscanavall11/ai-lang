@@ -5,6 +5,29 @@ while the major is `0`, the minor carries breaking changes.
 
 ## Unreleased
 
+## 0.2.1
+
+The first complete release under the new names.
+
+`0.2.0` published the six libraries and was refused the seventh:
+
+```
+403 Forbidden - PUT https://registry.npmjs.org/haic
+Package name too similar to existing packages has,hapi,chai,cac,yalc,ai
+```
+
+Six packages sit inside an edit distance that short, so npm treats the name as a
+possible typosquat. That threshold makes any brief unscoped name effectively
+unobtainable, which is why the compiler now ships as `@haic/cli` alongside the
+libraries it already shared a scope with.
+
+Install with `npm install -g @haic/cli`. The command is still `haic`.
+
+Also fixed: the editor manifest pointed at `snippets/hadl.json` while the file
+on disk was still `snippets/ail.json`, so the extension contributed no snippets
+at all — silently, because VS Code does not complain about a snippet path it
+cannot resolve. A test now asserts every path the manifest declares exists.
+
 ## 0.1.1
 
 The command-line package is `@haic/cli`, not `hadl`.
