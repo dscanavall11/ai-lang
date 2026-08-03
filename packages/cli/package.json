@@ -1,5 +1,5 @@
 {
-  "name": "haic",
+  "name": "@haic/cli",
   "version": "0.2.0",
   "description": "A natural-language programming language for AI to write software in. Compiles to Java, TypeScript, Python and Go, plus Docker, Kubernetes, Terraform and AWS.",
   "keywords": [
