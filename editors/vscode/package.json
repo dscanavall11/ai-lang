@@ -2,7 +2,7 @@
   "name": "hadl",
   "displayName": "HADL",
   "description": "Syntax highlighting and editing support for HADL, a natural-language programming language that compiles to Java, TypeScript, Python and Go.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "dscanavall11",
   "license": "Apache-2.0",
   "engines": {

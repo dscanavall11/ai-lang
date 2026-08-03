@@ -1,6 +1,6 @@
 {
   "name": "@haic/architect",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Turns a requirements document into a reviewable HADL spec and draft sources.",
   "keywords": [
     "hadl",
@@ -35,8 +35,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@haic/core": "0.2.0",
-    "@haic/parser": "0.2.0",
-    "@haic/analyzer": "0.2.0"
+    "@haic/core": "0.2.1",
+    "@haic/parser": "0.2.1",
+    "@haic/analyzer": "0.2.1"
   }
 }
