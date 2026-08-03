@@ -1,6 +1,6 @@
 {
   "name": "@ai-lang/parser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hand-written lexer and recursive-descent parser for AI-Lang.",
   "keywords": [
     "ai-lang",
@@ -34,6 +34,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.0"
+    "@ai-lang/core": "0.1.1"
   }
 }

@@ -43,10 +43,21 @@ jobs:
 
       # Dependency order: every package is published after the ones it requires,
       # so the registry never holds a version whose dependency does not exist.
+      #
+      # A version already on the registry is skipped rather than attempted. npm
+      # refuses to republish one, so without this a rerun after a partial
+      # failure — which is exactly when a rerun happens — dies on the first
+      # package that already succeeded.
       - name: Publish
         run: |
           for package in core parser codegen iac analyzer architect cli; do
-            echo "publishing packages/$package"
+            name=$(node -p "require('./packages/$package/package.json').name")
+            version=$(node -p "require('./packages/$package/package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "skipping $name@$version, already published"
+              continue
+            fi
+            echo "publishing $name@$version"
             npm publish --workspace "packages/$package" --provenance --access public
           done
         env:

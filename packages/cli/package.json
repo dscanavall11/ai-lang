@@ -1,6 +1,6 @@
 {
-  "name": "ai-lang",
-  "version": "0.1.0",
+  "name": "@ai-lang/cli",
+  "version": "0.1.1",
   "description": "A natural-language programming language for AI to write software in. Compiles to Java, TypeScript, Python and Go, plus Docker, Kubernetes, Terraform and AWS.",
   "keywords": [
     "programming-language",
@@ -43,11 +43,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/analyzer": "0.1.0",
-    "@ai-lang/architect": "0.1.0",
-    "@ai-lang/codegen": "0.1.0",
-    "@ai-lang/core": "0.1.0",
-    "@ai-lang/iac": "0.1.0",
-    "@ai-lang/parser": "0.1.0"
+    "@ai-lang/analyzer": "0.1.1",
+    "@ai-lang/architect": "0.1.1",
+    "@ai-lang/codegen": "0.1.1",
+    "@ai-lang/core": "0.1.1",
+    "@ai-lang/iac": "0.1.1",
+    "@ai-lang/parser": "0.1.1"
   }
 }

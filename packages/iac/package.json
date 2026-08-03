@@ -1,6 +1,6 @@
 {
   "name": "@ai-lang/iac",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI-Lang infrastructure generators: Docker, Kubernetes, Terraform and AWS.",
   "keywords": [
     "ai-lang",
@@ -36,6 +36,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.0"
+    "@ai-lang/core": "0.1.1"
   }
 }

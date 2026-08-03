@@ -1,6 +1,6 @@
 {
   "name": "@ai-lang/codegen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI-Lang code generators: one backend per target language, all from one IR.",
   "keywords": [
     "ai-lang",
@@ -37,6 +37,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.0"
+    "@ai-lang/core": "0.1.1"
   }
 }

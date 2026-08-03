@@ -1,6 +1,6 @@
 {
   "name": "@ai-lang/analyzer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The AI-Lang semantic passes, type checker and scenario interpreter.",
   "keywords": [
     "ai-lang",
@@ -35,7 +35,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.0",
-    "@ai-lang/parser": "0.1.0"
+    "@ai-lang/core": "0.1.1",
+    "@ai-lang/parser": "0.1.1"
   }
 }
