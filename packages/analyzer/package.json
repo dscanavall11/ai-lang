@@ -1,6 +1,6 @@
 {
   "name": "@haic/analyzer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The HADL semantic passes, type checker and scenario interpreter.",
   "keywords": [
     "hadl",
@@ -35,7 +35,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@haic/core": "0.2.0",
-    "@haic/parser": "0.2.0"
+    "@haic/core": "0.2.1",
+    "@haic/parser": "0.2.1"
   }
 }
