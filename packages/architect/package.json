@@ -1,6 +1,6 @@
 {
   "name": "@ai-lang/architect",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Turns a requirements document into a reviewable AI-Lang spec and draft sources.",
   "keywords": [
     "ai-lang",
@@ -35,8 +35,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-lang/core": "0.1.0",
-    "@ai-lang/parser": "0.1.0",
-    "@ai-lang/analyzer": "0.1.0"
+    "@ai-lang/core": "0.1.1",
+    "@ai-lang/parser": "0.1.1",
+    "@ai-lang/analyzer": "0.1.1"
   }
 }

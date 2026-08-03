@@ -6,7 +6,8 @@ Not an IDE. Not an agent. A language — with its own syntax, its own type syste
 its own compiler, and its own opinions about what good software looks like.
 
 ```bash
-npx ai-lang new my-store
+npm install -g @ai-lang/cli
+ail new my-store
 ```
 
 ## What the source looks like
