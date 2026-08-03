@@ -97,7 +97,7 @@ target code exists. What the generated code owes its readers is idiom. A
 
 ## ADR-006 — Simplicity findings are warnings, not errors
 
-**Decision.** Everything in the `AIL25xx` family — unreachable declarations,
+**Decision.** Everything in the `HADL25xx` family — unreachable declarations,
 duplicate shapes, pass-through operations, ports with no callers, fields nothing
 reads — is a warning or a note. `haic check --strict` promotes them.
 

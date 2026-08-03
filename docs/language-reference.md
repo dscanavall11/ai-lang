@@ -665,23 +665,23 @@ The backend emits `order.computeTotal()`.
 
 | Range | Stage |
 | --- | --- |
-| `AIL10xx` | Section and field syntax |
-| `AIL12xx` | Type expressions |
-| `AIL13xx` | Expressions |
-| `AIL14xx` | Statements |
-| `AIL15xx` | Infrastructure block |
-| `AIL16xx` | Frontmatter and module structure |
-| `AIL20xx` | Symbol resolution |
-| `AIL21xx` | Type checking |
-| `AIL22xx` | Domain-driven design rules |
-| `AIL23xx` | Checked and unchecked error flow |
-| `AIL24xx` | Hexagonal architecture and SOLID |
-| `AIL25xx` | Simplicity (YAGNI) |
-| `AIL29xx` | Internal IR validation |
+| `HADL10xx` | Section and field syntax |
+| `HADL12xx` | Type expressions |
+| `HADL13xx` | Expressions |
+| `HADL14xx` | Statements |
+| `HADL15xx` | Infrastructure block |
+| `HADL16xx` | Frontmatter and module structure |
+| `HADL20xx` | Symbol resolution |
+| `HADL21xx` | Type checking |
+| `HADL22xx` | Domain-driven design rules |
+| `HADL23xx` | Checked and unchecked error flow |
+| `HADL24xx` | Hexagonal architecture and SOLID |
+| `HADL25xx` | Simplicity (YAGNI) |
+| `HADL29xx` | Internal IR validation |
 
 `haic explain <code>` prints the reasoning behind the design rules.
 
-Everything in `AIL25xx` is a warning or a note, never an error: unused code is a
+Everything in `HADL25xx` is a warning or a note, never an error: unused code is a
 smell, not a contradiction. `haic check --strict` promotes them to errors.
 
 ---

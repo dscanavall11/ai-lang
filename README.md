@@ -1,9 +1,20 @@
 # HADL
 
-A programming language for AI to write software in.
+**H**uman-**AI** **D**esign **L**anguage — a programming language for AI to write
+software in.
 
 Not an IDE. Not an agent. A language — with its own syntax, its own type system,
 its own compiler, and its own opinions about what good software looks like.
+
+[![CI](https://github.com/dscanavall11/hadl/actions/workflows/ci.yml/badge.svg)](https://github.com/dscanavall11/hadl/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@haic/cli?label=%40haic%2Fcli)](https://www.npmjs.com/package/@haic/cli)
+[![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
+
+![The compiler catching a design mistake, running the scenarios, then compiling](docs/demo.svg)
+
+```bash
+npm install -g @haic/cli && haic new my-store
+```
 
 ```
 ## aggregate Order
@@ -23,8 +34,9 @@ operation compute total () -> Money:
   return Money with amount = sum of items by quantity times unitPrice.amount, currency = "EUR"
 ```
 
-That is the source. It compiles to Java, TypeScript, Python, Go or Rust, and to
-the Docker, Kubernetes, Terraform or AWS artifacts needed to run it.
+That is the source. It compiles to Java, TypeScript, Python or Go, and to the
+Docker, Kubernetes, Terraform or AWS artifacts needed to run it. A Rust backend
+exists but does not compile yet; the [status](#status) section says why.
 
 ---
 
@@ -100,21 +112,10 @@ haic build src --target typescript --out out
 
 Without installing, `npx @haic/cli new my-store` does the same thing.
 
-To work on the compiler itself, clone instead:
+Then generate the service and run it:
 
 ```bash
-git clone https://github.com/dscanavall11/hadl.git
-cd hadl
-npm install
-npm run build
-npm link --workspace @haic/cli
-```
-
-Either way, compile the worked CRUD and run it:
-
-```bash
-haic check examples/crud
-haic build examples/crud --target typescript --out out
+haic build src --target typescript --out out
 cd out/typescript && npm install && npm run dev
 ```
 
@@ -122,7 +123,8 @@ cd out/typescript && npm install && npm run dev
 listening on http://localhost:8080
 ```
 
-It serves for real, against an in-memory store:
+It serves for real, against an in-memory store. The worked CRUD example — which
+lives in the repository, not in the installed package — answers like this:
 
 ```bash
 curl -X POST localhost:8080/tasks -H 'content-type: application/json' \
@@ -137,10 +139,10 @@ curl -X POST localhost:8080/tasks -H 'content-type: application/json' \
 That 422 came from one modifier in the source:
 `- title: text, required, min length 1, max length 200`.
 
-Before generating anything, run the design:
+Generating is the last step, not the first. Before it, run the design:
 
 ```bash
-haic test examples/crud
+haic test src
 ```
 
 ```
@@ -159,16 +161,15 @@ run**, never as a pass.
 
 **→ [Build your own CRUD](docs/crud-tutorial.md)** — the whole path, step by step.
 
-`haic new <name>` scaffolds a complete slice — one aggregate with a real
-invariant, one port, one service, one endpoint — that compiles as written.
+---
 
 ## Why write this instead of prompting for the code
 
-The tasks example is **132 lines** of `.hadl`. It produces **420 lines of
-TypeScript** across 12 files, or **606 lines of Java** across 19 — before tests,
+The tasks example is **144 lines** of `.hadl`. It produces **411 lines of
+TypeScript** across 13 files, or **515 lines of Java** across 20 — before tests,
 build files, or the compose stack that come with them.
 
-You iterate on the 132 lines: small enough to hold in your head, and a mistake
+You iterate on the 144 lines: small enough to hold in your head, and a mistake
 there is a compiler error with a line number rather than a plausible-looking
 paragraph. Only then do you spend the tokens to expand it. And the expansion is
 deterministic — same source, same output, every time — so re-running it costs
@@ -286,8 +287,8 @@ writes a reviewable `.ai-spec/` directory rather than code.
 
 Working end to end, and early.
 
-The worked examples compile to all five languages and all four platforms, and the
-compiler itself has 243 tests.
+Five worked example modules compile to every backend and all four platforms, and
+the compiler itself has 261 tests.
 
 Whether the emitted project then satisfies its own toolchain is a separate
 question, so CI builds every one of them with the real compiler on every push:

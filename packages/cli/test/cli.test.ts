@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { main } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-const scratch = mkdtempSync(join(tmpdir(), 'ail-cli-'));
+const scratch = mkdtempSync(join(tmpdir(), 'haic-cli-'));
 
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
@@ -32,6 +32,17 @@ async function run(argv: string[], cwd = repoRoot): Promise<{ code: number; out:
 }
 
 describe('the haic command', () => {
+  it('reports the version its own manifest declares', async () => {
+    // It reported 0.1.0 through two releases, because the number was written
+    // beside the manifest instead of read from it.
+    const declared = (JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')) as {
+      version: string;
+    }).version;
+    const { code, out } = await run(['--version']);
+    expect(code).toBe(0);
+    expect(out.trim()).toBe(`haic ${declared}`);
+  });
+
   it('reports usage when called with nothing', async () => {
     const { code, out } = await run([]);
     expect(code).toBe(2);

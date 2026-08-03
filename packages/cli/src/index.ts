@@ -1,4 +1,5 @@
 /** CLI entry point: registry, dispatch, and help. */
+import { createRequire } from 'node:module';
 import { parseArgs } from './args.js';
 import { CommandRegistry, EXIT_OK, EXIT_USAGE, type Command } from './command.js';
 import { architectCommand } from './commands/architect.js';
@@ -12,7 +13,13 @@ import { targetsCommand } from './commands/targets.js';
 import { testCommand } from './commands/test.js';
 import { dim, error, heading, info } from './output.js';
 
-export const VERSION = '0.1.0';
+/**
+ * Read from the manifest rather than written here, because a constant repeated
+ * beside the thing it names drifts from it — this one reported 0.1.0 for two
+ * releases. `dist/index.js` sits one level under the package root, and npm
+ * always ships package.json.
+ */
+export const VERSION: string = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
 
 export const registry = new CommandRegistry()
   .register(newCommand)
@@ -59,7 +66,7 @@ function printHelp(topic: string | undefined): void {
     return;
   }
 
-  info(`ail ${VERSION} — the HADL compiler`);
+  info(`haic ${VERSION} — the HADL compiler`);
   info('');
   info(`${dim('Usage:')} haic <command> [paths...] [options]`);
   heading('Commands');
