@@ -5,6 +5,26 @@ while the major is `0`, the minor carries breaking changes.
 
 ## 0.3.0 — 2026-08-04
 
+### The release would have shipped a cli nobody could install
+
+The publish step named its packages in a hand-written list, and the list was one
+short: `@haic/lsp` was added this cycle and never placed in it, while
+`@haic/cli` requires it. Publishing would have put a cli on the registry whose
+dependency was not there, and `npm i -g @haic/cli` would have failed to resolve
+it. `npm run release:dry` could not catch it, because the dry run publishes
+`--workspaces` and the release loop does not — the two never described the same
+set.
+
+The list now has to prove it covers every package in `packages/` before anything
+is published. Adding a ninth package fails the release until it is placed, which
+is the half a script can check; placing it in the right dependency order is the
+half that still needs a person.
+
+Which is also why `haic --version` printed `haic 0.1.0` in 0.1.0, 0.2.0 and
+0.2.1 alike: `VERSION` was a literal typed beside the thing it names, so
+updating the package changed everything except the number it reported. It reads
+its own manifest now, and so does the language server.
+
 ### `"t-1"` is a uuid, because the design says the field is one
 
 A scenario names the things it sets up: `given task be Task with id = "t-1"`.

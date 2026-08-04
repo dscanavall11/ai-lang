@@ -17,6 +17,10 @@ jobs:
   publish:
     name: Publish to npm
     runs-on: ubuntu-latest
+    env:
+      # Every package, in the order its dependencies allow. A step below
+      # refuses to publish if this misses one.
+      PUBLISH_ORDER: core parser codegen iac analyzer architect lsp cli
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,6 +45,32 @@ jobs:
             exit 1
           fi
 
+      # The list below is hand-ordered, so it can be short by one. It was: a
+      # `lsp` package was added and nobody added it here, and `@haic/cli`
+      # requires it — so the release would have put a cli on the registry whose
+      # dependency was not there, and `npm i -g @haic/cli` would fail to
+      # resolve. `npm run release:dry` could not catch it either, because it
+      # publishes `--workspaces` and this loop does not.
+      #
+      # So the list has to prove it covers every workspace before anything is
+      # published. Adding a package now fails the release until it is placed,
+      # which is the cheap half of the problem; placing it in the right order is
+      # the half a human still has to think about.
+      - name: The publish order must cover every package
+        run: |
+          declared=$(node -p "
+            require('node:fs').readdirSync('packages')
+              .filter((entry) => require('node:fs').existsSync('packages/' + entry + '/package.json'))
+              .filter((entry) => !require('./packages/' + entry + '/package.json').private)
+              .sort().join(' ')")
+          listed=$(echo "$PUBLISH_ORDER" | tr ' ' '\n' | sort | tr '\n' ' ' | sed 's/ *$//')
+          if [ "$declared" != "$listed" ]; then
+            echo "the publish order does not match the packages that exist" >&2
+            echo "  packages: $declared" >&2
+            echo "  ordered:  $listed" >&2
+            exit 1
+          fi
+
       # Dependency order: every package is published after the ones it requires,
       # so the registry never holds a version whose dependency does not exist.
       #
@@ -50,7 +80,7 @@ jobs:
       # package that already succeeded.
       - name: Publish
         run: |
-          for package in core parser codegen iac analyzer architect cli; do
+          for package in $PUBLISH_ORDER; do
             name=$(node -p "require('./packages/$package/package.json').name")
             version=$(node -p "require('./packages/$package/package.json').version")
             if npm view "$name@$version" version >/dev/null 2>&1; then
