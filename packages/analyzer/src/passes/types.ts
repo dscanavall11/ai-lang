@@ -46,6 +46,9 @@ export const typePass: SemanticPass = {
       if (declaration.kind === 'entity' || declaration.kind === 'value-object') {
         checkInvariants(context, checker, declaration);
       }
+      if (declaration.kind === 'scenario') {
+        checkScenario(context, checker, declaration);
+      }
       if ('fields' in declaration) {
         for (const field of declaration.fields) checkFieldConstraints(context, checker, declaration.name, field);
       }
@@ -90,6 +93,60 @@ function checkOperation(
       span,
       { hint: 'add a "return" at the end, or make every branch return or fail' },
     );
+  }
+}
+
+/** Failures the compiler raises itself, which no design declares. */
+const BUILT_IN_FAILURES: ReadonlySet<string> = new Set(['ConstraintViolation', 'InvariantViolation']);
+
+/**
+ * A scenario is a program too.
+ *
+ * Nothing checked one until now, so `at = GeoPoint with latitude = 1,
+ * longitude = 2, capacity = 3` — where the parser reads `capacity` as another
+ * argument to the GeoPoint — passed `haic check`, passed `haic test` because
+ * the interpreter shrugs at a field it does not know, and only failed once the
+ * scenario was compiled into a typed language. The same inference that checks
+ * an operation body checks this one.
+ */
+function checkScenario(context: AnalysisContext, checker: TypeChecker, scenario: Extract<IRDeclaration, { kind: 'scenario' }>): void {
+  checker.enterDeclaration(scenario);
+  const span = scenario.span ?? fallbackSpan(context);
+  const scope = new Scope();
+
+  for (const step of scenario.given) {
+    scope.define(step.binding, checker.infer(step.value, scope));
+  }
+
+  const outcome = checker.infer(scenario.when.call, scope);
+  scope.define(scenario.when.binding, outcome.kind === 'result' ? outcome.ok : outcome);
+
+  for (const expectation of scenario.expectations) {
+    if (expectation.kind === 'holds') {
+      const type = checker.infer(expectation.condition, scope);
+      if (type !== UNKNOWN && !checker.compatible(BOOLEAN, type)) {
+        context.diagnostics.error(
+          'type',
+          'HADL2157',
+          `a "then" must be a yes/no condition, but this is ${typeToString(type)}`,
+          expectation.span ?? span,
+          { hint: 'write "then result.total is 40", or "then it fails with <Error>"' },
+        );
+      }
+      continue;
+    }
+    // `ConstraintViolation` and `InvariantViolation` are raised by the language
+    // rather than declared in a design, and a scenario may expect either.
+    if (expectation.kind === 'fails' && !BUILT_IN_FAILURES.has(expectation.error) && checker.lookup(expectation.error)?.kind !== 'error') {
+      context.diagnostics.error('type', 'HADL2158', `"${expectation.error}" is not a declared error`, expectation.span ?? span, {
+        hint: withSuggestion('', expectation.error, checker.index.errors.map((e) => e.name)) ?? 'declare it with "## error <Name> (checked, status 4xx)"',
+      });
+    }
+    if (expectation.kind === 'publishes' && checker.lookup(expectation.event)?.kind !== 'event') {
+      context.diagnostics.error('type', 'HADL2159', `"${expectation.event}" is not a declared event`, expectation.span ?? span, {
+        hint: withSuggestion('', expectation.event, checker.index.events.map((e) => e.name)),
+      });
+    }
   }
 }
 

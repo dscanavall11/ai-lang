@@ -10,6 +10,7 @@
  * takes a few milliseconds. When that stops being true the fix is an
  * incremental analyzer, not a queue that hides the delay.
  */
+import { createRequire } from 'node:module';
 import { formatSource } from '@haic/parser';
 import { ErrorCodes, type Message } from './protocol.js';
 import {
@@ -23,6 +24,12 @@ import {
   type Position,
 } from './features.js';
 import { Workspace } from './workspace.js';
+
+/**
+ * Read from the manifest, not written here. The CLI reported 0.1.0 for two
+ * releases because a version was typed beside the thing it names.
+ */
+const VERSION: string = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
 
 export interface ServerOptions {
   /** Sends one message to the client. */
@@ -141,7 +148,7 @@ export class LanguageServer {
         hoverProvider: true,
         completionProvider: { triggerCharacters: [' ', ':', '#', '>'] },
       },
-      serverInfo: { name: 'haic', version: '0.2.1' },
+      serverInfo: { name: 'haic', version: VERSION },
     };
   }
 

@@ -3,7 +3,51 @@
 Notable changes, newest first. Versions follow [semver](https://semver.org);
 while the major is `0`, the minor carries breaking changes.
 
-## Unreleased
+## 0.3.0 — 2026-08-04
+
+### `"t-1"` is a uuid, because the design says the field is one
+
+A scenario names the things it sets up: `given task be Task with id = "t-1"`.
+The field is declared `uuid`, and `"t-1"` is not one — so the interpreter, which
+compares values rather than checking them, ran it happily, while the generated
+TypeScript refused to compile it. The first fix was to write real uuids in the
+examples, and the examples became unreadable: eight modules of
+`"3f2504e0-4f89-41d3-9a0c-0305e82c3301"` where the point was to say *the first
+task*.
+
+The rule now: **a text literal standing where a uuid is declared becomes the
+UUID version 5 of that text.** `"t-1"` is one uuid, `"t-2"` is another, they are
+the same uuid every run, in the interpreter, in `haic ir`, in every backend and
+in every compiled test. Nothing reads the digits of an identifier in a scenario;
+everything compares it to itself. The conversion is written into the IR at type
+inference, so `haic ir` shows the value that will actually run.
+
+Which retires the escape hatch the last release shipped — a scenario whose
+values a generated test would refuse no longer stays behind with the
+interpreter, because there is no such scenario.
+
+### A scenario is type-checked like an operation body
+
+`given`, `when` and every `then` are now inferred by the same type checker that
+reads an operation body, which they never were. The dispatch example wrote
+
+```
+when: assign the round with at = GeoPoint with latitude = 41.39, longitude = 2.16, capacity = 2
+```
+
+where the parser reads `capacity` as a third argument to the **GeoPoint**. The
+interpreter shrugs at a field it does not know, so it passed `haic test` and
+failed only once the scenario was compiled into a typed language — which is the
+wrong end of the loop to find it at.
+
+- `HADL2157` — a `then` that is not a yes or no, plus every type error the
+  checker already knew how to report, now reaching scenario code;
+- `HADL2158` — `then it fails with X` where `X` is no error this design
+  declares;
+- `HADL2159` — `then it publishes X` where `X` is no declared event.
+
+Seventeen scenarios across the examples compile and run against the generated
+TypeScript now, and the examples went back to reading like `"r-9"` and `"e-1"`.
 
 ### A scenario over a service compiles too
 
@@ -20,8 +64,8 @@ port asking for something a double cannot answer — anything that is not find o
 by id, save one, list them, delete one — leaves that scenario with the
 interpreter and says so in the generated file.
 
-Ten scenarios across the examples now compile and run against the generated
-TypeScript, up from two.
+That took the compiled scenarios from two to ten; the two sections above take
+them to seventeen.
 
 ### `haic test --trace`, which is the debugger
 
@@ -49,14 +93,13 @@ afterwards beats a prompt you drive through it.
 
 - the dispatch example wrote `at = GeoPoint with latitude = 41.39, longitude =
   2.16, capacity = 2`, where the parser reads `capacity` as a third argument to
-  the **GeoPoint**. The interpreter shrugged at a field it did not know and the
-  scenario passed; the typed backend refused it. The example binds the point
-  first now, which is what `AGENTS.md` already tells everyone to do;
-- the ledger, dispatch and matching scenarios used short ids like `"e-1"` where
-  the design declares `uuid`. Real uuids now, which is what a generated test —
-  and any typed backend — actually accepts;
+  the **GeoPoint**. The example binds the point first now, which is what
+  `AGENTS.md` already tells everyone to do — and the checking above is so that
+  the next one is a diagnostic rather than a broken build;
 - the in-memory query matcher is exported, because a test double answers a query
-  by calling it rather than by carrying a second copy of it.
+  by calling it rather than by carrying a second copy of it;
+- `haic lsp` reported its version as a string typed next to the field that names
+  it. It reads its own manifest now, which is the fix the CLI already had.
 
 ### The scenarios run inside the fence too
 
@@ -97,8 +140,8 @@ Two things surfaced the moment the blocks actually ran, which is the point:
 - a literal keeps the type it looks like, not the type its field declares, so
   `id = "…"` reached a Python call as a bare string where a `uuid.UUID` was
   expected and compared equal to nothing. Literals are now retyped from the
-  declaration before lowering, and a scenario whose values a generated test
-  would refuse — `"o-1"` for a uuid — stays with the interpreter and says why.
+  declaration before lowering — and the conversion rule at the top of this
+  release is what makes the value itself acceptable.
 
 Go, Java and Rust do not compile scenarios yet. The work is the same shape as
 Python's uuid handling, one backend at a time, and until it is done they emit no

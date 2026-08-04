@@ -1,6 +1,6 @@
 {
   "name": "@haic/parser",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Hand-written lexer and recursive-descent parser for HADL.",
   "keywords": [
     "hadl",
@@ -34,6 +34,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@haic/core": "0.2.1"
+    "@haic/core": "0.3.0"
   }
 }

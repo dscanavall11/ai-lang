@@ -26,7 +26,7 @@ import {
   type ModuleIndex,
   type SourceSpan,
 } from '@haic/core';
-import { camelCase } from '@haic/core';
+import { camelCase, uuidFor } from '@haic/core';
 import type { AnalysisContext } from './context.js';
 import { Scope, withSuggestion } from './context.js';
 
@@ -71,6 +71,13 @@ export class TypeChecker {
     }
     if (owner.kind === 'service' || owner.kind === 'adapter' || owner.kind === 'aggregate') {
       for (const operation of owner.operations) this.addCallable(operation, owner, null);
+    }
+    // A scenario stands outside the system and calls in, so every service
+    // operation is reachable from one — that is what a scenario is for.
+    if (owner.kind === 'scenario') {
+      for (const service of this.context.index.services) {
+        for (const operation of service.operations) this.addCallable(operation, service, null);
+      }
     }
     // Aggregate behaviour is reachable by naming the aggregate instance as an argument.
     for (const aggregate of this.context.index.aggregates) {
@@ -120,7 +127,7 @@ export class TypeChecker {
       case 'list':
         return this.inferList(expression, scope, expected);
       case 'literal':
-        return expression.type;
+        return this.inferLiteral(expression, expected);
       case 'now':
         return TIMESTAMP;
       case 'new-id':
@@ -140,6 +147,29 @@ export class TypeChecker {
       case 'call':
         return this.inferCall(expression, scope);
     }
+  }
+
+  /**
+   * A literal takes the type of where it is going, when the two can be
+   * reconciled.
+   *
+   * Only one conversion exists and it is deliberate: text standing where a uuid
+   * is declared becomes a uuid, derived from that text. An identifier in a
+   * design is a name — `"t-1"` is readable and `"11111111-…"` is not — and
+   * nothing reads its digits. The rewrite lands in the IR so the interpreter,
+   * every backend and every compiled test see the same value.
+   */
+  private inferLiteral(expression: Extract<IRExpression, { kind: 'literal' }>, expected?: IRType): IRType {
+    if (!expected || typeof expression.value !== 'string') return expression.type;
+
+    const wanted = unwrap(expected);
+    const actual = unwrap(expression.type);
+    const convertible = wanted.kind === 'primitive' && wanted.name === 'uuid' && actual.kind === 'primitive' && actual.name === 'text';
+    if (!convertible) return expression.type;
+
+    expression.value = uuidFor(expression.value);
+    expression.type = UUID;
+    return UUID;
   }
 
   /**
@@ -244,7 +274,9 @@ export class TypeChecker {
 
   private inferBinary(expression: Extract<IRExpression, { kind: 'binary' }>, scope: Scope): IRType {
     const left = this.infer(expression.left, scope);
-    const right = this.infer(expression.right, scope);
+    // A comparison gives the literal on one side the type of the other, which
+    // is what makes `then published.noteId is "n-1"` mean what it reads as.
+    const right = this.infer(expression.right, scope, left);
 
     switch (expression.operator) {
       case 'and':
@@ -283,7 +315,10 @@ export class TypeChecker {
 
       case 'equals':
       case 'not-equals':
-        if (!this.compatible(left, right)) {
+        // The right side was inferred against the left; the left may still need
+        // the same courtesy when the literal is the one written first.
+        if (!this.compatible(left, right)) this.infer(expression.left, scope, right);
+        if (!this.compatible(this.infer(expression.left, scope), right)) {
           this.error(
             'HADL2105',
             `cannot compare ${typeToString(left)} with ${typeToString(right)}`,

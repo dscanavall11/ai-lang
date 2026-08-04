@@ -318,16 +318,20 @@ then result is 2
     expect(emitted('python')).toContain('uuid.UUID("11111111-1111-4111-8111-111111111111")');
   });
 
-  it('leaves a scenario it cannot compile faithfully with the interpreter', () => {
-    // `"q-1"` is not a uuid. Emitting the test anyway would produce a failure
-    // the design never described, so nothing is emitted at all.
+  it('carries a readable id into the test as the uuid it stands for', () => {
+    // `"q-1"` is text where a uuid is declared, so the compiler derives one —
+    // the same one here, in the interpreter and in every other backend.
     const shortId = source.replace('11111111-1111-4111-8111-111111111111', 'q-1');
     const files = generateProject(codeGenerators.require('typescript'), {
       project: projectOf(shortId),
       outputDir: 'out/typescript',
       options: {},
     }).files;
-    expect(files.find((file) => file.path.endsWith('scenarios.test.ts'))).toBeUndefined();
+    const test = files.find((file) => file.path.endsWith('scenarios.test.ts'))!.contents;
+
+    expect(test).toContain('quote.median()');
+    expect(test).not.toContain('"q-1"');
+    expect(test).toMatch(/id: "[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"/);
   });
 
   it('names the ones it left behind, when it writes a file at all', () => {

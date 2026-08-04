@@ -138,6 +138,9 @@ then it fails with ConstraintViolation
 
   it('says which event was published instead of the expected one', () => {
     const report = run(`${DOMAIN}
+## event TaskStarted from Task
+- taskId: uuid, required
+
 ## scenario expecting the wrong event
 
 given task be Task with id = "t-1", title = "Ship it"
@@ -159,15 +162,23 @@ then made.id is "00000000-0000-4000-8000-000000000001"
   });
 
   it('marks a scenario it cannot execute as inconclusive, never as a pass', () => {
+    // A declared operation the interpreter has no in-memory form of: the port
+    // is real, the phrase is real, and no fake store can answer it.
     const report = run(`${DOMAIN}
 ## port Mailer (outbound)
 using http-client
 
 - send a letter (to: text) -> nothing
 
+## service Postroom
+uses Mailer
+
+operation post a letter (to: text) -> nothing:
+  perform send a letter with to = to
+
 ## scenario sending mail
 
-when send a letter with to = "someone@example.com"
+when post a letter with to = "someone@example.com"
 then it publishes TaskFinished
 `);
     expect(report.results[0]!.outcome).toBe('inconclusive');

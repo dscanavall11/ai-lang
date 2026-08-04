@@ -125,11 +125,6 @@ export function scenarioPlans(index: ModuleIndex): ScenarioSelection {
       continue;
     }
 
-    const unusable = unusableValue(index, scenario, operation);
-    if (unusable) {
-      skipped.push({ title, reason: unusable });
-      continue;
-    }
 
     compiled.push({
       kind: 'aggregate',
@@ -190,9 +185,6 @@ function servicePlan(
     seeds.push({ binding: step.binding, port: found.port, save: found.save });
   }
 
-  const unusable = unusableValue(index, scenario, operation);
-  if (unusable) return { reason: unusable };
-
   return {
     kind: 'service',
     scenario,
@@ -236,45 +228,6 @@ export function repositoryPhrase(phrase: string): 'find' | 'save' | 'list' | 'de
   return null;
 }
 
-/**
- * A value the interpreter accepts but a generated test would not.
- *
- * `given order be Order with id = "o-1"` reads well and runs fine here, where a
- * uuid is a string like any other. It does not survive contact with a backend
- * that models `uuid` as a uuid: pydantic rejects `"o-1"`, and so do Java and
- * Rust. Compiling that scenario would produce a test that fails for a reason
- * the design never described, so it stays with the interpreter and says why.
- */
-function unusableValue(index: ModuleIndex, scenario: IRScenarioDecl, operation: IROperation): string | null {
-  const problems: string[] = [];
-
-  const check = (type: IRType | undefined, value: IRExpression, where: string): void => {
-    if (!type || value.kind !== 'literal' || typeof value.value !== 'string') return;
-    if (unwrapOptional(type).kind !== 'primitive') return;
-    if ((unwrapOptional(type) as { name: string }).name !== 'uuid') return;
-    if (UUID.test(value.value)) return;
-    problems.push(`${where} is "${value.value}", which is not a uuid`);
-  };
-
-  for (const step of scenario.given) {
-    if (step.value.kind !== 'construct') continue;
-    const shape = index.get(step.value.type);
-    if (!shape || !('fields' in shape)) continue;
-    for (const argument of step.value.arguments) {
-      check(shape.fields.find((field) => field.name === argument.name)?.type, argument.value, `${step.value.type}.${argument.name}`);
-    }
-  }
-
-  if (scenario.when.call.kind === 'call') {
-    for (const argument of scenario.when.call.arguments) {
-      check(operation.parameters.find((parameter) => parameter.name === argument.name)?.type, argument.value, argument.name);
-    }
-  }
-
-  return problems.length === 0 ? null : `${problems[0]}, and a generated test would be checked`;
-}
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * A literal, carrying the type of the field it fills rather than its own.
@@ -321,10 +274,6 @@ function elementOf(type: IRType | undefined): IRType | undefined {
   if (!type) return undefined;
   const inner = type.kind === 'optional' ? type.of : type;
   return inner.kind === 'list' || inner.kind === 'set' ? inner.of : undefined;
-}
-
-function unwrapOptional(type: IRType): IRType {
-  return type.kind === 'optional' ? type.of : type;
 }
 
 /** The scenario the plan came from expects a failure rather than a value. */

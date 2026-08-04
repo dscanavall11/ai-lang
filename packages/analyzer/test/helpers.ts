@@ -42,3 +42,15 @@ identified by id
 invariant "an order always carries a label":
   label is not empty
 `;
+
+/** The analysed module, for a test that has to look at the IR itself. */
+export function analysed(body: string, options: AnalyzeOptions = {}): IRModule {
+  const source = `---\nmodule: test\ncontext: Test\n---\n\n${body}`;
+  const bag = new DiagnosticBag();
+  const { module } = parseModule('test.hadl', source, bag);
+  if (bag.hasErrors || !module) {
+    throw new Error(`unexpected parse errors:\n${formatDiagnostics(bag.items, new Map([['test.hadl', source]]))}`);
+  }
+  analyze([module], { projectName: 'test', ...options });
+  return module;
+}

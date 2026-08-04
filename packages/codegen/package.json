@@ -1,6 +1,6 @@
 {
   "name": "@haic/codegen",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "HADL code generators: one backend per target language, all from one IR.",
   "keywords": [
     "hadl",
@@ -37,6 +37,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@haic/core": "0.2.1"
+    "@haic/core": "0.3.0"
   }
 }

@@ -256,3 +256,45 @@ any normalisation of the code inside a fence.
 
 **Revisit if** the canonical layout and the examples ever disagree. That is a
 bug in one of them, and the test that compares them says which.
+
+---
+
+## ADR-013 — A text literal where a uuid is declared is converted, not refused
+
+**Decision.** In any expression, a text literal standing where a `uuid` is
+expected becomes the RFC 4122 version 5 uuid derived from that text, under a
+namespace fixed for the language. The conversion happens during type inference
+and is written into the IR, so `haic ir` shows the value that will run and no
+backend has to know the rule exists. A literal that already is a uuid is left
+exactly as written. Nothing else converts: `text` to `integer` is still an
+error, and `- hits: integer, default false` is still `HADL2155`.
+
+**Why.** Scenarios name the things they set up — `given task be Task with id =
+"t-1"` — and the name is what makes the scenario readable. The interpreter
+compared such a value to itself and ran happily; the generated TypeScript
+checked it and refused, so the same design passed `haic test` and failed
+`npm test`.
+
+Three answers were available. Accept it and let each backend deal with it, which
+is what was happening and which is how the two runners came to disagree. Refuse
+it, which is honest and which we tried: eight example modules filled with
+`"3f2504e0-4f89-41d3-9a0c-0305e82c3301"`, where the point of the line was to say
+*the first task*. Or convert it.
+
+Converting wins because an identifier in a design is a *name*, not a value.
+Nothing reads its digits; everything compares it to itself. So deriving the uuid
+from the text preserves the only property anyone depends on — distinct names are
+distinct ids, the same name is the same id — while making the value acceptable
+everywhere. Version 5 rather than a counter because it needs no state and no
+ordering: the same text is the same uuid in the interpreter, in a compiled test,
+in a fixture written next year in another repository.
+
+The namespace is fixed forever. Changing it moves every derived id, which would
+turn a compiler upgrade into a data migration.
+
+**Rules out.** Any other implicit conversion — this is a rule about identifiers,
+not a coercion policy — and any scheme where the derived id depends on where the
+literal appears, which would break the one property being bought.
+
+**Revisit if** a design needs the uuid to match one a system outside HADL
+already assigned. It can: write that uuid, and it is passed through untouched.

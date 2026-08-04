@@ -1,6 +1,6 @@
 {
   "name": "@haic/lsp",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Language Server Protocol implementation for HADL: diagnostics, formatting, symbols, hover and completion.",
   "keywords": [
     "hadl",
@@ -34,8 +34,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@haic/analyzer": "0.2.1",
-    "@haic/core": "0.2.1",
-    "@haic/parser": "0.2.1"
+    "@haic/analyzer": "0.3.0",
+    "@haic/core": "0.3.0",
+    "@haic/parser": "0.3.0"
   }
 }

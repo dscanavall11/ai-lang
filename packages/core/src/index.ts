@@ -1,6 +1,7 @@
 export * from './diagnostics.js';
 export * from './ir/schema.js';
 export * from './ir/index-module.js';
+export * from './ir/literals.js';
 export * from './ir/scenarios.js';
 export * from './ir/type-utils.js';
 export * from './languages.js';

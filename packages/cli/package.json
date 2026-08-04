@@ -1,6 +1,6 @@
 {
   "name": "@haic/cli",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A natural-language programming language for AI to write software in. Compiles to Java, TypeScript, Python and Go, plus Docker, Kubernetes, Terraform and AWS.",
   "keywords": [
     "programming-language",
@@ -43,12 +43,12 @@
     "access": "public"
   },
   "dependencies": {
-    "@haic/analyzer": "0.2.1",
-    "@haic/architect": "0.2.1",
-    "@haic/codegen": "0.2.1",
-    "@haic/core": "0.2.1",
-    "@haic/iac": "0.2.1",
-    "@haic/lsp": "0.2.1",
-    "@haic/parser": "0.2.1"
+    "@haic/analyzer": "0.3.0",
+    "@haic/architect": "0.3.0",
+    "@haic/codegen": "0.3.0",
+    "@haic/core": "0.3.0",
+    "@haic/iac": "0.3.0",
+    "@haic/lsp": "0.3.0",
+    "@haic/parser": "0.3.0"
   }
 }
