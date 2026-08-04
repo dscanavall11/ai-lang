@@ -5,6 +5,49 @@ while the major is `0`, the minor carries breaking changes.
 
 ## Unreleased
 
+### `haic build --java`, and the parser bug behind it
+
+`haic build --java` was accepted, ignored, and answered with a TypeScript
+project. The flag existed nowhere, so it was parsed as an unknown option and
+dropped, and the build fell back to the target in the frontmatter.
+
+`--java`, `--js`, `--py`, `--go`, `--rust` and every other language name are now
+shorthand for `--language <name>`; two of them mean two targets. But the flag
+was the symptom. Two things behind it were worse:
+
+**The parser guessed which flags take a value.** Any flag swallowed the next
+word unless it began with a dash, so `haic fmt --check src` parsed as
+`--check=src` with no paths at all — and then formatted the current directory
+instead of checking the one you named, because `--check` held a string rather
+than `true`. `haic check --strict src`, `haic build --dry-run src` and
+`haic test --only x src` had the same shape. Which flags take a value is now
+read from each command's own help text, so the documentation is load-bearing and
+a flag written `--out <dir>` takes an argument while `--strict` does not.
+
+**An unknown flag was silently ignored.** `haic build --jav` now exits 2 and
+says so. A command that quietly does something other than what was asked is the
+one outcome worse than failing.
+
+### A default has to be of the field's type
+
+```
+- hits: integer, required, default false
+```
+
+was accepted in full, and reached the backends as `int hits = false` in Java and
+a TypeScript field whose declared type and initial value disagreed. Nothing
+checked a constraint against the type it constrains.
+
+Now `HADL2155` reports a default that is not of the field's type — a number for
+text, `false` for an integer, a fraction for a whole number, an enum member the
+enum does not have, a literal for a shape that is built from its fields, or
+`nothing` on a required field — and says what to write instead. `HADL2156`
+reports a constraint that cannot apply at all: a length on a number, a range on
+text, a pattern on a uuid.
+
+The check lives in the type pass rather than the parser because `default Draft`
+is only meaningful once enums are resolved.
+
 ### Four defects in the fenced-block feature
 
 Found by using it, in the order they matter.

@@ -21,7 +21,7 @@ This is the part that matters most. Never hand back `.hadl` you have not checked
 haic fmt .            # canonical layout; never changes what the file means
 haic check .          # parses, type-checks, audits the architecture
 haic test .           # runs the scenarios against the IR — no code, no tokens
-haic build . --language typescript --out out
+haic build . --java --out out        # or --ts, --py, --go, --rust, or --language <name>
 ```
 
 Run `haic fmt` before handing work back, the way you would run any formatter.

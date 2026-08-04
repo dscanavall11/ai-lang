@@ -229,7 +229,7 @@ nothing and reviewing it is a diff, not a re-read.
 | `haic new <name>` | Scaffold a project |
 | `haic check [paths]` | Parse, type-check and audit the design |
 | `haic test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
-| `haic build [paths] --language <lang>` | Generate the service, in the language you name |
+| `haic build [paths] --java` | Generate the service, in the language you name (`--language java` too) |
 | `haic deploy [paths] --target <platform>` | Generate the infrastructure |
 | `haic architect <requirements.md>` | Turn a requirements document into a reviewable spec and draft sources |
 | `haic ir [paths]` | Print the typed IR as JSON |

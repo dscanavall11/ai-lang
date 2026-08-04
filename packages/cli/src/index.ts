@@ -1,7 +1,7 @@
 /** CLI entry point: registry, dispatch, and help. */
 import { createRequire } from 'node:module';
 import { parseArgs } from './args.js';
-import { CommandRegistry, EXIT_OK, EXIT_USAGE, type Command } from './command.js';
+import { CommandRegistry, EXIT_OK, EXIT_USAGE, knownFlagsOf, valueFlagsOf, type Command } from './command.js';
 import { architectCommand } from './commands/architect.js';
 import { buildCommand } from './commands/build.js';
 import { checkCommand } from './commands/check.js';
@@ -37,7 +37,12 @@ export const registry = new CommandRegistry()
   .register(explainCommand);
 
 export async function main(argv: readonly string[], cwd: string = process.cwd()): Promise<number> {
-  const args = parseArgs(argv);
+  // Parsed twice on purpose. Which flags take a value is a property of the
+  // command, and the command name is the first positional — so the first pass
+  // finds the command with nothing consuming an argument, and the second pass
+  // parses for real. Guessing instead is how `--check src` lost its path.
+  const command = registry.get(parseArgs(argv).command ?? '');
+  const args = parseArgs(argv, valueFlagsOf(command));
 
   if (args.flags.has('version') || args.flags.has('v') || args.command === 'version') {
     info(`haic ${VERSION}`);
@@ -48,10 +53,19 @@ export async function main(argv: readonly string[], cwd: string = process.cwd())
     return args.command === undefined && !args.flags.has('help') ? EXIT_USAGE : EXIT_OK;
   }
 
-  const command = registry.get(args.command);
   if (!command) {
     error(`unknown command "${args.command}"`);
     info(dim(`Run "haic help" to see the available commands.`));
+    return EXIT_USAGE;
+  }
+
+  // An ignored flag is a command doing something other than what was asked, in
+  // silence. `haic build --java` built TypeScript for exactly that reason.
+  const known = knownFlagsOf(command);
+  const unknown = [...args.flags.keys()].filter((flag) => !known.has(flag));
+  if (unknown.length > 0) {
+    error(`unknown option${unknown.length === 1 ? '' : 's'} ${unknown.map((flag) => `"--${flag}"`).join(', ')} for "${command.name}"`);
+    info(dim(`Run "haic help ${command.name}" to see the options it takes.`));
     return EXIT_USAGE;
   }
 

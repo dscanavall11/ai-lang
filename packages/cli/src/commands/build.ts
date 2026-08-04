@@ -8,7 +8,7 @@ import {
   type Diagnostic,
   type GenerationContext,
 } from '@haic/core';
-import { flagBoolean, flagList, flagString } from '../args.js';
+import { flagBoolean, flagList, flagString, type ParsedArgs } from '../args.js';
 import { EXIT_FAILURE, EXIT_OK, type Command } from '../command.js';
 import { loadProject, renderDiagnostics } from '../driver.js';
 import { dim, error, heading, info, listFiles, success, summarise, writeFiles } from '../output.js';
@@ -23,10 +23,14 @@ export const buildCommand: Command = {
       description: 'Compile as this language, whatever the source declares. Accepts js, ts, py, golang, rs and the full names',
     },
     { name: '--target <ids>', description: 'The same thing by backend id, or "all". Defaults to each context\'s declared target' },
+    { name: '--<language>', description: 'The same thing, shorter: --java, --js, --py, --go, --rust' },
     { name: '--out <dir>', description: 'Output directory (default: ./out)' },
     { name: '--strict', description: 'Treat warnings as errors' },
     { name: '--dry-run', description: 'Report what would be written without writing it' },
   ],
+  // `--java` reads better than `--language java` and is what people reach for.
+  // It used to be accepted, ignored, and answered with a TypeScript project.
+  extraFlags: languageNames(),
 
   run({ args, cwd }) {
     const loaded = loadProject(args.positional, cwd, {
@@ -43,7 +47,7 @@ export const buildCommand: Command = {
 
     let targets: string[];
     try {
-      targets = resolveTargets(args.flags.get('language'), args.flags.get('target'), loaded.project.contexts, loaded.project.defaultTarget);
+      targets = resolveTargets(args, loaded.project.contexts, loaded.project.defaultTarget);
     } catch (thrown) {
       error(thrown instanceof Error ? thrown.message : String(thrown));
       return EXIT_FAILURE;
@@ -98,23 +102,31 @@ export const buildCommand: Command = {
 };
 
 /**
- * `--language` wins over `--target`, and both win over the source.
+ * A language named on the command line wins over `--target`, and both win over
+ * the source.
  *
- * The two flags differ only in what they accept: `--language js` is the word a
- * reader would use, `--target typescript` is the backend id. They resolve to the
- * same five backends, and either one replaces the `target:` in the frontmatter
- * for this build — which is the point of having them. Without either, each
- * bounded context compiles to what it declared.
+ * Three spellings, one meaning: `--java` is the short one, `--language java` is
+ * the explicit one, `--target java` is the backend id. Each replaces the
+ * `target:` in the frontmatter for this build, which is the point of having
+ * them. Without any of them, each bounded context compiles to what it declared.
  */
 function resolveTargets(
-  language: string | boolean | undefined,
-  target: string | boolean | undefined,
+  args: ParsedArgs,
   contexts: ReadonlyArray<{ target?: CodegenTarget }>,
   fallback: CodegenTarget,
 ): string[] {
+  const language = args.flags.get('language');
+  const target = args.flags.get('target');
   if (language === 'all' || target === 'all') return codeGenerators.ids();
-  if (typeof language === 'string') return language.split(',').map(namedLanguage).filter(Boolean);
-  if (language === true) throw new Error(`--language needs a name. One of: ${languageNames().join(', ')}`);
+
+  // `--java --go` is two targets, the same as `--language java,go`.
+  const shorthand = [...args.flags.keys()].map(resolveLanguage).filter((id): id is CodegenTarget => id !== null);
+  const named = typeof language === 'string' ? language.split(',').map(namedLanguage).filter(Boolean) : [];
+  if (language === true && named.length === 0 && shorthand.length === 0) {
+    throw new Error(`--language needs a name. One of: ${languageNames().join(', ')}`);
+  }
+  const chosen = [...new Set([...named, ...shorthand])];
+  if (chosen.length > 0) return chosen;
 
   if (typeof target === 'string') {
     return target
