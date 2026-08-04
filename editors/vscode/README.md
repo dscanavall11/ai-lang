@@ -80,12 +80,46 @@ npx @vscode/vsce package
 That writes `hadl-0.2.1.vsix`, which installs with **Extensions → … → Install
 from VSIX**.
 
+## The language server
+
+The extension does not implement the language. It launches `haic lsp` — the
+compiler itself — so what you see in the editor is what CI sees, from the same
+passes, with the same codes.
+
+| Feature | What it does |
+| --- | --- |
+| Diagnostics | Every `haic check` finding, live, with its code and its `help:` line. Project-wide, so fixing one module clears the warning it caused in another. |
+| Format on save | `haic fmt`, which rewrites layout and only layout. On by default for `.hadl`; turn it off with `"editor.formatOnSave": false` under `[hadl]`. |
+| Go to definition | Any declared name, in whichever module declares it. |
+| Hover | What a declaration declares — fields, operations, invariants, and the language an operation is written in when it carries a fenced block. |
+| Outline | Every declaration in the file, with its kind. |
+| Completion | Declaration keywords after `##`, clauses under a heading, statements inside a body, and types after `:` or `->`. |
+
+### Finding the compiler
+
+In order: whatever `hadl.server.command` is set to, then the workspace's own
+`node_modules/.bin/haic`, then `packages/cli/dist/bin.js` if the workspace *is*
+the HADL checkout, then `haic` on `PATH`. Install it with:
+
+```bash
+npm install -g @haic/cli
+```
+
+Set `hadl.trace.server` to `messages` to watch the traffic in the output panel.
+
+### Before packaging
+
+The client depends on `vscode-languageclient`, so install it once in this
+folder:
+
+```bash
+cd editors/vscode && npm install
+```
+
 ## What it does not do yet
 
-No diagnostics, no go-to-definition, no completion. The compiler already
-produces precise diagnostics with source spans — `haic check` — so a language
-server is the obvious next step and the one that would change how the language
-feels to write. It is not built yet.
+No rename, no code actions, and no quick fixes from the `help:` lines — the
+compiler knows the fix in prose but does not yet describe it as an edit.
 
 ## Licence
 

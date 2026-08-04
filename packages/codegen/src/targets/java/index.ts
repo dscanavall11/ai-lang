@@ -40,6 +40,7 @@ import {
   type IRType,
   type ModuleIndex,
 } from '@haic/core';
+import { declaredImplementation } from '../../shared/adapters.js';
 import { ProjectLayout, type Layer } from '../../shared/layout.js';
 import { JavaEmitter, fieldsOf, enumConstant, type JavaEmitterOptions } from './emitter.js';
 
@@ -479,8 +480,8 @@ function adapterFiles(module: IRModule, index: ModuleIndex, layout: JavaLayout):
           `public ${emitter.typeName(operation.returns)} ${camelCase(operation.phrase)}(${parameters(operation, emitter)})${throwsClause(operation.throws, index)} {`,
         );
         writer.block(() => {
-          const declared = adapter.operations.find((o) => normalisePhrase(o.phrase) === normalisePhrase(operation.phrase));
-          if (declared && (declared.body.length > 0 || declared.native.length > 0)) {
+          const declared = declaredImplementation(adapter, operation.phrase);
+          if (declared) {
             operationEmitter(index, declared, {}).emitImplementation(writer, declared);
             return;
           }

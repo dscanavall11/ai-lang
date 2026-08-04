@@ -195,3 +195,64 @@ per target on one operation; any promise that a design using them is portable.
 **Revisit if** the escape hatch starts carrying orchestration rather than
 algorithms. That would mean the language is missing something structural, and
 the answer is to add it to the language rather than to widen the hatch.
+
+---
+
+## ADR-011 — The editor runs the compiler, not a copy of it
+
+**Decision.** `haic lsp` is a subcommand of the compiler, and the Visual Studio
+Code extension launches it rather than implementing anything itself. The server
+parses and analyses with the same passes as `haic check`, and formats with the
+same code as `haic fmt`. It re-analyses the whole project on every keystroke,
+and holds no incremental cache.
+
+**Why.** A language server is the second implementation a language grows, and
+the second implementation is where the two start to disagree: the editor accepts
+what CI rejects, and the author is told two different stories about the same
+line. Shipping the server inside the compiler removes the possibility rather
+than managing it. There is also nothing to install and nothing to keep in step —
+the extension has no version of its own to be behind.
+
+Re-analysing everything is the same argument in the small. A cache is a third
+opinion about what the file says, and the failure mode is a stale squiggle that
+outlives the fix. Analysing eight modules takes a few milliseconds, which is
+under the threshold where anyone notices, so the honest version is also the fast
+enough one.
+
+**Rules out.** Editor features that need information the compiler does not keep,
+notably renaming across files, and anything requiring sub-millisecond response
+on a project far larger than the examples.
+
+**Revisit if** a real project makes the keystroke path slow. The answer then is
+an incremental analyzer inside the compiler — which `haic check` would benefit
+from too — never a separate index that only the editor trusts.
+
+---
+
+## ADR-012 — The formatter guarantees the IR, not the bytes
+
+**Decision.** `haic fmt` rewrites layout: indentation, blank lines, the spacing
+of a field bullet, the frontmatter. It does not reflow prose, does not rewrite
+expressions, and does not edit inside a fenced block — a block is moved as one
+piece or left alone. It has no options. The property it promises is checked by
+tests: formatting never changes the IR a file parses to.
+
+**Why.** HADL is whitespace-sensitive in a way most languages are not — a blank
+line separates clauses from prose, indentation opens a body, a heading opens a
+declaration. A formatter here can silently change what a file means, which is
+why the guarantee is stated in terms of the IR and not in terms of a style
+guide. If the two disagree, the IR wins and the style loses.
+
+Prose is excluded for a different reason. It is not decoration: it survives into
+the generated code as documentation, and its line breaks are the author's. A
+formatter that reflows paragraphs would make every documentation edit a diff
+nobody can read.
+
+No options, because a formatter with options is a formatter that gets argued
+about in review, which is the cost it was adopted to remove.
+
+**Rules out.** Aligning columns, sorting declarations, wrapping long lines, and
+any normalisation of the code inside a fence.
+
+**Revisit if** the canonical layout and the examples ever disagree. That is a
+bug in one of them, and the test that compares them says which.

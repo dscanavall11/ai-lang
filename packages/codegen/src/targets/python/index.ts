@@ -33,6 +33,7 @@ import {
   type IRType,
   type ModuleIndex,
 } from '@haic/core';
+import { declaredImplementation } from '../../shared/adapters.js';
 import { ProjectLayout, type Layer } from '../../shared/layout.js';
 import { PythonEmitter, attributeName, methodName, pythonName } from './emitter.js';
 
@@ -415,8 +416,8 @@ function emitAdapterBody(
   emitter: PythonEmitter,
   index: ModuleIndex,
 ): void {
-  const declared = adapter.operations.find((o) => normalisePhrase(o.phrase) === normalisePhrase(operation.phrase));
-  if (declared && (declared.body.length > 0 || declared.native.length > 0)) {
+  const declared = declaredImplementation(adapter, operation.phrase);
+  if (declared) {
     writer.line(renderBody(emitter, declared, declared.parameters.map((p) => p.name)));
     return;
   }

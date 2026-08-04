@@ -562,6 +562,7 @@ the invariants that run on the fields it writes, and the wiring that calls it.
 | A block with nothing in it | `HADL2601` |
 | A block with no statements beside it | `HADL2602` |
 | The module's target has no body | `HADL2603` |
+| A block in an aggregate names a port | `HADL2604` |
 | The target being built has no body | `HADL3060` |
 
 Accepted names are the backend ids and their usual short forms: `typescript`,
@@ -590,6 +591,14 @@ scenario as inconclusive rather than passing it.
 
 Nothing inside a fence is checked, inferred, or ported. That is the cost, and it
 is why the compiler is loud about who is paying it.
+
+One rule survives the fence by guesswork rather than by reading: `HADL2213`
+keeps I/O out of the domain by inspecting statements, and a block has none. So
+an aggregate operation whose block names a declared port — in any of the casings
+a backend would write it, `OrderRepository`, `orderRepository`,
+`order_repository` — is `HADL2604`. It is a warning, not an error, because the
+compiler is matching words rather than reading code, and the message says what
+it saw rather than what it concluded.
 
 ---
 
@@ -750,7 +759,41 @@ smell, not a contradiction. `haic check --strict` promotes them to errors.
 
 ---
 
-## 8. What the language deliberately does not have
+## 9. Canonical layout
+
+`haic fmt` writes the layout every example in this repository is written in.
+There are no options.
+
+| It normalises | It never touches |
+| --- | --- |
+| Indentation, to two spaces per level | The words of an expression |
+| Runs of blank lines, to one | Where a prose paragraph breaks |
+| One blank line before every `##` | The order of anything |
+| `key: value` in the frontmatter | A value in the frontmatter |
+| `- name: Type, constraint` spacing | An inline `// comment`, spacing included |
+| The indentation of a fenced block, as one piece | The code inside a fenced block |
+
+The rule it follows is the rule the language follows: position carries meaning,
+so a formatter may move a line only in ways that cannot change what the line
+means. The guarantee is a test rather than a promise — formatting a file never
+changes the IR it parses to, and the suite checks that on every example.
+
+A block whose contents cannot absorb an outdent — because a line inside it
+starts at column zero — is left exactly where it is. The formatter would rather
+leave one block unaligned than shift code it does not understand.
+
+```bash
+haic fmt src
+haic fmt src --check     # exit 1 and list what would change; nothing is written
+haic fmt --stdin         # format standard input, for editors and pipes
+```
+
+`haic lsp` serves the same formatter as `textDocument/formatting`, so
+format-on-save in an editor and `haic fmt` in CI cannot disagree.
+
+---
+
+## 10. What the language deliberately does not have
 
 - **No classes, no inheritance.** The declaration kinds are the vocabulary.
 - **No `try`/`catch`.** Checked errors propagate; unchecked errors are defects.

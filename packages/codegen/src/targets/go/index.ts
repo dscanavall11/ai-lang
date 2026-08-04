@@ -38,6 +38,7 @@ import {
   type IRValueObjectDecl,
   type ModuleIndex,
 } from '@haic/core';
+import { declaredImplementation } from '../../shared/adapters.js';
 import { ProjectLayout } from '../../shared/layout.js';
 import { GoEmitter, goExported, goPackage, goString, goUnexported } from './emitter.js';
 
@@ -334,7 +335,11 @@ function adaptersFile(module: IRModule, index: ModuleIndex, context: GenerationC
       writer.blank();
       signatureDoc(writer, operation);
       writer.line(`func (a *${name}) ${goExported(operation.phrase)}(${parameterList(operation, emitter, true)}) ${resultList(operation.returns, emitter, true)} {`);
-      writer.block(() => adapterBody(writer, adapter.technology, operation, emitter, index, stored));
+      writer.block(() => {
+        const declared = declaredImplementation(adapter, operation.phrase);
+        if (declared) writeBody(writer, emitter, declared, operation.returns, true);
+        else adapterBody(writer, adapter.technology, operation, emitter, index, stored);
+      });
       writer.line('}');
     }
     writer.blank();
@@ -1064,17 +1069,22 @@ function writeOperation(writer: CodeWriter, emitter: GoEmitter, operation: IROpe
   const results = resultList(operation.returns, emitter, fallible);
   signatureDoc(writer, operation);
   writer.line(`func ${options.receiver} ${goExported(operation.phrase)}(${parameterList(operation, emitter, options.contextual)})${results ? ` ${results}` : ''} {`);
-  writer.block(() => {
-    emitter.enterOperation(operation.returns, fallible, operation.parameters);
-    // Native code returns for itself; only generated bodies get a trailing
-    // zero value bolted on to satisfy the compiler.
-    const emitted = emitter.emitImplementation(writer, operation);
-    if (emitted !== 'native' && !endsWithReturn(operation.body)) {
-      const terminal = emitter.terminalReturn();
-      if (terminal) writer.line(terminal);
-    }
-  });
+  writer.block(() => writeBody(writer, emitter, operation, operation.returns, fallible));
   writer.line('}');
+}
+
+/**
+ * An operation body, wherever it was written.
+ *
+ * Native code returns for itself; only a generated body gets a trailing zero
+ * value bolted on to satisfy the compiler.
+ */
+function writeBody(writer: CodeWriter, emitter: GoEmitter, operation: IROperation, returns: IRType, fallible: boolean): void {
+  emitter.enterOperation(returns, fallible, operation.parameters);
+  if (emitter.emitImplementation(writer, operation) === 'native') return;
+  if (endsWithReturn(operation.body)) return;
+  const terminal = emitter.terminalReturn();
+  if (terminal) writer.line(terminal);
 }
 
 function parameterList(operation: IROperationSignature, emitter: GoEmitter, contextual: boolean): string {

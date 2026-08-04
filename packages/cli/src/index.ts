@@ -7,7 +7,9 @@ import { buildCommand } from './commands/build.js';
 import { checkCommand } from './commands/check.js';
 import { deployCommand } from './commands/deploy.js';
 import { explainCommand } from './commands/explain.js';
+import { fmtCommand } from './commands/fmt.js';
 import { irCommand } from './commands/ir.js';
+import { lspCommand } from './commands/lsp.js';
 import { newCommand } from './commands/new.js';
 import { targetsCommand } from './commands/targets.js';
 import { testCommand } from './commands/test.js';
@@ -25,10 +27,12 @@ export const registry = new CommandRegistry()
   .register(newCommand)
   .register(architectCommand)
   .register(checkCommand)
+  .register(fmtCommand)
   .register(testCommand)
   .register(buildCommand)
   .register(deployCommand)
   .register(irCommand)
+  .register(lspCommand)
   .register(targetsCommand)
   .register(explainCommand);
 

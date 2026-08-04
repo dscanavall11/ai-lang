@@ -8,9 +8,15 @@
   "engines": {
     "vscode": "^1.75.0"
   },
+  "main": "./client.js",
+  "activationEvents": [
+    "onLanguage:hadl"
+  ],
   "categories": [
     "Programming Languages",
-    "Snippets"
+    "Snippets",
+    "Linters",
+    "Formatters"
   ],
   "keywords": [
     "hadl",
@@ -55,6 +61,26 @@
         "path": "./snippets/hadl.json"
       }
     ],
+    "configuration": {
+      "title": "HADL",
+      "properties": {
+        "hadl.server.command": {
+          "type": "string",
+          "default": "",
+          "description": "Command that runs the HADL compiler. Empty means: the workspace's own @haic/cli, then this checkout, then \"haic\" on PATH."
+        },
+        "hadl.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Log the traffic between the editor and the language server."
+        }
+      }
+    },
     "configurationDefaults": {
       "[hadl]": {
         "editor.insertSpaces": true,
@@ -65,8 +91,12 @@
         "editor.guides.indentation": true,
         "editor.rulers": [
           100
-        ]
+        ],
+        "editor.formatOnSave": true
       }
     }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
   }
 }

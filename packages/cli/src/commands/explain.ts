@@ -115,6 +115,11 @@ const CATALOGUE: Record<string, Explanation> = {
     why: 'A design compiles to whatever target is asked for. An operation implemented only in TypeScript quietly makes that one target the real source, and the first build for another one finds a hole where a body should be.',
     fix: 'Add HADL statements as the portable body, add a block for the other target, or say plainly that this module is single-target.',
   },
+  HADL2604: {
+    title: 'A block in an aggregate that names a port',
+    why: 'An aggregate that reaches a repository cannot be tested without one, cannot be reasoned about without knowing what the call does, and becomes the place transactions quietly begin. The compiler enforces that by reading the statements of an operation — and a fenced block has no statements to read, so the rule would stop applying exactly where the code gets interesting.',
+    fix: 'Pass what the block needs in as a parameter, or move the operation to the service that already holds the port. If the name is a coincidence, rename the local: the compiler cannot read the block, so a mention is all it has to go on.',
+  },
   HADL3060: {
     title: 'No body for the target being built',
     why: 'The compiler will not invent an implementation, and will not emit a project with a method that silently does nothing. Every other file in that build would look finished.',

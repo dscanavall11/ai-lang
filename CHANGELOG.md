@@ -5,6 +5,108 @@ while the major is `0`, the minor carries breaking changes.
 
 ## Unreleased
 
+### Four defects in the fenced-block feature
+
+Found by using it, in the order they matter.
+
+**A block in a `## adapter` was silently dropped by three backends.** Java and
+Python read `adapter.operations`; TypeScript, Go and Rust never did. So a block
+written for the one place the compiler already admits it cannot generate a body
+reached two targets and vanished for the other three — the generated method
+threw "no generated implementation" while the implementation sat in the source
+file, ignored. No diagnostic fired, because from the IR's point of view the body
+was there.
+
+The lookup is now one function in `shared/adapters.ts` that all five backends
+call, so a sixth cannot forget it, and a test emits the same adapter to every
+backend and asserts the placeholder is gone.
+
+**A fence walked around `HADL2213`.** No I/O in the domain is enforced by
+reading the statements of an aggregate operation, and a block has none — so the
+rule the language is most serious about stopped applying exactly where the code
+gets interesting. An aggregate operation whose block names a declared port is
+now `HADL2604`, matching the casings a backend would actually write
+(`OrderRepository`, `orderRepository`, `order_repository`). It is a warning
+rather than an error because the compiler is matching words, not reading code,
+and the message says what it saw rather than what it concluded.
+
+**Rust decided `&mut self` from a body that was not there.** `mutatesSelf` reads
+statements, so an operation written as a Rust block got a shared borrow and code
+that assigns to a field could not compile. A Rust block now takes `&mut self`: a
+borrow stricter than necessary costs nothing, and the other guess does not
+build.
+
+**Nothing proved a `java` or `go` block reached its own backend.** The examples
+carried only TypeScript and Python. `examples/ledger` now writes `total debited`
+three times — statements, a TypeScript block and a Java block, each exact in its
+own language's minor-unit arithmetic — so CI compiles a real Java block with
+Maven, and the adapter test covers all five backends.
+
+### A language server, which is the compiler
+
+```bash
+haic lsp
+```
+
+An editor now gets the compiler's own answers: diagnostics as you type, with
+their codes and their `help:` lines, across the whole project rather than one
+file at a time; go to definition on any declared name; hover that says what a
+declaration declares — and which language an operation is written in when it
+carries a fenced block; an outline of every declaration; completion that follows
+the rule the language follows, where a heading takes a declaration keyword, a
+clause line takes a clause, an indented line takes a statement, and after `:` or
+`->` the answer is a type.
+
+It is a subcommand rather than a separate binary on purpose. A language server
+is the second implementation a language grows, and the second implementation is
+where the two begin to disagree — the editor accepting what CI rejects. There is
+no second implementation here: the server parses and analyses with the same
+passes as `haic check` and formats with the same code as `haic fmt`, so the
+squiggle under a line and the failure in CI are the same diagnostic. The
+Visual Studio Code extension launches it and implements nothing itself, which
+also means it has no version of its own to be behind.
+
+The protocol layer is eighty lines and hand-written, like the argument parser
+and for the same reason. It is tested where these things actually break: a
+header split across two chunks, two messages glued into one, and a body measured
+in bytes rather than characters.
+
+[ADR-011](docs/decisions.md) records the reasoning, including why it re-analyses
+everything on every keystroke instead of keeping a cache.
+
+### `haic fmt`
+
+```bash
+haic fmt src
+haic fmt src --check     # for CI: report, write nothing, exit non-zero
+```
+
+No options. It normalises indentation, blank lines, the frontmatter and the
+spacing of a field bullet, and it touches nothing else: prose is never reflowed,
+expressions are left exactly as written, an inline `// comment` keeps the
+spacing it was aligned with, and a fenced block is moved as one piece with its
+contents unedited — or left where it is, if a line inside it starts at column
+zero and the block cannot absorb the shift.
+
+Formatting a whitespace-sensitive language is only safe with a guarantee, and
+this one is a test rather than a promise: **formatting never changes the IR a
+file parses to.** The suite checks it on every example. It also checks that the
+examples are already canonical — as is everything `haic new` and
+`haic architect` write, which is now enforced too.
+
+[ADR-012](docs/decisions.md) records what it is allowed to change and why the
+list is that short.
+
+### Also
+
+- The Visual Studio Code extension has a client: format on save, diagnostics,
+  hover, go to definition, outline and completion, all served by `haic lsp`. It
+  finds the compiler in the workspace's `node_modules`, in the checkout, or on
+  `PATH`.
+- The test that keeps the editor manifest honest now checks `main` as well, so
+  an extension that activates into nothing fails the build instead of failing
+  quietly — which is exactly how the snippets path broke in 0.2.1.
+
 ### An operation can be written in the target language
 
 Some logic is not a design decision. A matching loop, a great-circle distance, a

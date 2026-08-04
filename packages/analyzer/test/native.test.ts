@@ -57,6 +57,43 @@ describe('operations written in another language', () => {
   });
 });
 
+describe('the rule a block could otherwise walk around', () => {
+  const withPort = `## port BasketRepository (outbound)
+using in-memory
+
+- find basket by id (id: uuid) -> Basket
+
+`;
+
+  it('says so when a block inside an aggregate names a port', () => {
+    // HADL2213 reads statements. A block has none, so the rule that keeps I/O
+    // out of the domain would simply stop applying where it matters most.
+    const reported = check(
+      withPort + basket('  ```typescript\n  const found = await basketRepository.findBasketById({ id: this.id });\n  return found.lines[0]!;\n  ```'),
+    );
+    const io = reported.find((diagnostic) => diagnostic.code === 'HADL2604');
+    expect(io?.message).toContain('BasketRepository');
+    expect(io?.severity).toBe('warning');
+  });
+
+  it('stays quiet when the block only touches the aggregate', () => {
+    expect(codes(check(withPort + basket(NATIVE)))).not.toContain('HADL2604');
+  });
+
+  it('says nothing about a service, which is where a port belongs', () => {
+    const source = `${withPort}## service BasketService
+uses BasketRepository
+
+operation total (id: uuid) -> decimal:
+  \`\`\`typescript
+  const found = await this.basketRepository.findBasketById({ id });
+  return found.lines.length;
+  \`\`\`
+`;
+    expect(codes(check(source + basket('  return 0')))).not.toContain('HADL2604');
+  });
+});
+
 describe('scenarios over an operation with no HADL body', () => {
   const source = `---
 module: test

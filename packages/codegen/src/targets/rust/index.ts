@@ -7,6 +7,7 @@
  * status. Errors travel as `Result`, never as unwinding panics.
  */
 import {
+  nativeFor,
   CodeWriter,
   GENERATED_BANNER,
   comment,
@@ -34,6 +35,7 @@ import {
   type IRType,
   type ModuleIndex,
 } from '@haic/core';
+import { declaredImplementation } from '../../shared/adapters.js';
 import { ProjectLayout } from '../../shared/layout.js';
 import { RustEmitter } from './emitter.js';
 
@@ -180,7 +182,7 @@ function modelFile(module: IRModule, index: ModuleIndex): GeneratedFile | null {
       for (const operation of operations) {
         writer.blank();
         signatureDoc(writer, operation);
-        const receiver = mutatesSelf(operation.body) ? '&mut self' : '&self';
+        const receiver = mutatesSelf(operation.body) || nativeFor(operation, 'rust') ? '&mut self' : '&self';
         const parameters = [receiver, ...operation.parameters.map((p) => `${emitter.identifier(p.name)}: ${emitter.typeName(p.type)}`)];
         writer.line(`pub fn ${emitter.methodName(operation.phrase)}(${parameters.join(', ')}) -> ${emitter.resultType(operation.returns)} {`);
         writer.block(() => emitter.emitOperationImplementation(writer, operation, true));
@@ -461,7 +463,11 @@ function adaptersFile(module: IRModule, index: ModuleIndex): GeneratedFile | nul
         if (position > 0) writer.blank();
         signatureDoc(writer, operation);
         writer.line(`async fn ${signature(operation, emitter)} {`);
-        writer.block(() => writeAdapterBody(writer, adapter, operation, index, emitter));
+        writer.block(() => {
+          const declared = declaredImplementation(adapter, operation.phrase);
+          if (declared) emitter.emitOperationImplementation(writer, declared, true);
+          else writeAdapterBody(writer, adapter, operation, index, emitter);
+        });
         writer.line('}');
       });
     });
@@ -1106,6 +1112,15 @@ function sizeExpression(field: IRField, access: string): string {
   return `${access}.len()`;
 }
 
+/**
+ * Whether the method needs `&mut self`.
+ *
+ * Read off the statements, which is why a body written as a Rust block gets
+ * `&mut self` regardless: there are no statements to read, and a block that
+ * assigns to a field would not compile behind a shared borrow. The cost of
+ * guessing wrong this way is a borrow stricter than necessary; the cost of
+ * guessing the other way is code that does not build.
+ */
 function mutatesSelf(body: readonly IRStatement[]): boolean {
   return body.some((statement) => {
     switch (statement.kind) {

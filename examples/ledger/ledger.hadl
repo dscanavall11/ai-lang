@@ -15,11 +15,12 @@ every mutation. What is *not* a design decision is how a total is added up:
 adding `0.1` to `0.2` in binary floating point is how a ledger ends up out by a
 cent, and no amount of design language changes that.
 
-So `total debited` is written twice, on purpose. The HADL statements are the
-reference implementation: they say what the total means, and `haic test` runs
-them. The fenced block is what ships: it sums in minor units, where the
-arithmetic is exact. Both are in the file, side by side, and the compiler knows
-which is which.
+So `total debited` is written three times, on purpose. The HADL statements are
+the reference implementation: they say what the total means, `haic test` runs
+them, and every backend without a block of its own compiles them. The fenced
+blocks are what ships to TypeScript and to Java: each sums in that language's
+minor-unit arithmetic, where the result is exact. All three are in the file,
+side by side, and the compiler knows which is which.
 
 ## enum PostingSide
 - Debit
@@ -77,6 +78,14 @@ operation total debited () -> Money:
     .filter((posting) => posting.side === PostingSide.Debit)
     .reduce((sum, posting) => sum + Math.round(posting.amount.amount * 100), 0);
   return new Money({ amount: cents / 100, currency: this.currency });
+  ```
+
+  ```java
+  long cents = this.postings.stream()
+      .filter(posting -> posting.getSide() == PostingSide.DEBIT)
+      .mapToLong(posting -> Math.round(posting.getAmount().amount() * 100))
+      .sum();
+  return new Money(cents / 100.0, this.currency);
   ```
 
   return Money with amount = sum of only postings where side is Debit by amount.amount, currency = currency

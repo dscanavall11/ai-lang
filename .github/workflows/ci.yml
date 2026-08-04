@@ -32,6 +32,8 @@ jobs:
         run: npm run build
       - name: Test
         run: npm test
+      - name: The sources must already be in canonical layout
+        run: node packages/cli/dist/bin.js fmt examples --check
       - name: Check the worked examples
         run: node packages/cli/dist/bin.js check examples
       - name: Run the scenarios the examples declare

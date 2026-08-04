@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -81,6 +81,10 @@ describe('the haic command', () => {
     const checked = await run(['check', 'src'], root);
     expect(checked.out).not.toContain('error[');
     expect(checked.code).toBe(0);
+
+    // What the compiler writes, the compiler must not want to rewrite.
+    const formatted = await run(['fmt', 'src', '--check'], root);
+    expect(formatted.code).toBe(0);
   });
 
   it('refuses to overwrite an existing directory', async () => {
@@ -123,6 +127,26 @@ describe('the haic command', () => {
     expect(out).toContain('--language typescript');
   });
 
+  it('leaves an already formatted example alone', async () => {
+    const { code, out } = await run(['fmt', 'examples', '--check']);
+    expect(code).toBe(0);
+    expect(out).toContain('already formatted');
+  });
+
+  it('reports what it would reformat without writing it', async () => {
+    const messy = join(scratch, 'messy.hadl');
+    const source = '---\nmodule:  probe\n---\n\n##  dto  Shape\n- x:text,required\n';
+    writeFileSync(messy, source, 'utf8');
+
+    const checked = await run(['fmt', messy, '--check']);
+    expect(checked.code).toBe(1);
+    expect(readFileSync(messy, 'utf8')).toBe(source);
+
+    const written = await run(['fmt', messy]);
+    expect(written.code).toBe(0);
+    expect(readFileSync(messy, 'utf8')).toBe('---\nmodule: probe\n---\n\n## dto Shape\n- x: text, required\n');
+  });
+
   it('explains the reasoning behind a design rule', async () => {
     const { code, out } = await run(['explain', 'HADL2503']);
     expect(code).toBe(0);
@@ -148,6 +172,10 @@ describe('the architect command', () => {
     const checked = await run(['check', 'src'], out);
     expect(checked.out).not.toContain('error[');
     expect(checked.code).toBe(0);
+
+    // And they must already be in the layout `haic fmt` would give them.
+    const formatted = await run(['fmt', 'src', '--check'], out);
+    expect(formatted.code).toBe(0);
   });
 
   it('reports a missing requirements file rather than guessing', async () => {
