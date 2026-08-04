@@ -49,10 +49,10 @@ export const testCommand: Command = {
       }
       if (quiet) continue;
 
-      const mark = result.outcome === 'passed' ? '✓' : result.outcome === 'failed' ? '✗' : '?';
+      const mark = MARKS[result.outcome];
       info(`  ${mark} ${result.title}`);
       for (const problem of result.problems) info(`      ${dim(problem)}`);
-      if (result.outcome !== 'passed' && result.span) {
+      if (result.outcome !== 'passed' && result.outcome !== 'deferred' && result.span) {
         info(`      ${dim(`${result.span.file}:${result.span.start.line}`)}`);
       }
     }
@@ -63,16 +63,23 @@ export const testCommand: Command = {
     if (counted.failed > 0) parts.push(`${counted.failed} failed`);
     // An unrunnable scenario is reported, never quietly counted as a pass.
     if (counted.inconclusive > 0) parts.push(`${counted.inconclusive} could not run`);
+    if (counted.deferred > 0) parts.push(`${counted.deferred} deferred to the target language`);
     info(parts.join(', '));
+    if (counted.deferred > 0) {
+      info(dim('  those reach code written in a target language; "haic build" compiles them into that project\'s tests'));
+    }
 
     return counted.failed === 0 && counted.inconclusive === 0 ? EXIT_OK : EXIT_FAILURE;
   },
 };
+
+const MARKS: Record<string, string> = { passed: '✓', failed: '✗', inconclusive: '?', deferred: '→' };
 
 function countOf(results: ReturnType<typeof runScenarios>['results']) {
   return {
     passed: results.filter((r) => r.outcome === 'passed').length,
     failed: results.filter((r) => r.outcome === 'failed').length,
     inconclusive: results.filter((r) => r.outcome === 'inconclusive').length,
+    deferred: results.filter((r) => r.outcome === 'deferred').length,
   };
 }

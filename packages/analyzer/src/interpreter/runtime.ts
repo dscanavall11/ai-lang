@@ -36,6 +36,23 @@ export class DomainFailure extends Error {
 /** Raised when the interpreter genuinely cannot proceed. Never a test failure. */
 export class Unsupported extends Error {}
 
+/**
+ * Raised when the scenario reached an operation written in a target language.
+ *
+ * Separate from `Unsupported` because it means something different: not "this
+ * design cannot be run" but "this part of it runs somewhere else". The compiled
+ * project has a test for it, so the runner reports it as deferred rather than
+ * as a scenario that failed to execute.
+ */
+export class DeferredToTarget extends Unsupported {
+  constructor(
+    readonly phrase: string,
+    readonly languages: readonly string[],
+  ) {
+    super(`"${phrase}" is written in ${languages.join(', ')}, so it runs in the generated project's tests`);
+  }
+}
+
 export interface PublishedEvent {
   name: string;
   payload: RecordValue;
@@ -317,10 +334,7 @@ export class Interpreter {
     // A native block is target-language source; there is nothing here that could
     // run it, and guessing at its result would make the scenario meaningless.
     if (operation.body.length === 0 && operation.native.length > 0) {
-      const written = operation.native.map((n) => n.dialect).join(', ');
-      throw new Unsupported(
-        `"${operation.phrase}" is written in ${written}, so this scenario has no HADL body to run`,
-      );
+      throw new DeferredToTarget(operation.phrase, operation.native.map((block) => block.dialect));
     }
 
     const scope = new Map<string, Value>(args);

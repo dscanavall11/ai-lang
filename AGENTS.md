@@ -21,7 +21,7 @@ This is the part that matters most. Never hand back `.hadl` you have not checked
 haic fmt .            # canonical layout; never changes what the file means
 haic check .          # parses, type-checks, audits the architecture
 haic test .           # runs the scenarios against the IR — no code, no tokens
-haic build . --language typescript --out out
+haic build . --java --out out        # or --ts, --py, --go, --rust, or --language <name>
 ```
 
 Run `haic fmt` before handing work back, the way you would run any formatter.
@@ -335,6 +335,11 @@ Rules that matter:
   backend, and the block lands in a `.ts` file, so it has to type-check there.
 - **One block per target, several targets per operation.** Write a `typescript`
   block and a `python` block and each backend takes its own.
+- **Write a scenario for it.** A scenario over an aggregate operation is
+  compiled into a test in the block's own language, which is the only place the
+  block ever runs. `haic test` reports such a scenario as *deferred*, not
+  failed. Use real uuids in it: a generated test is checked, and `"o-1"` is not
+  a uuid.
 - **Write the statements too, when you can.** Statements beside a block are the
   reference implementation: `haic test` runs *them*, and the block is what
   ships. An operation with a block and no statements is `HADL2602` — no scenario

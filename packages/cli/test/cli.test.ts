@@ -127,6 +127,27 @@ describe('the haic command', () => {
     expect(out).toContain('--language typescript');
   });
 
+  it('takes the language as a bare flag, which is what people type', async () => {
+    const { code, out } = await run(['build', 'examples/crud', '--java', '--dry-run']);
+    expect(code).toBe(0);
+    expect(out).toContain('Java');
+    expect(out).not.toContain('TypeScript');
+  });
+
+  it('does not let a bare flag swallow the path after it', async () => {
+    const { code, out } = await run(['build', '--go', 'examples/crud', '--dry-run']);
+    expect(code).toBe(0);
+    expect(out).toContain('Go');
+  });
+
+  it('refuses an option it does not have instead of ignoring it', async () => {
+    // `--jav` used to be accepted, ignored, and answered with a TypeScript
+    // project, which is the worst of the three possible outcomes.
+    const { code, err } = await run(['build', 'examples/crud', '--jav', '--dry-run']);
+    expect(code).toBe(2);
+    expect(err).toContain('unknown option "--jav"');
+  });
+
   it('leaves an already formatted example alone', async () => {
     const { code, out } = await run(['fmt', 'examples', '--check']);
     expect(code).toBe(0);
@@ -140,6 +161,14 @@ describe('the haic command', () => {
 
     const checked = await run(['fmt', messy, '--check']);
     expect(checked.code).toBe(1);
+    expect(readFileSync(messy, 'utf8')).toBe(source);
+
+    // The same thing with the flag first. It used to parse as `--check=<path>`,
+    // which left no paths at all: the command then walked the current directory
+    // and, because `--check` was a string rather than true, wrote to it.
+    const flagFirst = await run(['fmt', '--check', messy]);
+    expect(flagFirst.code).toBe(1);
+    expect(flagFirst.out).toContain('messy.hadl');
     expect(readFileSync(messy, 'utf8')).toBe(source);
 
     const written = await run(['fmt', messy]);

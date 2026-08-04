@@ -3,6 +3,13 @@
  *
  * A dependency would buy help formatting and little else, and the language this
  * tool compiles exists to argue against dependencies nobody needs.
+ *
+ * The one thing it cannot do without is knowing which flags take a value. A
+ * parser that guesses — "the next word, unless it starts with a dash" — reads
+ * `haic fmt --check src` as `--check=src` with no paths at all, and then
+ * formats the current directory instead of checking the one you named. It did
+ * exactly that. So the caller passes the set, taken from the command's own
+ * documentation, and every other flag stands alone.
  */
 
 export interface ParsedArgs {
@@ -11,7 +18,7 @@ export interface ParsedArgs {
   flags: Map<string, string | boolean>;
 }
 
-export function parseArgs(argv: readonly string[]): ParsedArgs {
+export function parseArgs(argv: readonly string[], valueFlags: ReadonlySet<string> = new Set()): ParsedArgs {
   const positional: string[] = [];
   const flags = new Map<string, string | boolean>();
 
@@ -24,11 +31,12 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
     const name = token.replace(/^--?/, '');
     const equals = name.indexOf('=');
     if (equals >= 0) {
+      // `--out=dir` says what it means whether or not the flag is known.
       flags.set(name.slice(0, equals), name.slice(equals + 1));
       continue;
     }
     const next = argv[i + 1];
-    if (next !== undefined && !next.startsWith('-')) {
+    if (valueFlags.has(name) && next !== undefined && !next.startsWith('-')) {
       flags.set(name, next);
       i += 1;
       continue;

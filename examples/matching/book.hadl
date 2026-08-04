@@ -103,7 +103,7 @@ operation match incoming (side: Side, limitPrice: decimal, quantity: integer, or
   ```
 
   ```python
-  buying = side == Side.Buy
+  buying = side == Side.BUY
   resting = self.asks if buying else self.bids
 
   def crosses(price: float) -> bool:
@@ -217,15 +217,30 @@ service runs. A limit price of zero is not: zero is a number, and only the
 domain knows it is not a price.
 
 given book be OrderBook with symbol = "ACME", bids = [], asks = []
-when submit order with command = SubmitOrder with symbol = "ACME", orderId = "o-1", side = Buy, limitPrice = 0, quantity = 5
+when submit order with command = SubmitOrder with symbol = "ACME", orderId = "22222222-2222-4222-8222-222222222221", side = Buy, limitPrice = 0, quantity = 5
 then it fails with OrderRejected
+
+## scenario a crossing order takes the resting price
+
+The matching loop is written in TypeScript and in Python, so `haic test` cannot
+run this one — it says so, and `haic build` compiles it into the generated
+project's tests, where it runs against the code that actually ships. A resting
+sell at 10 meets an incoming buy willing to pay 11: the fill happens at 10,
+because the side that waited set the terms.
+
+given resting be RestingOrder with id = "11111111-1111-4111-8111-111111111119", side = Sell, limitPrice = 10, quantity = 4, placedAt = now
+and book be OrderBook with symbol = "ACME", bids = [], asks = [resting]
+when match incoming with orderBook = book, side = Buy, limitPrice = 11, quantity = 3, orderId = "22222222-2222-4222-8222-222222222229"
+then count of result is 1
+and sum of result by quantity is 3
+and sum of result by price is 10
 
 ## scenario cancelling lifts the order out of the book
 
-given first be RestingOrder with id = "r-1", side = Buy, limitPrice = 10, quantity = 5, placedAt = now
-and second be RestingOrder with id = "r-2", side = Buy, limitPrice = 9, quantity = 3, placedAt = now
+given first be RestingOrder with id = "11111111-1111-4111-8111-111111111111", side = Buy, limitPrice = 10, quantity = 5, placedAt = now
+and second be RestingOrder with id = "11111111-1111-4111-8111-111111111112", side = Buy, limitPrice = 9, quantity = 3, placedAt = now
 and book be OrderBook with symbol = "ACME", bids = [first, second], asks = []
-when cancel resting with orderBook = book, cancelledId = "r-1"
+when cancel resting with orderBook = book, cancelledId = "11111111-1111-4111-8111-111111111111"
 then count of book.bids is 1
 
 ## infrastructure

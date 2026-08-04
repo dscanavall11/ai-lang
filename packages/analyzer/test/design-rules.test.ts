@@ -1,6 +1,64 @@
 import { describe, expect, it } from 'vitest';
 import { ORDER, check, codes, errorCodes } from './helpers.js';
 
+describe('a constraint that does not fit its type', () => {
+  const counter = (field: string): string => `## aggregate Counter
+identified by id
+
+- id: uuid, required
+${field}
+
+invariant "a counter counts":
+  id is present
+`;
+
+  it('rejects a default that is not of the field\'s type', () => {
+    expect(errorCodes(check(counter('- hits: integer, required, default false')))).toContain('HADL2155');
+    expect(errorCodes(check(counter('- label: text, required, default 42')))).toContain('HADL2155');
+    expect(errorCodes(check(counter('- active: boolean, required, default "yes"')))).toContain('HADL2155');
+  });
+
+  it('says what to write instead', () => {
+    const reported = check(counter('- hits: integer, required, default false'));
+    expect(reported.find((d) => d.code === 'HADL2155')?.message).toContain('false is not a number');
+    expect(reported.find((d) => d.code === 'HADL2155')?.hint).toContain('default 0');
+  });
+
+  it('rejects a fractional default on a whole number', () => {
+    expect(errorCodes(check(counter('- hits: integer, required, default 1.5')))).toContain('HADL2155');
+    expect(errorCodes(check(counter('- ratio: decimal, required, default 1.5')))).not.toContain('HADL2155');
+  });
+
+  it('accepts an enum member and rejects one the enum does not have', () => {
+    const withEnum = (value: string): string =>
+      `## enum State\n- Draft\n- Placed\n\n${counter(`- state: State, required, default ${value}`)}`;
+    expect(errorCodes(check(withEnum('Draft')))).not.toContain('HADL2155');
+    expect(errorCodes(check(withEnum('Shipped')))).toContain('HADL2155');
+  });
+
+  it('rejects a literal default for a shape that is built from fields', () => {
+    const withShape = `## value object Money\n- amount: decimal, required\n\n${counter('- total: Money, required, default 0')}`;
+    expect(errorCodes(check(withShape))).toContain('HADL2155');
+  });
+
+  it('rejects "default nothing" on a required field and allows it on an optional one', () => {
+    expect(errorCodes(check(counter('- note: text, required, default nothing')))).toContain('HADL2155');
+    expect(errorCodes(check(counter('- note: text, optional, default nothing')))).not.toContain('HADL2155');
+  });
+
+  it('rejects a length constraint on a number and a range on text', () => {
+    expect(errorCodes(check(counter('- hits: integer, required, min length 2')))).toContain('HADL2156');
+    expect(errorCodes(check(counter('- label: text, required, min 2')))).toContain('HADL2156');
+    expect(errorCodes(check(counter('- code: uuid, required, pattern "[a-z]+"')))).toContain('HADL2156');
+  });
+
+  it('leaves the constraints that do fit alone', () => {
+    expect(errorCodes(check(counter('- label: text, required, min length 1, max length 8, pattern "[a-z]+"')))).toEqual([]);
+    expect(errorCodes(check(counter('- hits: integer, required, min 0, max 10, default 0')))).toEqual([]);
+    expect(errorCodes(check(counter('- tags: list of text, required, min length 1')))).toEqual([]);
+  });
+});
+
 describe('domain-driven design rules', () => {
   it('rejects an aggregate embedding another aggregate', () => {
     const diagnostics = check(`${ORDER}

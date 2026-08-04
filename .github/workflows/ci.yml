@@ -64,9 +64,11 @@ jobs:
           # it actually has bodies for — which is also what keeps HADL3060
           # honest, since a regression that silently emitted an empty method
           # would turn this job green.
+          # `npm test` is `tsc` plus the scenarios the compiler wrote as tests,
+          # which is the only place a fenced TypeScript block is ever executed.
           - target: typescript
             sources: examples
-            verify: npm install --no-audit --no-fund && npx tsc --noEmit
+            verify: npm install --no-audit --no-fund && npm test
           - target: java
             sources: examples/crud examples/orders examples/billing examples/guide examples/ledger
             verify: mvn -q -B compile
