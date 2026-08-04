@@ -33,6 +33,9 @@ import {
   type IRType,
   type ModuleIndex,
   scenarioPlans,
+  type IRPortDecl,
+  type ScenarioPlan,
+  type ServicePlan,
 } from '@haic/core';
 import { declaredImplementation } from '../../shared/adapters.js';
 import { emitScenarioBody, skippedComments, type TestHooks } from '../../shared/scenario-tests.js';
@@ -606,7 +609,10 @@ function emitQueryMatchers(writer: CodeWriter, index: ModuleIndex): void {
     const emitter = new TypeScriptEmitter(index);
     writer.blank();
     writer.line(`/** In-memory form of the criteria declared by query ${query.name}. */`);
-    writer.line(`function ${matcherName(query)}(${subject}: ${pascalCase(query.over)}, query: ${pascalCase(query.name)}): boolean {`);
+    // Exported because a compiled scenario stands up its own double, and a
+    // double answering a query differently from the adapter would be testing
+    // something the project does not ship.
+    writer.line(`export function ${matcherName(query)}(${subject}: ${pascalCase(query.over)}, query: ${pascalCase(query.name)}): boolean {`);
     writer.block(() => {
       const aggregate = index.typed(query.over, 'aggregate');
       for (const criterion of query.criteria) {
@@ -760,18 +766,21 @@ function scenarioTestsFile(module: IRModule, index: ModuleIndex) {
   // itself as a passing test, and a green count that ran nothing is a lie.
   if (compiled.length === 0) return null;
 
-  const hooks: TestHooks = {
-    local: (name, value) => `const ${name} = ${value};`,
-    discard: (value) => `${value};`,
-    assertTrue: (condition, message) => [`assert.ok(${condition}, ${quote(message)});`],
-    assertRaises: (call, error) => [`assert.throws(() => ${call}, ${pascalCase(error)});`],
-  };
-
   const writer = new CodeWriter();
+  emitTestDoubles(writer, index, compiled);
+
   for (const plan of compiled) {
+    // A service operation is async, so its test is too. An aggregate's is not,
+    // and making it async anyway would hide a forgotten await behind a pass.
+    const asynchronous = plan.kind === 'service';
+    const emitter = new TypeScriptEmitter(index);
+
     docComment(writer, plan.scenario.description);
-    writer.line(`test(${quote(plan.title)}, () => {`);
-    writer.block(() => emitScenarioBody(writer, new TypeScriptEmitter(index), plan, hooks));
+    writer.line(`test(${quote(plan.title)}, ${asynchronous ? 'async ' : ''}() => {`);
+    writer.block(() => {
+      emitScenarioBody(writer, emitter, plan, testHooks(asynchronous));
+      if (plan.kind === 'service') emitPublishedChecks(writer, plan);
+    });
     writer.line('});');
     writer.blank();
   }
@@ -782,10 +791,116 @@ function scenarioTestsFile(module: IRModule, index: ModuleIndex) {
     layout.path('domain', module, 'scenarios').replace(/\.ts$/, '.test.ts'),
     module,
     index,
-    { enums: true, valueObjects: true, model: true, messages: true, errors: true },
+    {
+      enums: true,
+      valueObjects: true,
+      model: true,
+      messages: true,
+      errors: true,
+      ports: true,
+      services: true,
+      adapters: true,
+      validation: true,
+      eventPublisher: true,
+    },
     writer,
     imports,
   );
+}
+
+function testHooks(asynchronous: boolean): TestHooks {
+  return {
+    local: (name, value) => `const ${name} = ${value};`,
+    discard: (value) => `${value};`,
+    assertTrue: (condition, message) => [`assert.ok(${condition}, ${quote(message)});`],
+    assertRaises: (call, error) =>
+      asynchronous
+        ? [`await assert.rejects(async () => ${call}, ${pascalCase(error)});`]
+        : [`assert.throws(() => ${call}, ${pascalCase(error)});`],
+    setUp: (plan) => (plan.kind === 'service' ? serviceSetUp(plan) : []),
+    call: (plan, emitter) => (plan.kind === 'service' ? serviceCall(plan, emitter) : emitter.expression(plan.call)),
+  };
+}
+
+/** `await matchingService.submitOrder({ command })`, spelled out. */
+function serviceCall(plan: ServicePlan, emitter: { expression(value: IRExpression): string }): string {
+  const args = plan.call.kind === 'call' ? plan.call.arguments : [];
+  const rendered = args.map((argument) => `${camelCase(argument.name)}: ${emitter.expression(argument.value)}`);
+  const payload = rendered.length > 0 ? `{ ${rendered.join(', ')} }` : '';
+  return `await ${camelCase(plan.service.name)}.${camelCase(plan.operation.phrase)}(${payload})`;
+}
+
+/** The doubles, stood up and seeded, before the operation under test runs. */
+function serviceSetUp(plan: ServicePlan): string[] {
+  const lines: string[] = [];
+  for (const port of plan.ports) lines.push(`const ${camelCase(port.name)} = new Fake${pascalCase(port.name)}();`);
+  for (const seed of plan.seeds) {
+    const parameter = camelCase(seed.save.parameters[0]?.name ?? 'entity');
+    lines.push(`await ${camelCase(seed.port.name)}.${camelCase(seed.save.phrase)}({ ${parameter}: ${camelCase(seed.binding)} });`);
+  }
+  lines.push('const eventPublisher = new RecordingEventPublisher();');
+  const args = [...plan.ports.map((port) => camelCase(port.name)), 'eventPublisher'];
+  lines.push(`const ${camelCase(plan.service.name)} = new ${pascalCase(plan.service.name)}(${args.join(', ')});`);
+  return lines;
+}
+
+/** `then it publishes X`, against the publisher the test handed the service. */
+function emitPublishedChecks(writer: CodeWriter, plan: ServicePlan): void {
+  for (const expectation of plan.expectations) {
+    if (expectation.kind !== 'publishes') continue;
+    writer.line(
+      `assert.ok(eventPublisher.published.includes(${quote(pascalCase(expectation.event))}), ${quote(`it publishes ${expectation.event}`)});`,
+    );
+  }
+}
+
+/**
+ * One in-memory double per port the compiled scenarios need, plus a publisher
+ * that remembers rather than prints.
+ *
+ * The doubles are emitted by the same function that writes the real in-memory
+ * adapter, so a test cannot pass against behaviour the adapter does not have.
+ */
+function emitTestDoubles(writer: CodeWriter, index: ModuleIndex, compiled: readonly ScenarioPlan[]): void {
+  const ports = new Map<string, IRPortDecl>();
+  let publisher = false;
+  for (const plan of compiled) {
+    if (plan.kind !== 'service') continue;
+    publisher = true;
+    for (const port of plan.ports) ports.set(port.name, port);
+  }
+  if (ports.size === 0 && !publisher) return;
+
+  const emitter = new TypeScriptEmitter(index);
+  for (const port of ports.values()) {
+    writer.line(`/** Stands in for ${port.name}, with the in-memory adapter's behaviour. */`);
+    writer.line(`class Fake${pascalCase(port.name)} implements ${pascalCase(port.name)} {`);
+    writer.block(() => {
+      writer.line('private readonly rows = new Map<string, unknown>();');
+      for (const operation of port.operations) {
+        writer.blank();
+        writer.line(`async ${camelCase(operation.phrase)}(${parameterObject(operation, emitter)}): Promise<${emitter.typeName(operation.returns)}> {`);
+        writer.block(() => emitAdapterBody(writer, 'in-memory', operation, emitter, index));
+        writer.line('}');
+      }
+    });
+    writer.line('}');
+    writer.blank();
+  }
+
+  if (publisher) {
+    writer.line('/** Records what the service published, so a `then` can look. */');
+    writer.line('class RecordingEventPublisher implements EventPublisher {');
+    writer.block(() => {
+      writer.line('readonly published: string[] = [];');
+      writer.blank();
+      writer.line('async publish(topic: string): Promise<void> {');
+      writer.block(() => writer.line('this.published.push(topic);'));
+      writer.line('}');
+    });
+    writer.line('}');
+    writer.blank();
+  }
 }
 
 function quote(text: string): string {
@@ -1250,6 +1365,7 @@ interface ImportFlags {
   errors?: boolean;
   ports?: boolean;
   services?: boolean;
+  adapters?: boolean;
   validation?: boolean;
   eventPublisher?: boolean;
   sqlClient?: boolean;
@@ -1294,6 +1410,8 @@ function renderImports(self: string, module: IRModule, index: ModuleIndex, flags
   if (flags.errors) add(index.errors.map((d) => pascalCase(d.name)), [], layout.path('domain', module, 'errors'));
   if (flags.ports) add([], index.ports.map((d) => pascalCase(d.name)), layout.path('application', module, 'ports'));
   if (flags.services) add(index.services.map((d) => pascalCase(d.name)), [], layout.path('application', module, 'services'));
+  // A double answers a query by calling the same matcher the adapter calls.
+  if (flags.adapters) add(index.queries.map((query) => matcherName(query)), [], layout.path('infrastructure', module, 'adapters'));
   if (flags.validation) add(['ConstraintViolation', 'InvariantViolation'], [], layout.sharedPath('validation'));
   if (flags.eventPublisher) add([], ['EventPublisher'], layout.sharedPath('event-publisher'));
   if (flags.sqlClient) add([], ['SqlClient'], layout.sharedPath('sql-client'));

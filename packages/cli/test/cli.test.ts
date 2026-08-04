@@ -248,6 +248,15 @@ describe('the test command', () => {
     expect(err).toContain('no scenario matches');
   });
 
+  it('prints what the interpreter did when asked', async () => {
+    const { code, out } = await run(['test', 'examples/ledger', '--trace']);
+    expect(code).toBe(0);
+    expect(out).toContain('→ post entry(');
+    expect(out).toContain('⇄ JournalRepository.find journal entry by id');
+    expect(out).toContain('? when: no');
+    expect(out).toContain('! EntryPosted');
+  });
+
   it('says so rather than passing when a module declares no scenarios', async () => {
     const { code, err } = await run(['test', 'examples/billing']);
     expect(code).toBe(0);

@@ -592,6 +592,35 @@ scenario as inconclusive rather than passing it.
 Nothing inside a fence is checked, inferred, or ported. That is the cost, and it
 is why the compiler is loud about who is paying it.
 
+### Watching a scenario run
+
+```bash
+haic test src --trace
+```
+
+The interpreter reports what it did: the call it made, the branch it took, what
+each name was bound to, which port it reached and what it published.
+
+```
+ledger
+  ✓ posting a balanced entry announces the movement
+    → post entry(command = PostEntry with entryId = "3333…")
+      ⇄ JournalRepository.find journal entry by id
+      · entry = JournalEntry with id = "3333…", reference = "INV-1"…
+      ? when: no
+      → total debited(journalEntry = JournalEntry with id = "3333…")
+        ← Money with amount = 40, currency = "EUR"
+      · total = Money with amount = 40, currency = "EUR"
+      ⇄ JournalRepository.save journal entry
+      ! EntryPosted
+      ← EntryPosted with entryId = "3333…"
+```
+
+A **failing** scenario prints its trace whether or not `--trace` was passed: the
+step before a failure is the question being asked. There is no breakpoint and no
+stepping — a scenario runs in about a millisecond, and what is worth reading is
+the sequence rather than a moment inside it.
+
 ### Running what is inside a fence
 
 `haic test` runs scenarios against the IR, where a block cannot execute. So a
@@ -611,10 +640,18 @@ The generated project carries that scenario as an ordinary test — `node --test
 for TypeScript, `unittest` for Python, neither of which is a new dependency —
 built from the same `given`, the same call and the same expectations.
 
-A scenario is compiled when it exercises an **aggregate operation**: that needs
-nothing but the aggregate itself. One that calls a service is left with the
-interpreter, which already knows how to fake ports and observe events, and the
-generated file names it in a comment rather than dropping it silently.
+Two shapes compile. A scenario over an **aggregate operation** needs nothing but
+the aggregate: construct it, call the method, check the result. A scenario over a
+**service** gets what the interpreter gives it — an in-memory double per port,
+seeded from `given` through the port that saves each aggregate, and a publisher
+that records what it was handed so `then it publishes X` has something to read.
+The doubles are written by the same emitter as the real in-memory adapter, so a
+test cannot pass against behaviour the project does not ship.
+
+What does not compile is named in the generated file rather than dropped. A port
+whose operations are not the repository phrases a double can answer — find one
+by id, save one, list them, delete one — would need a body nobody wrote, so that
+scenario stays with the interpreter and says why.
 
 Two things a compiled scenario must respect, because a generated test is checked
 where the interpreter is not:

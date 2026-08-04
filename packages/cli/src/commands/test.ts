@@ -4,7 +4,7 @@
  * No code is generated, no toolchain is needed and no tokens are spent: the
  * design is exercised before it is expanded.
  */
-import { runScenarios } from '@haic/analyzer';
+import { renderTrace, runScenarios } from '@haic/analyzer';
 import { flagBoolean, flagString } from '../args.js';
 import { EXIT_FAILURE, EXIT_OK, type Command } from '../command.js';
 import { loadProject, renderDiagnostics } from '../driver.js';
@@ -16,6 +16,7 @@ export const testCommand: Command = {
   usage: 'haic test [paths...] [--only <name>]',
   flags: [
     { name: '--only <text>', description: 'Run only scenarios whose name contains this text' },
+    { name: '--trace', description: 'Print what the interpreter did, step by step. A failing scenario prints it anyway' },
     { name: '--quiet', description: 'Print only the summary line' },
   ],
 
@@ -31,7 +32,7 @@ export const testCommand: Command = {
 
     const only = flagString(args, 'only', '');
     const modules = loaded.project.modules;
-    const report = runScenarios(modules);
+    const report = runScenarios(modules, { trace: flagBoolean(args, 'trace') });
     const shown = only ? report.results.filter((r) => r.title.toLowerCase().includes(only.toLowerCase())) : report.results;
 
     if (shown.length === 0) {
@@ -52,6 +53,9 @@ export const testCommand: Command = {
       const mark = MARKS[result.outcome];
       info(`  ${mark} ${result.title}`);
       for (const problem of result.problems) info(`      ${dim(problem)}`);
+      // The steps that led here. A passing scenario only shows them on request;
+      // a failing one shows them because that is the question being asked.
+      for (const line of renderTrace(result.trace)) info(dim(line));
       if (result.outcome !== 'passed' && result.outcome !== 'deferred' && result.span) {
         info(`      ${dim(`${result.span.file}:${result.span.start.line}`)}`);
       }

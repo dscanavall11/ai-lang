@@ -11,4 +11,5 @@ export { nativePass } from './passes/native.js';
 export { walkStatements, walkExpressions, walkExpression, typesReferencedBy, typesOfDeclaration, bodies } from './walk.js';
 export { Interpreter, DomainFailure, Unsupported, DeferredToTarget } from './interpreter/runtime.js';
 export { runScenarios, type ScenarioResult, type TestReport, type Outcome } from './interpreter/scenarios.js';
+export { Trace, renderTrace, brief, type TraceStep, type TraceKind } from './interpreter/trace.js';
 export { show, equals, isRecord, record, type Value, type RecordValue } from './interpreter/values.js';

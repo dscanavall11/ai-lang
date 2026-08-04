@@ -21,17 +21,31 @@ export interface TestHooks {
   assertRaises(call: string, error: string, message: string): string[];
   /** Local naming, so Python gets `resting_order` and TypeScript `restingOrder`. */
   name?(binding: string): string;
+  /** Lines that stand up whatever the call needs before it runs. */
+  setUp?(plan: ScenarioPlan): string[];
+  /**
+   * How the test calls the operation, when the emitter's own lowering would be
+   * wrong here.
+   *
+   * A service body calls itself through `this`, and resolves its own phrase to
+   * the inbound port it implements — correct inside the class, and meaningless
+   * in a test that holds the service as a local. The backend spells that call
+   * out rather than rewriting the text of one meant for somewhere else.
+   */
+  call?(plan: ScenarioPlan, emitter: LanguageEmitter): string;
 }
 
 /** Emits the body of one test: given, when, then. */
 export function emitScenarioBody(writer: CodeWriter, emitter: LanguageEmitter, plan: ScenarioPlan, hooks: TestHooks): void {
   const named = hooks.name ?? camelCase;
+  const rendered = (expression: Parameters<LanguageEmitter['expression']>[0]): string => emitter.expression(expression);
 
   for (const step of plan.given) {
-    writer.line(hooks.local(named(step.binding), emitter.expression(step.value)));
+    writer.line(hooks.local(named(step.binding), rendered(step.value)));
   }
+  for (const line of hooks.setUp?.(plan) ?? []) writer.line(line);
 
-  const call = emitter.expression(plan.call);
+  const call = hooks.call ? hooks.call(plan, emitter) : rendered(plan.call);
   const failure = expectedFailure(plan);
   if (failure) {
     // A scenario that expects a failure asserts nothing after it: the call did
@@ -45,7 +59,7 @@ export function emitScenarioBody(writer: CodeWriter, emitter: LanguageEmitter, p
 
   for (const expectation of plan.expectations) {
     if (expectation.kind !== 'holds') continue;
-    for (const line of hooks.assertTrue(emitter.expression(expectation.condition), plan.title)) writer.line(line);
+    for (const line of hooks.assertTrue(rendered(expectation.condition), plan.title)) writer.line(line);
   }
 }
 
