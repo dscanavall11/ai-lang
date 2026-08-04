@@ -97,6 +97,130 @@ describe('a fenced body', () => {
   });
 });
 
+/**
+ * An adapter is where a block is most obviously useful: it is the one place the
+ * compiler already admits it cannot generate the body. Java and Python honoured
+ * a block there and the other three dropped it in silence — the generated method
+ * threw "no generated implementation" while the implementation sat in the source.
+ */
+describe('a block in an adapter', () => {
+  const withAdapter = projectOf(`---
+module: search
+context: Search
+---
+
+# Search
+
+## aggregate Doc
+identified by id
+
+- id: uuid, required
+- title: text, required
+
+invariant "a doc is titled":
+  title is not empty
+
+## port DocSearch (outbound)
+
+- search docs (term: text) -> list of Doc
+
+## adapter ElasticDocSearch implements DocSearch using http-client
+
+operation search docs (term: text) -> list of Doc:
+  \`\`\`typescript
+  const response = await fetch(\`https://search.internal?q=\${term}\`);
+  return (await response.json()) as Doc[];
+  \`\`\`
+
+  \`\`\`python
+  response = await self._client.get("https://search.internal", params={"q": term})
+  return [Doc(**row) for row in response.json()]
+  \`\`\`
+
+  \`\`\`go
+  return searchInternal(ctx, term)
+  \`\`\`
+
+  \`\`\`java
+  return this.client.search(term);
+  \`\`\`
+
+  \`\`\`rust
+  Ok(self.client.search(term).await?)
+  \`\`\`
+
+## port DocReader (inbound)
+
+- read docs (term: text) -> list of Doc
+
+## service DocService
+uses DocSearch
+implements DocReader
+
+operation read docs (term: text) -> list of Doc:
+  let found be search docs with term = term
+  return found
+
+## endpoint GET /docs
+handled by DocService.read docs
+responds 200 with Doc
+`);
+
+  const cases = [
+    { target: 'typescript', snippet: 'const response = await fetch(' },
+    { target: 'python', snippet: 'response = await self._client.get(' },
+    { target: 'go', snippet: 'return searchInternal(ctx, term)' },
+    { target: 'java', snippet: 'return this.client.search(term);' },
+    { target: 'rust', snippet: 'Ok(self.client.search(term).await?)' },
+  ];
+
+  it.each(cases)('reaches the $target backend', ({ target, snippet }) => {
+    const emitted = generateProject(codeGenerators.require(target), {
+      project: withAdapter,
+      outputDir: `out/${target}`,
+      options: {},
+    })
+      .files.map((file) => file.contents)
+      .join('\n');
+
+    expect(emitted).toContain(snippet);
+    // And the placeholder it replaces must be gone, not sitting beside it.
+    expect(emitted).not.toContain('has no generated implementation');
+  });
+});
+
+describe('what a backend decides from a body it did not write', () => {
+  it('gives a Rust block a mutable receiver, having no statements to read', () => {
+    const rust = projectOf(
+      SOURCE.replace(
+        '  return ordered[len(ordered) // 2]\n  ```',
+        '  return ordered[len(ordered) // 2]\n  ```\n\n  ```rust\n  self.lines.sort_by(|a, b| a.partial_cmp(b).unwrap());\n  Ok(self.lines[self.lines.len() / 2])\n  ```',
+      ),
+    );
+    const model = generateProject(codeGenerators.require('rust'), { project: rust, outputDir: 'out/rust', options: {} })
+      .files.find((file) => file.path.endsWith('model.rs'))!.contents;
+
+    // A block that assigns to a field cannot compile behind a shared borrow.
+    expect(model).toContain('pub fn median(&mut self)');
+    expect(model).toContain('self.lines.sort_by(');
+  });
+
+  it('leaves a Go block to return for itself', () => {
+    const go = projectOf(
+      SOURCE.replace(
+        '  return ordered[len(ordered) // 2]\n  ```',
+        '  return ordered[len(ordered) // 2]\n  ```\n\n  ```go\n  sort.Float64s(q.Lines)\n  return q.Lines[len(q.Lines)/2], nil\n  ```',
+      ),
+    );
+    const model = generateProject(codeGenerators.require('go'), { project: go, outputDir: 'out/go', options: {} })
+      .files.find((file) => file.path.endsWith('model.go'))!.contents;
+
+    expect(model).toContain('return q.Lines[len(q.Lines)/2], nil');
+    // No zero-value return bolted on after code that already returned.
+    expect(model).not.toMatch(/return q\.Lines\[len\(q\.Lines\)\/2\], nil\n\s*return 0/);
+  });
+});
+
 describe('statements written beside a block', () => {
   const fallback = projectOf(
     SOURCE.replace(

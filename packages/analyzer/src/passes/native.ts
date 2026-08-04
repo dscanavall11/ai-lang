@@ -29,10 +29,58 @@ export const nativePass: SemanticPass = {
         reportEmptyBlocks(context, where, operation);
         reportUntestable(context, where, operation, span);
         reportUncoveredTarget(context, where, operation, declared, span);
+        if (declaration.kind === 'aggregate') reportIoInTheDomain(context, where, operation, span);
       }
     }
   },
 };
+
+/**
+ * `HADL2213` — no I/O in the domain — is enforced by reading the statements of
+ * an aggregate operation. A fenced block has no statements to read, so the rule
+ * the language is most serious about would be silently unenforceable exactly
+ * where the code gets interesting.
+ *
+ * The compiler will not parse the block, so this asks the only question it can
+ * answer from outside: does the code name a port this module declares? That is
+ * a guess, which is why it is a warning and why the message says what it saw
+ * rather than what it concluded. A guess with the reasoning shown beats a rule
+ * that quietly stops applying.
+ */
+function reportIoInTheDomain(context: AnalysisContext, where: string, operation: IROperation, span: SourceSpan): void {
+  // A port called `OrderRepository` is `orderRepository` in TypeScript and
+  // `order_repository` in Python and Rust. Comparing the names as written would
+  // catch the one spelling nobody uses in code.
+  const ports = new Map(context.index.ports.map((port) => [flatten(port.name), port.name]));
+  if (ports.size === 0) return;
+
+  for (const block of operation.native) {
+    const mentioned = [...new Set([...wordsIn(block.code)].map(flatten).map((word) => ports.get(word)))].filter(
+      (name): name is string => name !== undefined,
+    );
+    if (mentioned.length === 0) continue;
+    context.diagnostics.warn(
+      'ddd',
+      'HADL2604',
+      `the ${block.dialect} block in ${where} names the port ${mentioned.join(', ')}`,
+      block.span ?? span,
+      {
+        hint: 'an aggregate decides and a service fetches: pass what the block needs in as a parameter, or move the operation to the service that already holds the port',
+      },
+    );
+  }
+}
+
+/** `OrderRepository`, `orderRepository` and `order_repository` are one name. */
+function flatten(word: string): string {
+  return word.replace(/_/g, '').toLowerCase();
+}
+
+function wordsIn(code: readonly string[]): Set<string> {
+  const found = new Set<string>();
+  for (const line of code) for (const word of line.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []) found.add(word);
+  return found;
+}
 
 /** A fence with nothing between it deletes the operation for that target. */
 function reportEmptyBlocks(context: AnalysisContext, where: string, operation: IROperation): void {

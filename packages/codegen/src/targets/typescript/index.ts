@@ -33,6 +33,7 @@ import {
   type IRType,
   type ModuleIndex,
 } from '@haic/core';
+import { declaredImplementation } from '../../shared/adapters.js';
 import { prefixReferences } from '../../shared/emitter.js';
 import { ProjectLayout, relativeImport } from '../../shared/layout.js';
 import { compileQuery } from '../../shared/query-sql.js';
@@ -368,7 +369,13 @@ function adaptersFile(module: IRModule, index: ModuleIndex) {
         signatureDoc(writer, operation);
         const parameters = parameterObject(operation, emitter);
         writer.line(`async ${camelCase(operation.phrase)}(${parameters}): Promise<${emitter.typeName(operation.returns)}> {`);
-        writer.block(() => emitAdapterBody(writer, adapter.technology, operation, emitter, index));
+        writer.block(() => {
+          // An operation the adapter wrote for itself wins over anything this
+          // backend would have generated for the phrase.
+          const declared = declaredImplementation(adapter, operation.phrase);
+          if (declared) emitter.emitImplementation(writer, declared);
+          else emitAdapterBody(writer, adapter.technology, operation, emitter, index);
+        });
         writer.line('}');
       }
     });

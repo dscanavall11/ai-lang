@@ -342,6 +342,9 @@ Rules that matter:
   of the system be the interesting part.
 - **Keep it indented.** The fence and its contents sit under the operation, like
   any Markdown block. A line at column zero ends the body.
+- **A block in an aggregate still may not do I/O.** The compiler cannot read the
+  code, so it warns when a block inside an aggregate names one of your ports
+  (`HADL2604`). Aggregates decide; services fetch and save.
 - **A block only fits an operation.** Not a handler, not an invariant, not a
   scenario (`HADL1424`). If a handler needs one, give the work to an operation
   and call it.

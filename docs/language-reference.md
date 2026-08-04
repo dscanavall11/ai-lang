@@ -562,6 +562,7 @@ the invariants that run on the fields it writes, and the wiring that calls it.
 | A block with nothing in it | `HADL2601` |
 | A block with no statements beside it | `HADL2602` |
 | The module's target has no body | `HADL2603` |
+| A block in an aggregate names a port | `HADL2604` |
 | The target being built has no body | `HADL3060` |
 
 Accepted names are the backend ids and their usual short forms: `typescript`,
@@ -590,6 +591,14 @@ scenario as inconclusive rather than passing it.
 
 Nothing inside a fence is checked, inferred, or ported. That is the cost, and it
 is why the compiler is loud about who is paying it.
+
+One rule survives the fence by guesswork rather than by reading: `HADL2213`
+keeps I/O out of the domain by inspecting statements, and a block has none. So
+an aggregate operation whose block names a declared port — in any of the casings
+a backend would write it, `OrderRepository`, `orderRepository`,
+`order_repository` — is `HADL2604`. It is a warning, not an error, because the
+compiler is matching words rather than reading code, and the message says what
+it saw rather than what it concluded.
 
 ---
 

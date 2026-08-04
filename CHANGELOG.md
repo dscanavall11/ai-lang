@@ -5,6 +5,43 @@ while the major is `0`, the minor carries breaking changes.
 
 ## Unreleased
 
+### Four defects in the fenced-block feature
+
+Found by using it, in the order they matter.
+
+**A block in a `## adapter` was silently dropped by three backends.** Java and
+Python read `adapter.operations`; TypeScript, Go and Rust never did. So a block
+written for the one place the compiler already admits it cannot generate a body
+reached two targets and vanished for the other three — the generated method
+threw "no generated implementation" while the implementation sat in the source
+file, ignored. No diagnostic fired, because from the IR's point of view the body
+was there.
+
+The lookup is now one function in `shared/adapters.ts` that all five backends
+call, so a sixth cannot forget it, and a test emits the same adapter to every
+backend and asserts the placeholder is gone.
+
+**A fence walked around `HADL2213`.** No I/O in the domain is enforced by
+reading the statements of an aggregate operation, and a block has none — so the
+rule the language is most serious about stopped applying exactly where the code
+gets interesting. An aggregate operation whose block names a declared port is
+now `HADL2604`, matching the casings a backend would actually write
+(`OrderRepository`, `orderRepository`, `order_repository`). It is a warning
+rather than an error because the compiler is matching words, not reading code,
+and the message says what it saw rather than what it concluded.
+
+**Rust decided `&mut self` from a body that was not there.** `mutatesSelf` reads
+statements, so an operation written as a Rust block got a shared borrow and code
+that assigns to a field could not compile. A Rust block now takes `&mut self`: a
+borrow stricter than necessary costs nothing, and the other guess does not
+build.
+
+**Nothing proved a `java` or `go` block reached its own backend.** The examples
+carried only TypeScript and Python. `examples/ledger` now writes `total debited`
+three times — statements, a TypeScript block and a Java block, each exact in its
+own language's minor-unit arithmetic — so CI compiles a real Java block with
+Maven, and the adapter test covers all five backends.
+
 ### A language server, which is the compiler
 
 ```bash
