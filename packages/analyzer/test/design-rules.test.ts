@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ORDER, check, codes, errorCodes } from './helpers.js';
+import { uuidFor } from '@haic/core';
+import { ORDER, analysed, check, codes, errorCodes } from './helpers.js';
 
 describe('a constraint that does not fit its type', () => {
   const counter = (field: string): string => `## aggregate Counter
@@ -837,5 +838,143 @@ match task.state is state
 `),
       ),
     ).toContain('HADL2153');
+  });
+});
+
+describe('a literal standing where a uuid is declared', () => {
+  const withId = (value: string, then = 'then result is present'): string => `## aggregate Note
+identified by id
+
+- id: uuid, required
+- title: text, required
+
+invariant "a note is titled":
+  title is not empty
+
+operation rename (to: text) -> text:
+  set title to to
+  return title
+
+## scenario naming a note
+
+given note be Note with id = ${value}, title = "Draft"
+when rename with note = note, to = "Final"
+${then}
+`;
+
+  it('is accepted, because an id in a design is a name', () => {
+    expect(errorCodes(check(withId('"n-1"', 'then result is "Final"')))).toEqual([]);
+  });
+
+  it('becomes the same uuid every time, and a different one per name', () => {
+    expect(uuidFor('n-1')).toBe(uuidFor('n-1'));
+    expect(uuidFor('n-1')).not.toBe(uuidFor('n-2'));
+    expect(uuidFor('n-1')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  });
+
+  it('leaves a value that is already a uuid exactly as written', () => {
+    const written = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
+    expect(uuidFor(written)).toBe(written);
+  });
+
+  it('is recorded in the IR, so every backend sees the same value', () => {
+    const module = analysed(withId('"n-1"', 'then result is "Final"'));
+    const scenario = module.declarations.find((d) => d.kind === 'scenario')!;
+    const given = (scenario as { given: Array<{ value: { arguments: Array<{ name: string; value: { value: unknown } }> } }> }).given[0]!;
+    const id = given.value.arguments.find((argument) => argument.name === 'id')!;
+    expect(id.value.value).toBe(uuidFor('n-1'));
+  });
+
+  it('converts on both sides of a comparison', () => {
+    // `then note.id is "n-1"` reads as a question about the same note.
+    expect(errorCodes(check(withId('"n-1"', 'then note.id is "n-1"')))).toEqual([]);
+  });
+
+  it('does not convert anything else', () => {
+    // Only text-to-uuid. A number where text is declared is still an error.
+    expect(errorCodes(check(withId('"n-1"', 'then result is 3')))).toContain('HADL2105');
+  });
+});
+
+describe('a scenario, which is a program too', () => {
+  const shape = `## value object Point
+- latitude: decimal, required
+- longitude: decimal, required
+
+## aggregate Pin
+identified by id
+
+- id: uuid, required
+- at: Point, required
+- label: text, required
+
+invariant "a pin is labelled":
+  label is not empty
+
+operation rename (to: text) -> text:
+  set label to to
+  return label
+`;
+
+  it('catches an argument that landed on the wrong construction', () => {
+    // The parser reads `label` as a third argument to the Point, which is the
+    // bug this check exists for: `haic test` passed it, TypeScript did not.
+    const reported = check(`${shape}
+## scenario naming a pin
+
+given pin be Pin with id = "p-1", at = Point with latitude = 1, longitude = 2, label = "Home"
+when rename with pin = pin, to = "Away"
+then result is "Away"
+`);
+    expect(errorCodes(reported).length).toBeGreaterThan(0);
+  });
+
+  it('accepts it once the point is bound first', () => {
+    expect(
+      errorCodes(check(`${shape}
+## scenario naming a pin
+
+given here be Point with latitude = 1, longitude = 2
+and pin be Pin with id = "p-1", at = here, label = "Home"
+when rename with pin = pin, to = "Away"
+then result is "Away"
+`)),
+    ).toEqual([]);
+  });
+
+  it('rejects a "then" that is not a yes or no', () => {
+    expect(errorCodes(check(`${shape}
+## scenario naming a pin
+
+given here be Point with latitude = 1, longitude = 2
+and pin be Pin with id = "p-1", at = here, label = "Home"
+when rename with pin = pin, to = "Away"
+then result
+`))).toContain('HADL2157');
+  });
+
+  it('rejects an error or an event nothing declares', () => {
+    const base = `${shape}
+## scenario naming a pin
+
+given here be Point with latitude = 1, longitude = 2
+and pin be Pin with id = "p-1", at = here, label = "Home"
+when rename with pin = pin, to = "Away"
+`;
+    expect(errorCodes(check(`${base}then it fails with Nope\n`))).toContain('HADL2158');
+    expect(errorCodes(check(`${base}then it publishes Nope\n`))).toContain('HADL2159');
+  });
+
+  it('accepts the failures the language raises itself', () => {
+    expect(
+      errorCodes(check(`${shape}
+## scenario naming a pin nothing
+
+given here be Point with latitude = 1, longitude = 2
+and pin be Pin with id = "p-1", at = here, label = "Home"
+when rename with pin = pin, to = ""
+then it fails with InvariantViolation
+`)),
+    ).toEqual([]);
   });
 });

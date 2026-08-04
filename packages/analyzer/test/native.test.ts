@@ -131,11 +131,11 @@ then result is 2
     expect(codes(check(source.split('---\n\n')[1]!))).not.toContain('HADL2602');
   });
 
-  it('keeps warning when the scenario uses a value a generated test would refuse', () => {
-    // `"b-1"` is fine for the interpreter and fine in TypeScript, and refused
-    // by every backend that models a uuid as a uuid. A scenario the compiler
-    // cannot compile faithfully does not count as exercising anything.
+  it('counts even when the scenario names its ids the readable way', () => {
+    // `"b-1"` is text where a uuid is declared. The compiler derives a stable
+    // uuid from it rather than refusing it, so the scenario compiles and the
+    // operation is exercised.
     const shortId = source.replace('11111111-1111-4111-8111-111111111111', 'b-1');
-    expect(codes(check(shortId.split('---\n\n')[1]!))).toContain('HADL2602');
+    expect(codes(check(shortId.split('---\n\n')[1]!))).not.toContain('HADL2602');
   });
 });

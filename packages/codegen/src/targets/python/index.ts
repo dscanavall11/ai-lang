@@ -1180,7 +1180,18 @@ function pythonFile(path: string, summary: string, candidates: readonly ImportCa
  * `python -m unittest discover` runs it.
  */
 function scenarioTestsFile(module: IRModule, index: ModuleIndex): GeneratedFile | null {
-  const { compiled, skipped } = scenarioPlans(index);
+  const selected = scenarioPlans(index);
+  // Only aggregate scenarios so far: a service one needs an in-memory double
+  // per port and a publisher to watch, which the TypeScript backend builds and
+  // this one does not yet. Emitting it anyway would produce a file that fails
+  // for reasons the design never described.
+  const compiled = selected.compiled.filter((plan) => plan.kind === 'aggregate');
+  const skipped = [
+    ...selected.skipped,
+    ...selected.compiled
+      .filter((plan) => plan.kind === 'service')
+      .map((plan) => ({ title: plan.title, reason: 'the Python backend does not stand up port doubles yet' })),
+  ];
   // No file at all when there is nothing to run: an empty test file reports
   // itself as a passing test, and a green count that ran nothing is a lie.
   if (compiled.length === 0) return null;

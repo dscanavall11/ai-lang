@@ -77,7 +77,7 @@ Or package it, which is tidier:
 npx @vscode/vsce package
 ```
 
-That writes `hadl-0.2.1.vsix`, which installs with **Extensions → … → Install
+That writes `hadl-0.3.0.vsix`, which installs with **Extensions → … → Install
 from VSIX**.
 
 ## The language server

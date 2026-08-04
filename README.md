@@ -208,7 +208,7 @@ Write statements beside the block and they become the reference implementation â
 compiler says so:
 
 ```
-warning[HADL2602]: no scenario can exercise OrderBook.match incoming: its only body is typescript
+warning[HADL2602]: nothing exercises OrderBook.match incoming: its only body is typescript, and no scenario reaches it
 ```
 
 And the block does not go untested. A scenario over that operation is compiled
@@ -408,8 +408,9 @@ writes a reviewable `.ai-spec/` directory rather than code.
 
 Working end to end, and early.
 
-Eight worked example modules compile to every backend and all four platforms, and
-the compiler itself has 363 tests.
+Eight worked example modules compile to every backend and all four platforms,
+seventeen of their scenarios compile into the generated TypeScript and run there,
+and the compiler itself has 416 tests.
 
 Whether the emitted project then satisfies its own toolchain is a separate
 question, so CI builds every one of them with the real compiler on every push:

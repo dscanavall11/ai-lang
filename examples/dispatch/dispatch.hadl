@@ -213,19 +213,19 @@ responds 409 when RoundAlreadyPlanned
 
 given base be GeoPoint with latitude = 41.39, longitude = 2.16
 and drop be GeoPoint with latitude = 41.4, longitude = 2.17
-and courier be Courier with id = "66666666-6666-4666-8666-666666666661", at = base, capacity = 2
-and job be Job with id = "77777777-7777-4777-8777-777777777771", pickup = drop, state = Waiting, dueBy = now
-and round be DispatchRound with id = "88888888-8888-4888-8888-888888888881", city = "Barcelona", couriers = [courier], jobs = [job], plannedAt = now
-when plan round with command = PlanRound with roundId = "88888888-8888-4888-8888-888888888881"
+and courier be Courier with id = "c-1", at = base, capacity = 2
+and job be Job with id = "j-1", pickup = drop, state = Waiting, dueBy = now
+and round be DispatchRound with id = "r-1", city = "Barcelona", couriers = [courier], jobs = [job], plannedAt = now
+when plan round with command = PlanRound with roundId = "r-1"
 then it fails with RoundAlreadyPlanned
 
 ## scenario a round with nothing dropped
 
 given base be GeoPoint with latitude = 41.39, longitude = 2.16
 and drop be GeoPoint with latitude = 41.4, longitude = 2.17
-and courier be Courier with id = "66666666-6666-4666-8666-666666666661", at = base, capacity = 2
-and job be Job with id = "77777777-7777-4777-8777-777777777771", pickup = drop, state = Assigned, dueBy = now
-and round be DispatchRound with id = "88888888-8888-4888-8888-888888888881", city = "Barcelona", couriers = [courier], jobs = [job]
+and courier be Courier with id = "c-1", at = base, capacity = 2
+and job be Job with id = "j-1", pickup = drop, state = Assigned, dueBy = now
+and round be DispatchRound with id = "r-1", city = "Barcelona", couriers = [courier], jobs = [job]
 when dropped jobs with dispatchRound = round
 then result is empty
 

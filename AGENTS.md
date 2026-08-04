@@ -347,8 +347,9 @@ Rules that matter:
 - **Write a scenario for it.** A scenario over an aggregate operation is
   compiled into a test in the block's own language, which is the only place the
   block ever runs. `haic test` reports such a scenario as *deferred*, not
-  failed. Use real uuids in it: a generated test is checked, and `"o-1"` is not
-  a uuid.
+  failed. Write ids the way you would say them — `"o-1"` is text where a `uuid`
+  is declared, and the compiler derives a stable uuid from it, the same one
+  everywhere.
 - **Write the statements too, when you can.** Statements beside a block are the
   reference implementation: `haic test` runs *them*, and the block is what
   ships. An operation with a block and no statements is `HADL2602` — no scenario

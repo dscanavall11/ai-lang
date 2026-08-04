@@ -464,6 +464,19 @@ reported as **inconclusive**, never as a pass:
 "0 failures" for work that never happened is the one thing a test runner must
 not do.
 
+**A scenario is checked like a body.** `given`, `when` and every `then` go
+through the same type checker as an operation body, because the interpreter
+compares values rather than checking them — it will shrug at a field that does
+not exist, and the mistake surfaces only once the scenario is compiled into a
+typed language. On top of every error the checker already reports:
+
+- `HADL2157` — a `then` that is not a yes/no condition;
+- `HADL2158` — `then it fails with X` where `X` is no declared error;
+- `HADL2159` — `then it publishes X` where `X` is no declared event.
+
+A literal standing where a `uuid` is declared is [converted rather than
+refused](#t-1-where-a-uuid-is-declared).
+
 ### 4.16 `glossary`
 
 ```
@@ -653,14 +666,31 @@ whose operations are not the repository phrases a double can answer — find one
 by id, save one, list them, delete one — would need a body nobody wrote, so that
 scenario stays with the interpreter and says why.
 
-Two things a compiled scenario must respect, because a generated test is checked
-where the interpreter is not:
+One thing a compiled scenario must respect, because a generated test is checked
+where the interpreter is not: `then it publishes X` cannot be checked against an
+aggregate, which does not publish; only a service does.
 
-- a value must be one its declared type accepts — `id = "o-1"` is fine here and
-  refused by any backend that models `uuid` as a uuid, so a scenario using one
-  stays with the interpreter and says so;
-- `then it publishes X` cannot be checked against an aggregate, which does not
-  publish; only a service does.
+### `"t-1"` where a uuid is declared
+
+A scenario names the things it sets up, and the name is the point:
+
+```
+given task be Task with id = "t-1"
+```
+
+`Task.id` is a `uuid` and `"t-1"` is not one, so a text literal standing where a
+uuid is declared **becomes the UUID version 5 of that text**. `"t-1"` is one
+uuid, `"t-2"` is another, and both are the same uuid on every run — in the
+interpreter, in `haic ir`, in every backend and in every compiled test. The
+conversion happens during type inference and is written into the IR, so
+`haic ir` shows the value that will run.
+
+Nothing reads the digits of an identifier in a scenario; everything compares it
+to itself. Writing a real uuid still works and is left alone, which is what you
+want when the design pins a specific one.
+
+The rule is deliberately narrow: text to uuid, nothing else. `- hits: integer,
+default false` is still `HADL2155`.
 
 An operation reached by a compiled scenario is exercised, so `HADL2602` does not
 fire for it: the warning means *nothing* runs this, and something does.
