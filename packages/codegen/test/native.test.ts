@@ -245,3 +245,133 @@ describe('statements written beside a block', () => {
     expect(model).toContain('const sorted = [...this.lines].sort((a, b) => a - b);');
   });
 });
+
+/**
+ * A scenario the interpreter cannot run is the whole reason this exists: the
+ * operation it reaches is written in a target language, so the only place it
+ * can run is a test in that language.
+ */
+describe('scenarios compiled into tests', () => {
+  const source = `---
+module: pricing
+context: Pricing
+---
+
+# Pricing
+
+## aggregate Quote
+identified by id
+
+- id: uuid, required
+- lines: list of decimal, required
+
+invariant "a quote prices something":
+  lines is not empty
+
+operation median () -> decimal:
+  \`\`\`typescript
+  const sorted = [...this.lines].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)]!;
+  \`\`\`
+
+  \`\`\`python
+  ordered = sorted(self.lines)
+  return ordered[len(ordered) // 2]
+  \`\`\`
+
+## scenario the median of three prices
+
+given quote be Quote with id = "11111111-1111-4111-8111-111111111111", lines = [3, 1, 2]
+when median with quote = quote
+then result is 2
+`;
+
+  const emitted = (target: string): string => {
+    const files = generateProject(codeGenerators.require(target), {
+      project: projectOf(source),
+      outputDir: `out/${target}`,
+      options: {},
+    }).files;
+    const test = files.find((file) => /scenarios\.test\.ts$|test_scenarios\.py$/.test(file.path));
+    return test?.contents ?? '';
+  };
+
+  it('builds the given, calls the operation and checks the result, in TypeScript', () => {
+    const contents = emitted('typescript');
+    expect(contents).toContain("import { test } from 'node:test';");
+    expect(contents).toContain('const quote = new Quote({');
+    expect(contents).toContain('const result = quote.median();');
+    expect(contents).toContain('assert.ok(result === 2');
+  });
+
+  it('does the same in Python, with the standard library', () => {
+    const contents = emitted('python');
+    expect(contents).toContain('import unittest');
+    expect(contents).toContain('class ScenarioTests(unittest.TestCase):');
+    expect(contents).toContain('result = quote.median()');
+    expect(contents).toContain('self.assertTrue(result == 2');
+  });
+
+  it('gives a literal the type its field declares, not the type it looks like', () => {
+    // `"1111…"` parses as text. Python models a uuid as a uuid, and a bare
+    // string there compares equal to nothing — including itself.
+    expect(emitted('python')).toContain('uuid.UUID("11111111-1111-4111-8111-111111111111")');
+  });
+
+  it('leaves a scenario it cannot compile faithfully with the interpreter', () => {
+    // `"q-1"` is not a uuid. Emitting the test anyway would produce a failure
+    // the design never described, so nothing is emitted at all.
+    const shortId = source.replace('11111111-1111-4111-8111-111111111111', 'q-1');
+    const files = generateProject(codeGenerators.require('typescript'), {
+      project: projectOf(shortId),
+      outputDir: 'out/typescript',
+      options: {},
+    }).files;
+    expect(files.find((file) => file.path.endsWith('scenarios.test.ts'))).toBeUndefined();
+  });
+
+  it('names the ones it left behind, when it writes a file at all', () => {
+    // The matching example has one of each: a compiled scenario and a service
+    // scenario. A reader counting tests should see where the other one went.
+    const withService = source.replace(
+      '## scenario the median of three prices',
+      `## port Quotes (outbound)
+using in-memory
+
+- find quote by id (id: uuid) -> Quote
+
+## port Pricing (inbound)
+
+- price it (id: uuid) -> decimal
+
+## service PricingService
+uses Quotes
+implements Pricing
+
+operation price it (id: uuid) -> decimal:
+  let quote be find quote by id with id = id
+  return median with quote = quote
+
+## endpoint GET /quotes/{id}
+handled by PricingService.price it
+responds 200 with Quote
+
+## scenario pricing through the service
+
+given quote be Quote with id = "11111111-1111-4111-8111-111111111111", lines = [3, 1, 2]
+when price it with id = "11111111-1111-4111-8111-111111111111"
+then result is 2
+
+## scenario the median of three prices`,
+    );
+    const files = generateProject(codeGenerators.require('typescript'), {
+      project: projectOf(withService),
+      outputDir: 'out/typescript',
+      options: {},
+    }).files;
+    const test = files.find((file) => file.path.endsWith('scenarios.test.ts'))!.contents;
+
+    expect(test).toContain('quote.median()');
+    expect(test).toContain('pricing through the service — run by "haic test"');
+  });
+});

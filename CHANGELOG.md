@@ -5,6 +5,52 @@ while the major is `0`, the minor carries breaking changes.
 
 ## Unreleased
 
+### The scenarios run inside the fence too
+
+`haic test` runs scenarios against the IR, where a fenced block cannot execute.
+That left the most interesting code in a design as the only code nothing ever
+ran — and `HADL2602` could do no better than say so.
+
+A scenario over an aggregate operation is now compiled into a test in the target
+language, from the same `given`, the same call and the same expectations:
+
+```
+matching
+  → a crossing order takes the resting price
+      "match incoming" is written in typescript, python, so it runs in the generated project's tests
+
+2 passed, 1 deferred to the target language
+```
+
+```bash
+haic build src --ts --out out && cd out/typescript && npm test
+# ok 1 - a crossing order takes the resting price
+```
+
+`deferred` is a fourth outcome, and it is neither a pass nor a failure: nothing
+ran here, and something ran elsewhere. `HADL2602` stops firing for an operation
+a compiled scenario reaches, because the warning means *nothing* exercises this.
+
+TypeScript uses `node --test`, Python uses `unittest`; neither is a new
+dependency, and the generated `npm test` now type-checks and runs them. A
+scenario that calls a service stays with the interpreter — that needs its ports
+wired and its events observed — and the generated file names it in a comment
+rather than dropping it.
+
+Two things surfaced the moment the blocks actually ran, which is the point:
+
+- the Python block in `examples/matching` said `Side.Buy`, and the Python
+  backend spells that member `Side.BUY`. It had never been executed;
+- a literal keeps the type it looks like, not the type its field declares, so
+  `id = "…"` reached a Python call as a bare string where a `uuid.UUID` was
+  expected and compared equal to nothing. Literals are now retyped from the
+  declaration before lowering, and a scenario whose values a generated test
+  would refuse — `"o-1"` for a uuid — stays with the interpreter and says why.
+
+Go, Java and Rust do not compile scenarios yet. The work is the same shape as
+Python's uuid handling, one backend at a time, and until it is done they emit no
+test file rather than an empty one.
+
 ### `haic build --java`, and the parser bug behind it
 
 `haic build --java` was accepted, ignored, and answered with a TypeScript

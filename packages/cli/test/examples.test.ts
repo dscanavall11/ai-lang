@@ -77,10 +77,23 @@ describe('the non-CRUD systems', () => {
     });
   }
 
-  it('names the operations a scenario cannot reach', async () => {
+  it('compiles a scenario the interpreter cannot run into a test that can', async () => {
+    // `match incoming` is written in TypeScript and Python, so `haic test`
+    // defers it — and the generated project carries the test that runs it.
+    const ran = await run(['test', 'examples/matching']);
+    expect(ran.code).toBe(0);
+    expect(ran.out).toContain('deferred to the target language');
+
+    const out = join(scratch, 'compiled-scenarios');
+    expect((await run(['build', 'examples/matching', '--ts', '--out', out])).code).toBe(0);
+    const tests = readFileSync(join(out, 'typescript', 'src', 'domain', 'matching', 'scenarios.test.ts'), 'utf8');
+    expect(tests).toContain('book.matchIncoming(');
+    expect(tests).toContain('a crossing order takes the resting price');
+  });
+
+  it('says nothing about an operation a scenario reaches', async () => {
     const { out } = await run(['check', 'examples/matching']);
-    expect(out).toContain('HADL2602');
-    expect(out).toContain('OrderBook.match incoming');
+    expect(out).not.toContain('HADL2602');
   });
 
   it('keeps the ledger silent, because its block has statements beside it', async () => {

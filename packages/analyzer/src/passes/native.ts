@@ -11,7 +11,7 @@
  * it, does not type it, and does not pretend to; it reports what it can know
  * from the outside, which is who has a body and who does not.
  */
-import { nativeFor, type CodegenTarget, type IRDeclaration, type IROperation, type SourceSpan } from '@haic/core';
+import { nativeFor, scenarioPlans, type CodegenTarget, type IRDeclaration, type IROperation, type SourceSpan } from '@haic/core';
 import type { AnalysisContext, SemanticPass } from '../context.js';
 
 export const nativePass: SemanticPass = {
@@ -20,6 +20,13 @@ export const nativePass: SemanticPass = {
   run(context) {
     const declared = context.module.target ?? context.project.defaultTarget;
 
+    // Scenarios a backend will compile into a test of its own. An operation one
+    // of them reaches is exercised — in the target language, against the code
+    // that ships — so saying nothing can reach it would be false.
+    const compiled = new Set(
+      scenarioPlans(context.index).compiled.map((plan) => `${plan.aggregate.name}.${plan.operation.phrase}`),
+    );
+
     for (const declaration of context.module.declarations) {
       for (const operation of operationsOf(declaration)) {
         if (operation.native.length === 0) continue;
@@ -27,7 +34,7 @@ export const nativePass: SemanticPass = {
         const span = operation.span ?? declaration.span ?? fallbackSpan(context);
 
         reportEmptyBlocks(context, where, operation);
-        reportUntestable(context, where, operation, span);
+        if (!compiled.has(where)) reportUntestable(context, where, operation, span);
         reportUncoveredTarget(context, where, operation, declared, span);
         if (declaration.kind === 'aggregate') reportIoInTheDomain(context, where, operation, span);
       }
@@ -97,9 +104,13 @@ function reportEmptyBlocks(context: AnalysisContext, where: string, operation: I
 }
 
 /**
- * Statements beside a block are what `haic test` can run. Without them the
- * operation is only covered by tests written in the target language, which is a
- * choice worth making on purpose rather than by omission.
+ * Nothing exercises this operation.
+ *
+ * There are two ways to fix that and the hint names both: statements beside the
+ * block, which `haic test` runs and every other backend compiles, or a scenario
+ * over the operation, which the backend turns into a test in the block's own
+ * language. What is not acceptable is neither, which leaves the most interesting
+ * code in the system as the only code nothing ever ran.
  */
 function reportUntestable(context: AnalysisContext, where: string, operation: IROperation, span: SourceSpan): void {
   if (operation.body.length > 0) return;
@@ -107,10 +118,10 @@ function reportUntestable(context: AnalysisContext, where: string, operation: IR
   context.diagnostics.warn(
     'codegen',
     'HADL2602',
-    `no scenario can exercise ${where}: its only body is ${languages}`,
+    `nothing exercises ${where}: its only body is ${languages}, and no scenario reaches it`,
     span,
     {
-      hint: 'write the HADL statements too — they stay the reference implementation, and the block still wins for its own target',
+      hint: `write a scenario over ${where.split('.')[0]}, which compiles into the generated project's tests — or write the HADL statements too, which stay the reference implementation`,
     },
   );
 }

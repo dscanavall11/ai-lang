@@ -592,6 +592,42 @@ scenario as inconclusive rather than passing it.
 Nothing inside a fence is checked, inferred, or ported. That is the cost, and it
 is why the compiler is loud about who is paying it.
 
+### Running what is inside a fence
+
+`haic test` runs scenarios against the IR, where a block cannot execute. So a
+scenario that reaches one is reported as **deferred** rather than failed, and
+`haic build` compiles it into a test in the target language:
+
+```
+matching
+  ✓ rejecting an order that names no price
+  → a crossing order takes the resting price
+      "match incoming" is written in typescript, python, so it runs in the generated project's tests
+
+2 passed, 1 deferred to the target language
+```
+
+The generated project carries that scenario as an ordinary test — `node --test`
+for TypeScript, `unittest` for Python, neither of which is a new dependency —
+built from the same `given`, the same call and the same expectations.
+
+A scenario is compiled when it exercises an **aggregate operation**: that needs
+nothing but the aggregate itself. One that calls a service is left with the
+interpreter, which already knows how to fake ports and observe events, and the
+generated file names it in a comment rather than dropping it silently.
+
+Two things a compiled scenario must respect, because a generated test is checked
+where the interpreter is not:
+
+- a value must be one its declared type accepts — `id = "o-1"` is fine here and
+  refused by any backend that models `uuid` as a uuid, so a scenario using one
+  stays with the interpreter and says so;
+- `then it publishes X` cannot be checked against an aggregate, which does not
+  publish; only a service does.
+
+An operation reached by a compiled scenario is exercised, so `HADL2602` does not
+fire for it: the warning means *nothing* runs this, and something does.
+
 One rule survives the fence by guesswork rather than by reading: `HADL2213`
 keeps I/O out of the domain by inspecting statements, and a block has none. So
 an aggregate operation whose block names a declared port — in any of the casings

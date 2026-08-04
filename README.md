@@ -194,6 +194,24 @@ compiler says so:
 warning[HADL2602]: no scenario can exercise OrderBook.match incoming: its only body is typescript
 ```
 
+And the block does not go untested. A scenario over that operation is compiled
+into the generated project as an ordinary test — `node --test` for TypeScript,
+`unittest` for Python — so the code inside the fence runs against the same
+`given`, the same call and the same expectations the design wrote:
+
+```
+matching
+  → a crossing order takes the resting price
+      "match incoming" is written in typescript, python, so it runs in the generated project's tests
+
+2 passed, 1 deferred to the target language
+```
+
+```bash
+haic build src --ts --out out && cd out/typescript && npm test
+# ok 1 - a crossing order takes the resting price
+```
+
 Blocks can name more than one language, and `--language` decides which backend
 runs, whatever the source declared:
 

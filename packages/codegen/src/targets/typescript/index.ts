@@ -32,8 +32,10 @@ import {
   type IRQueryDecl,
   type IRType,
   type ModuleIndex,
+  scenarioPlans,
 } from '@haic/core';
 import { declaredImplementation } from '../../shared/adapters.js';
+import { emitScenarioBody, skippedComments, type TestHooks } from '../../shared/scenario-tests.js';
 import { prefixReferences } from '../../shared/emitter.js';
 import { ProjectLayout, relativeImport } from '../../shared/layout.js';
 import { compileQuery } from '../../shared/query-sql.js';
@@ -60,6 +62,7 @@ export const typescriptGenerator: CodeGenerator = {
       adaptersFile(module, index),
       routesFile(module, index),
       handlersFile(module, index),
+      scenarioTestsFile(module, index),
     ].filter((f): f is NonNullable<typeof f> => f !== null);
 
     void context;
@@ -743,6 +746,52 @@ function handlersFile(module: IRModule, index: ModuleIndex) {
 // Project-level files
 // ---------------------------------------------------------------------------
 
+/**
+ * The scenarios, as tests that run against the generated code.
+ *
+ * `haic test` executes these against the IR, where a fenced block cannot run —
+ * so for an operation written in TypeScript, this file is the only place the
+ * scenario is actually executed. Same `given`, same call, same expectations,
+ * lowered by the same emitter as everything else.
+ */
+function scenarioTestsFile(module: IRModule, index: ModuleIndex) {
+  const { compiled, skipped } = scenarioPlans(index);
+  // No file at all when there is nothing to run: an empty test file reports
+  // itself as a passing test, and a green count that ran nothing is a lie.
+  if (compiled.length === 0) return null;
+
+  const hooks: TestHooks = {
+    local: (name, value) => `const ${name} = ${value};`,
+    discard: (value) => `${value};`,
+    assertTrue: (condition, message) => [`assert.ok(${condition}, ${quote(message)});`],
+    assertRaises: (call, error) => [`assert.throws(() => ${call}, ${pascalCase(error)});`],
+  };
+
+  const writer = new CodeWriter();
+  for (const plan of compiled) {
+    docComment(writer, plan.scenario.description);
+    writer.line(`test(${quote(plan.title)}, () => {`);
+    writer.block(() => emitScenarioBody(writer, new TypeScriptEmitter(index), plan, hooks));
+    writer.line('});');
+    writer.blank();
+  }
+  for (const line of skippedComments(skipped)) writer.line(line);
+
+  const imports = compiled.length > 0 ? ["import { test } from 'node:test';", "import assert from 'node:assert/strict';"] : [];
+  return assemble(
+    layout.path('domain', module, 'scenarios').replace(/\.ts$/, '.test.ts'),
+    module,
+    index,
+    { enums: true, valueObjects: true, model: true, messages: true, errors: true },
+    writer,
+    imports,
+  );
+}
+
+function quote(text: string): string {
+  return JSON.stringify(text);
+}
+
 function packageJson(context: GenerationContext) {
   const name = kebabCase(context.project.name);
   return file(
@@ -756,6 +805,8 @@ function packageJson(context: GenerationContext) {
         scripts: {
           build: 'tsc',
           typecheck: 'tsc --noEmit',
+          // The scenarios, compiled. Node runs them; nothing was installed for it.
+          test: 'tsc && node --test "dist/**/*.test.js"',
           start: 'node dist/main.js',
           dev: 'tsc && node dist/main.js',
         },
