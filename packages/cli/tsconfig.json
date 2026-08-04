@@ -11,6 +11,7 @@
     { "path": "../analyzer" },
     { "path": "../codegen" },
     { "path": "../iac" },
-    { "path": "../architect" }
+    { "path": "../architect" },
+    { "path": "../lsp" }
   ]
 }

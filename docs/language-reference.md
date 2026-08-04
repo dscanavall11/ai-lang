@@ -750,7 +750,41 @@ smell, not a contradiction. `haic check --strict` promotes them to errors.
 
 ---
 
-## 8. What the language deliberately does not have
+## 9. Canonical layout
+
+`haic fmt` writes the layout every example in this repository is written in.
+There are no options.
+
+| It normalises | It never touches |
+| --- | --- |
+| Indentation, to two spaces per level | The words of an expression |
+| Runs of blank lines, to one | Where a prose paragraph breaks |
+| One blank line before every `##` | The order of anything |
+| `key: value` in the frontmatter | A value in the frontmatter |
+| `- name: Type, constraint` spacing | An inline `// comment`, spacing included |
+| The indentation of a fenced block, as one piece | The code inside a fenced block |
+
+The rule it follows is the rule the language follows: position carries meaning,
+so a formatter may move a line only in ways that cannot change what the line
+means. The guarantee is a test rather than a promise — formatting a file never
+changes the IR it parses to, and the suite checks that on every example.
+
+A block whose contents cannot absorb an outdent — because a line inside it
+starts at column zero — is left exactly where it is. The formatter would rather
+leave one block unaligned than shift code it does not understand.
+
+```bash
+haic fmt src
+haic fmt src --check     # exit 1 and list what would change; nothing is written
+haic fmt --stdin         # format standard input, for editors and pipes
+```
+
+`haic lsp` serves the same formatter as `textDocument/formatting`, so
+format-on-save in an editor and `haic fmt` in CI cannot disagree.
+
+---
+
+## 10. What the language deliberately does not have
 
 - **No classes, no inheritance.** The declaration kinds are the vocabulary.
 - **No `try`/`catch`.** Checked errors propagate; unchecked errors are defects.

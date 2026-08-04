@@ -234,6 +234,8 @@ nothing and reviewing it is a diff, not a re-read.
 | `haic architect <requirements.md>` | Turn a requirements document into a reviewable spec and draft sources |
 | `haic ir [paths]` | Print the typed IR as JSON |
 | `haic explain <code>` | Explain the reasoning behind a diagnostic |
+| `haic fmt [paths]` | Rewrite sources in the canonical layout, or `--check` them |
+| `haic lsp` | Run the language server, for editors that speak LSP |
 | `haic targets` | List available targets |
 
 ---
@@ -261,9 +263,9 @@ difference between a language an AI can use and a prompt it can only follow.
 ## Editor support
 
 A Visual Studio Code extension lives in [`editors/vscode`](editors/vscode):
-highlighting, two-space indentation with guides, folding, and snippets for every
-declaration. It is not on the Marketplace yet — copy the folder into your
-extensions directory, or package it:
+highlighting, two-space indentation with guides, folding, snippets for every
+declaration, and a language-server client. It is not on the Marketplace yet —
+copy the folder into your extensions directory, or package it:
 
 ```bash
 npx @vscode/vsce package
@@ -274,9 +276,46 @@ curly-brace language: it is what separates a declaration from the prose beside
 it. The grammar uses standard TextMate scopes, so whatever theme you already run
 will colour it without knowing the language exists.
 
-No language server yet. The compiler already produces diagnostics with exact
-source spans, so that is the obvious next step — see
-[`editors/vscode/README.md`](editors/vscode/README.md).
+The extension does not implement the language. It launches `haic lsp`, which is
+this compiler — so the squiggle under a line and the error in CI are the same
+diagnostic from the same pass, and the editor cannot be a version behind the
+project it is editing. That gives you, in any LSP client:
+
+- **Diagnostics as you type**, codes and `help:` lines intact, across the whole
+  project — a change in one module fixes the warning it was causing in another.
+- **Format on save** (`haic fmt`), which rewrites layout and only layout.
+- **Go to definition** on any declared name, **hover** for what it declares, and
+  an **outline** of every declaration in the file.
+- **Completion** that follows the one rule the language follows: a heading takes
+  a declaration keyword, a clause line takes a clause, an indented line takes a
+  statement, and after `:` or `->` the answer is a type.
+
+Any other editor speaks the same protocol. For Neovim:
+
+```lua
+vim.lsp.start({ name = 'haic', cmd = { 'haic', 'lsp' }, root_dir = vim.fs.dirname('.') })
+```
+
+---
+
+## Formatting
+
+```bash
+haic fmt src           # rewrite
+haic fmt src --check   # report and exit non-zero, for CI
+```
+
+There are no options, because a formatter with options is a formatter you argue
+about. It normalises layout — indentation, blank lines, the space after a colon,
+the frontmatter — and touches nothing else: prose is never reflowed, expressions
+are left exactly as written, and the inside of a fenced block is moved as one
+piece and otherwise not edited.
+
+The guarantee that makes it safe to run on a whitespace-sensitive language is a
+test, not a promise: **formatting a file never changes the IR it parses to.** The
+suite checks that on every example, in both directions, along with the fact that
+the examples are already in canonical form — as is everything `haic new` and
+`haic architect` write.
 
 ---
 
@@ -318,6 +357,7 @@ writes a reviewable `.ai-spec/` directory rather than code.
 | `packages/codegen` | One backend per target language |
 | `packages/iac` | One generator per deployment platform |
 | `packages/architect` | Requirements → bounded contexts → domain model → draft sources |
+| `packages/lsp` | The language server: diagnostics, formatting, symbols, hover, completion |
 | `packages/cli` | The `haic` command |
 | `editors/vscode` | Grammar, indentation and snippets for Visual Studio Code |
 
@@ -333,7 +373,7 @@ writes a reviewable `.ai-spec/` directory rather than code.
 Working end to end, and early.
 
 Eight worked example modules compile to every backend and all four platforms, and
-the compiler itself has 310 tests.
+the compiler itself has 363 tests.
 
 Whether the emitted project then satisfies its own toolchain is a separate
 question, so CI builds every one of them with the real compiler on every push:
@@ -364,7 +404,9 @@ Known gaps, in the order they matter:
   requirement sentences. It flags them as open questions rather than hiding them.
 - Adapters generate real queries only for the four repository phrases they
   recognise. Everything else is left, explicitly, to the author.
-- No language server, so no diagnostics in the editor.
+- The language server re-analyses the whole project on every keystroke. That is
+  a few milliseconds today and the honest thing to do; a project ten times the
+  size of the examples will want an incremental analyzer.
 
 ## Licence
 

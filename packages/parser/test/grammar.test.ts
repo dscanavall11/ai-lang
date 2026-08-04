@@ -33,6 +33,7 @@ describe('the editor manifest', () => {
   it('references only files that exist', () => {
     const root = new URL('../../../editors/vscode/', import.meta.url);
     const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('package.json', root)), 'utf8')) as {
+      main?: string;
       contributes: {
         languages?: Array<{ configuration?: string }>;
         grammars?: Array<{ path: string }>;
@@ -41,6 +42,9 @@ describe('the editor manifest', () => {
     };
 
     const referenced = [
+      // `main` is the language-server client. A manifest that points at a file
+      // which is not there activates into nothing, in silence.
+      manifest.main,
       ...(manifest.contributes.languages ?? []).map((l) => l.configuration),
       ...(manifest.contributes.grammars ?? []).map((g) => g.path),
       ...(manifest.contributes.snippets ?? []).map((s) => s.path),
@@ -49,6 +53,30 @@ describe('the editor manifest', () => {
     expect(referenced.length).toBeGreaterThan(0);
     const missing = referenced.filter((path) => !existsSync(fileURLToPath(new URL(path, root))));
     expect(missing).toEqual([]);
+  });
+});
+
+describe('the editor client', () => {
+  const root = new URL('../../../editors/vscode/', import.meta.url);
+
+  it('reads only settings the manifest declares', () => {
+    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('package.json', root)), 'utf8')) as {
+      contributes: { configuration?: { properties: Record<string, unknown> } };
+    };
+    const client = readFileSync(fileURLToPath(new URL('client.js', root)), 'utf8');
+    const declared = Object.keys(manifest.contributes.configuration?.properties ?? {});
+
+    // `getConfiguration('hadl').get('server.command')` reads `hadl.server.command`.
+    const read = [...client.matchAll(/getConfiguration\('([\w.]+)'\)\.get\('([\w.]+)'\)/g)].map(
+      (match) => `${match[1]}.${match[2]}`,
+    );
+    expect(read.length).toBeGreaterThan(0);
+    expect(read.filter((setting) => !declared.includes(setting))).toEqual([]);
+  });
+
+  it('launches the compiler rather than a copy of it', () => {
+    const client = readFileSync(fileURLToPath(new URL('client.js', root)), 'utf8');
+    expect(client).toContain("args: ['lsp']");
   });
 });
 

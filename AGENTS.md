@@ -18,10 +18,16 @@ writing something a compiler could have written, delete it.
 This is the part that matters most. Never hand back `.hadl` you have not checked.
 
 ```bash
+haic fmt .            # canonical layout; never changes what the file means
 haic check .          # parses, type-checks, audits the architecture
 haic test .           # runs the scenarios against the IR — no code, no tokens
 haic build . --language typescript --out out
 ```
+
+Run `haic fmt` before handing work back, the way you would run any formatter.
+It rewrites indentation, blank lines and the spacing of a field bullet; it does
+not reflow prose, does not touch an expression, and moves a fenced block without
+editing inside it. `haic fmt --check` reports instead of writing.
 
 `haic check` is not a linter. It is a compiler front-end that reports exact
 spans and stable codes:
@@ -42,6 +48,10 @@ forwards. They are advice, not errors. Take them seriously anyway; they exist to
 stop you rebuilding the ceremony this language was written to remove.
 
 Iterate until `haic check` is silent and `haic test` is green. Only then compile.
+
+If you are working through an editor rather than a terminal, `haic lsp` is the
+same compiler behind the Language Server Protocol: the same diagnostics, the
+same codes, the same formatter.
 
 ---
 

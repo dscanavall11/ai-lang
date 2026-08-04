@@ -1,17 +1,11 @@
 {
-  "name": "@haic/cli",
+  "name": "@haic/lsp",
   "version": "0.2.1",
-  "description": "A natural-language programming language for AI to write software in. Compiles to Java, TypeScript, Python and Go, plus Docker, Kubernetes, Terraform and AWS.",
+  "description": "Language Server Protocol implementation for HADL: diagnostics, formatting, symbols, hover and completion.",
   "keywords": [
-    "programming-language",
-    "compiler",
-    "code-generation",
-    "domain-driven-design",
-    "hexagonal-architecture",
-    "infrastructure-as-code",
-    "natural-language",
-    "ai",
-    "llm"
+    "hadl",
+    "language-server",
+    "lsp"
   ],
   "license": "Apache-2.0",
   "author": "dscanavall11",
@@ -19,7 +13,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dscanavall11/hadl.git",
-    "directory": "packages/cli"
+    "directory": "packages/lsp"
   },
   "bugs": {
     "url": "https://github.com/dscanavall11/hadl/issues"
@@ -30,9 +24,6 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "haic": "dist/bin.js"
-  },
   "exports": {
     ".": "./dist/index.js"
   },
@@ -44,11 +35,7 @@
   },
   "dependencies": {
     "@haic/analyzer": "0.2.1",
-    "@haic/architect": "0.2.1",
-    "@haic/codegen": "0.2.1",
     "@haic/core": "0.2.1",
-    "@haic/iac": "0.2.1",
-    "@haic/lsp": "0.2.1",
     "@haic/parser": "0.2.1"
   }
 }

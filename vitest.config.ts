@@ -13,6 +13,7 @@ export default defineConfig({
       '@haic/codegen': src('codegen'),
       '@haic/iac': src('iac'),
       '@haic/architect': src('architect'),
+      '@haic/lsp': src('lsp'),
     },
   },
   test: {

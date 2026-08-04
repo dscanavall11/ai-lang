@@ -42,7 +42,9 @@ an operation with only a block is reported as one no scenario can reach.
 Never hand back `.hadl` you have not run. `haic check` type-checks and audits the
 architecture, reporting exact spans and stable codes; `haic explain <code>`
 explains any of them. `haic test` runs the scenarios the sources declare against
-the IR in about a second — no code generated, no tokens spent.
+the IR in about a second — no code generated, no tokens spent. `haic fmt` puts a
+file in canonical layout without changing what it means, and `haic lsp` serves
+the same diagnostics and the same formatter over the Language Server Protocol.
 
 ## Optional
 
