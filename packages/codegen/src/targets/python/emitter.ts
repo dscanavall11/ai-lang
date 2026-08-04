@@ -45,6 +45,8 @@ export function methodName(phrase: string): string {
 }
 
 export class PythonEmitter extends LanguageEmitter {
+  readonly target = 'python' as const;
+
   /** Names bound by the operation being emitted; anything else may belong to `self`. */
   private readonly locals = new Set<string>();
 
@@ -96,6 +98,9 @@ export class PythonEmitter extends LanguageEmitter {
     if (type.kind === 'named' && this.index.typed(type.name, 'enum')) {
       return `${pascalCase(type.name)}.${screamingSnakeCase(value)}`;
     }
+    // A uuid is a `uuid.UUID` here, and a bare string compares equal to none.
+    const inner = unwrap(type);
+    if (inner.kind === 'primitive' && inner.name === 'uuid') return `uuid.UUID(${JSON.stringify(value)})`;
     return JSON.stringify(value);
   }
 
@@ -294,6 +299,10 @@ export class PythonEmitter extends LanguageEmitter {
 
   protected override todoComment(): string {
     return '# no body declared in the .hadl source';
+  }
+
+  protected override commentPrefix(): string {
+    return '# ';
   }
 
   /** Keyword arguments are named after the fields they fill. */

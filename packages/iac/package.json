@@ -1,6 +1,6 @@
 {
   "name": "@haic/iac",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "HADL infrastructure generators: Docker, Kubernetes, Terraform and AWS.",
   "keywords": [
     "hadl",
@@ -36,6 +36,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@haic/core": "0.2.1"
+    "@haic/core": "0.3.0"
   }
 }

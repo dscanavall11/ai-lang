@@ -9,11 +9,14 @@
 import {
   CodeWriter,
   camelCase,
+  implementationFor,
   unwrap,
   type BinaryOperator,
+  type CodegenTarget,
   type IRArgument,
   type IRDeclaration,
   type IRExpression,
+  type IROperation,
   type IRStatement,
   type IRType,
   type ModuleIndex,
@@ -28,6 +31,9 @@ export interface EmitterOptions {
 
 export abstract class LanguageEmitter {
   constructor(protected readonly index: ModuleIndex) {}
+
+  /** Backend this emitter lowers into; decides which native block it may use. */
+  abstract readonly target: CodegenTarget;
 
   // -- required hooks -------------------------------------------------------
 
@@ -85,6 +91,39 @@ export abstract class LanguageEmitter {
   abstract emitForEach(writer: CodeWriter, item: string, collection: string, body: () => void): void;
 
   // -- shared walk ----------------------------------------------------------
+
+  /**
+   * Emits an operation's body: the fenced block written for this target when
+   * there is one, the lowered statements otherwise.
+   *
+   * Native code is copied out line for line, only re-indented to sit where the
+   * body belongs. Nothing rewrites it — the point of writing it was that the
+   * author, not the compiler, decides what it says. Backends read the answer to
+   * skip the fix-ups they apply to code they generated themselves, such as
+   * Go's trailing zero-value return.
+   */
+  emitImplementation(writer: CodeWriter, operation: IROperation): 'native' | 'statements' | 'missing' {
+    const chosen = implementationFor(operation, this.target);
+    if (chosen.kind === 'native') {
+      writer.line(`${this.commentPrefix()}Written in ${chosen.block.dialect} in the .hadl source, copied verbatim.`);
+      for (const line of chosen.block.code) writer.line(line);
+      return 'native';
+    }
+    if (chosen.kind === 'missing') {
+      // The build reports this as an error before any file is written; the
+      // comment is here so a partial output is never silently wrong.
+      writer.line(`${this.commentPrefix()}No ${this.target} body: this operation is written for ${chosen.written.join(', ')}.`);
+      this.emitEmptyBody(writer);
+      return 'missing';
+    }
+    this.emitBlock(writer, operation.body);
+    return 'statements';
+  }
+
+  /** Line-comment marker of the target language. */
+  protected commentPrefix(): string {
+    return '// ';
+  }
 
   emitBlock(writer: CodeWriter, statements: readonly IRStatement[]): void {
     if (statements.length === 0) {

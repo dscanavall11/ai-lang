@@ -9,6 +9,7 @@ import {
   type CodeWriter,
   type IRArgument,
   type IRExpression,
+  type IROperation,
   type IRStatement,
   type IRType,
   type ModuleIndex,
@@ -40,6 +41,8 @@ export interface RustEmitterOptions {
 }
 
 export class RustEmitter extends LanguageEmitter {
+  readonly target = 'rust' as const;
+
   private readonly portFields: ReadonlyMap<string, string>;
   private readonly selfFields: ReadonlySet<string>;
   readonly errorEnum: string;
@@ -312,12 +315,25 @@ export class RustEmitter extends LanguageEmitter {
     writer.line('}');
   }
 
+  /** An operation body, which may be the block written for Rust in the source. */
+  emitOperationImplementation(writer: CodeWriter, operation: IROperation, fallible: boolean): void {
+    this.returnsResult = fallible;
+    this.mutableLocals = mutatedLocals(operation.body);
+    // A native block ends however its author chose to end it; appending a tail
+    // expression to code the compiler did not write would change what it means.
+    if (this.emitImplementation(writer, operation) === 'native') return;
+    this.emitTail(writer, operation.body, operation.returns, fallible);
+  }
+
   /** Emits a body plus the trailing tail expression Rust expects. */
   emitOperationBody(writer: CodeWriter, body: readonly IRStatement[], returns: IRType, fallible: boolean): void {
     this.returnsResult = fallible;
     this.mutableLocals = mutatedLocals(body);
     this.emitBlock(writer, body);
+    this.emitTail(writer, body, returns, fallible);
+  }
 
+  private emitTail(writer: CodeWriter, body: readonly IRStatement[], returns: IRType, fallible: boolean): void {
     if (body.length > 0 && body[body.length - 1]?.kind === 'return') return;
     const unit = isUnit(this.okType(returns));
     if (fallible) writer.line(unit ? 'Ok(())' : 'Ok(Default::default())');

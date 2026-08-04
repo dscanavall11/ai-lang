@@ -97,7 +97,7 @@ target code exists. What the generated code owes its readers is idiom. A
 
 ## ADR-006 — Simplicity findings are warnings, not errors
 
-**Decision.** Everything in the `AIL25xx` family — unreachable declarations,
+**Decision.** Everything in the `HADL25xx` family — unreachable declarations,
 duplicate shapes, pass-through operations, ports with no callers, fields nothing
 reads — is a warning or a note. `haic check --strict` promotes them.
 
@@ -154,3 +154,147 @@ two descriptions drift, and the whole premise is that they cannot.
 **Revisit if** a real project needs environment-specific overrides. The answer
 would be environment values injected at deploy time, not a second source of
 truth at build time.
+
+---
+
+## ADR-010 — One escape hatch: a fenced block, per operation, per target
+
+**Decision.** An operation body may be a fenced code block naming a target
+language. The block is emitted verbatim into that backend and nowhere else.
+Statements may be written beside it; when they are, they remain the reference
+implementation that `haic test` runs. Everything the choice costs is reported:
+an operation with only a block is `HADL2602`, a target with no body for it is
+`HADL3060`, and a scenario that reaches one is inconclusive, never green.
+
+**Deviates from** the earlier stated position that there is no target-language
+escape hatch at all.
+
+**Why.** The premise of the language is that a compiler should write the code a
+design implies. That premise holds for structure — layering, mapping, wiring,
+validation — and it holds for rules, which is why invariants and checked errors
+belong in the source. It does not hold for algorithms. A price-time matching
+loop, a great-circle distance, a sum that must be exact in minor units: each has
+one correct form, already written down somewhere, and expressing it in design
+vocabulary produces a translation nobody can check against the original.
+
+Without a hatch, that logic does not disappear. It moves into a hand-edited file
+next to the generated ones, where the compiler cannot see it, cannot regenerate
+around it, and cannot tell anyone it exists. A declared hole is better than an
+undeclared one.
+
+The rules exist to keep the hole a hole rather than a second language living
+inside the first. It attaches to an operation, so the signature, the checked
+errors and the invariants stay the compiler's. It names its target, so building
+another one fails loudly instead of emitting a method that quietly does nothing.
+And the compiler keeps saying, on every check, which parts of the design it can
+no longer run.
+
+**Rules out.** Blocks in handlers, invariants and scenarios; more than one block
+per target on one operation; any promise that a design using them is portable.
+
+**Revisit if** the escape hatch starts carrying orchestration rather than
+algorithms. That would mean the language is missing something structural, and
+the answer is to add it to the language rather than to widen the hatch.
+
+---
+
+## ADR-011 — The editor runs the compiler, not a copy of it
+
+**Decision.** `haic lsp` is a subcommand of the compiler, and the Visual Studio
+Code extension launches it rather than implementing anything itself. The server
+parses and analyses with the same passes as `haic check`, and formats with the
+same code as `haic fmt`. It re-analyses the whole project on every keystroke,
+and holds no incremental cache.
+
+**Why.** A language server is the second implementation a language grows, and
+the second implementation is where the two start to disagree: the editor accepts
+what CI rejects, and the author is told two different stories about the same
+line. Shipping the server inside the compiler removes the possibility rather
+than managing it. There is also nothing to install and nothing to keep in step —
+the extension has no version of its own to be behind.
+
+Re-analysing everything is the same argument in the small. A cache is a third
+opinion about what the file says, and the failure mode is a stale squiggle that
+outlives the fix. Analysing eight modules takes a few milliseconds, which is
+under the threshold where anyone notices, so the honest version is also the fast
+enough one.
+
+**Rules out.** Editor features that need information the compiler does not keep,
+notably renaming across files, and anything requiring sub-millisecond response
+on a project far larger than the examples.
+
+**Revisit if** a real project makes the keystroke path slow. The answer then is
+an incremental analyzer inside the compiler — which `haic check` would benefit
+from too — never a separate index that only the editor trusts.
+
+---
+
+## ADR-012 — The formatter guarantees the IR, not the bytes
+
+**Decision.** `haic fmt` rewrites layout: indentation, blank lines, the spacing
+of a field bullet, the frontmatter. It does not reflow prose, does not rewrite
+expressions, and does not edit inside a fenced block — a block is moved as one
+piece or left alone. It has no options. The property it promises is checked by
+tests: formatting never changes the IR a file parses to.
+
+**Why.** HADL is whitespace-sensitive in a way most languages are not — a blank
+line separates clauses from prose, indentation opens a body, a heading opens a
+declaration. A formatter here can silently change what a file means, which is
+why the guarantee is stated in terms of the IR and not in terms of a style
+guide. If the two disagree, the IR wins and the style loses.
+
+Prose is excluded for a different reason. It is not decoration: it survives into
+the generated code as documentation, and its line breaks are the author's. A
+formatter that reflows paragraphs would make every documentation edit a diff
+nobody can read.
+
+No options, because a formatter with options is a formatter that gets argued
+about in review, which is the cost it was adopted to remove.
+
+**Rules out.** Aligning columns, sorting declarations, wrapping long lines, and
+any normalisation of the code inside a fence.
+
+**Revisit if** the canonical layout and the examples ever disagree. That is a
+bug in one of them, and the test that compares them says which.
+
+---
+
+## ADR-013 — A text literal where a uuid is declared is converted, not refused
+
+**Decision.** In any expression, a text literal standing where a `uuid` is
+expected becomes the RFC 4122 version 5 uuid derived from that text, under a
+namespace fixed for the language. The conversion happens during type inference
+and is written into the IR, so `haic ir` shows the value that will run and no
+backend has to know the rule exists. A literal that already is a uuid is left
+exactly as written. Nothing else converts: `text` to `integer` is still an
+error, and `- hits: integer, default false` is still `HADL2155`.
+
+**Why.** Scenarios name the things they set up — `given task be Task with id =
+"t-1"` — and the name is what makes the scenario readable. The interpreter
+compared such a value to itself and ran happily; the generated TypeScript
+checked it and refused, so the same design passed `haic test` and failed
+`npm test`.
+
+Three answers were available. Accept it and let each backend deal with it, which
+is what was happening and which is how the two runners came to disagree. Refuse
+it, which is honest and which we tried: eight example modules filled with
+`"3f2504e0-4f89-41d3-9a0c-0305e82c3301"`, where the point of the line was to say
+*the first task*. Or convert it.
+
+Converting wins because an identifier in a design is a *name*, not a value.
+Nothing reads its digits; everything compares it to itself. So deriving the uuid
+from the text preserves the only property anyone depends on — distinct names are
+distinct ids, the same name is the same id — while making the value acceptable
+everywhere. Version 5 rather than a counter because it needs no state and no
+ordering: the same text is the same uuid in the interpreter, in a compiled test,
+in a fixture written next year in another repository.
+
+The namespace is fixed forever. Changing it moves every derived id, which would
+turn a compiler upgrade into a data migration.
+
+**Rules out.** Any other implicit conversion — this is a rule about identifiers,
+not a coercion policy — and any scheme where the derived id depends on where the
+literal appears, which would break the one property being bought.
+
+**Revisit if** a design needs the uuid to match one a system outside HADL
+already assigned. It can: write that uuid, and it is passed through untouched.

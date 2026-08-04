@@ -21,6 +21,7 @@ import {
   type IRStatement,
   type ModuleIndex,
 } from '@haic/core';
+import { Trace, brief } from './trace.js';
 import { compare, emptyFor, equals, isRecord, record, show, type RecordValue, type Value } from './values.js';
 
 /** Raised by `fail`, and by a port that cannot find what it was asked for. */
@@ -36,6 +37,23 @@ export class DomainFailure extends Error {
 /** Raised when the interpreter genuinely cannot proceed. Never a test failure. */
 export class Unsupported extends Error {}
 
+/**
+ * Raised when the scenario reached an operation written in a target language.
+ *
+ * Separate from `Unsupported` because it means something different: not "this
+ * design cannot be run" but "this part of it runs somewhere else". The compiled
+ * project has a test for it, so the runner reports it as deferred rather than
+ * as a scenario that failed to execute.
+ */
+export class DeferredToTarget extends Unsupported {
+  constructor(
+    readonly phrase: string,
+    readonly languages: readonly string[],
+  ) {
+    super(`"${phrase}" is written in ${languages.join(', ')}, so it runs in the generated project's tests`);
+  }
+}
+
 export interface PublishedEvent {
   name: string;
   payload: RecordValue;
@@ -50,7 +68,11 @@ export class Interpreter {
   private readonly store = new Map<string, Map<string, RecordValue>>();
   private nextId = 0;
 
-  constructor(private readonly index: ModuleIndex) {}
+  constructor(
+    private readonly index: ModuleIndex,
+    /** Records what the run did. Absent unless someone asked for it. */
+    readonly trace: Trace | null = null,
+  ) {}
 
   get module(): IRModule {
     return this.index.module;
@@ -314,12 +336,30 @@ export class Interpreter {
   }
 
   private runOperation(operation: IROperation, args: Map<string, Value>, receiver: RecordValue | null): Value {
+    this.trace?.call(operation.phrase, args, operation.span);
+    this.trace?.enter();
+    try {
+      return this.runOperationBody(operation, args, receiver);
+    } finally {
+      this.trace?.leave();
+    }
+  }
+
+  private runOperationBody(operation: IROperation, args: Map<string, Value>, receiver: RecordValue | null): Value {
+    // A native block is target-language source; there is nothing here that could
+    // run it, and guessing at its result would make the scenario meaningless.
+    if (operation.body.length === 0 && operation.native.length > 0) {
+      throw new DeferredToTarget(operation.phrase, operation.native.map((block) => block.dialect));
+    }
+
     const scope = new Map<string, Value>(args);
     // An aggregate operation reads and writes its own fields directly.
     if (receiver) for (const [key, value] of receiver.fields) scope.set(key, value);
 
     const outcome = this.runBlock(operation.body, scope, receiver);
-    return outcome.kind === 'returned' ? outcome.value : null;
+    const value = outcome.kind === 'returned' ? outcome.value : null;
+    this.trace?.record('return', brief(value), operation.span);
+    return value;
   }
 
   /**
@@ -328,6 +368,7 @@ export class Interpreter {
    * inconclusive rather than passing it by accident.
    */
   private port(portName: string, phrase: string, args: Map<string, Value>): Value {
+    this.trace?.record('port', `${portName}.${phrase}`);
     const port = this.index.typed(portName, 'port');
     const signature = port?.operations.find((o) => normalisePhrase(o.phrase) === normalisePhrase(phrase));
     const normalised = normalisePhrase(phrase);
@@ -421,13 +462,17 @@ export class Interpreter {
     receiver: RecordValue | null,
   ): { kind: 'fell-through' } | { kind: 'returned'; value: Value } {
     switch (statement.kind) {
-      case 'let':
-        scope.set(statement.name, this.evaluate(statement.value, scope));
+      case 'let': {
+        const value = this.evaluate(statement.value, scope);
+        scope.set(statement.name, value);
+        this.trace?.record('let', `${statement.name} = ${brief(value)}`, statement.span);
         return { kind: 'fell-through' };
+      }
 
       case 'set': {
         const value = this.evaluate(statement.value, scope);
         this.assign(statement.target, value, scope, receiver);
+        this.trace?.record('set', `${statement.target.join('.')} = ${brief(value)}`, statement.span);
         return { kind: 'fell-through' };
       }
 
@@ -436,8 +481,11 @@ export class Interpreter {
         return { kind: 'fell-through' };
 
       case 'when': {
-        const branch = this.evaluate(statement.condition, scope) ? statement.then : statement.otherwise;
-        return this.runBlock(branch, new Map(scope), receiver);
+        const held = Boolean(this.evaluate(statement.condition, scope));
+        // Which way it went is the single most useful line in a trace: a
+        // scenario that ends somewhere surprising took a branch to get there.
+        this.trace?.record('branch', held ? 'when: yes' : 'when: no', statement.span);
+        return this.runBlock(held ? statement.then : statement.otherwise, new Map(scope), receiver);
       }
 
       case 'for-each': {
@@ -454,6 +502,7 @@ export class Interpreter {
       case 'fail': {
         const details = new Map<string, Value>();
         for (const argument of statement.arguments) details.set(argument.name, this.evaluate(argument.value, scope));
+        this.trace?.record('fail', statement.error, statement.span);
         return failWith(statement.error, details);
       }
 
@@ -461,6 +510,7 @@ export class Interpreter {
         const payload = new Map<string, Value>();
         for (const argument of statement.arguments) payload.set(argument.name, this.evaluate(argument.value, scope));
         this.published.push({ name: statement.event, payload: record(statement.event, payload) });
+        this.trace?.record('publish', statement.event, statement.span);
         return { kind: 'fell-through' };
       }
 

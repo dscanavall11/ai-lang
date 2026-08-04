@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { main } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-const scratch = mkdtempSync(join(tmpdir(), 'ail-cli-'));
+const scratch = mkdtempSync(join(tmpdir(), 'haic-cli-'));
 
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
@@ -32,6 +32,17 @@ async function run(argv: string[], cwd = repoRoot): Promise<{ code: number; out:
 }
 
 describe('the haic command', () => {
+  it('reports the version its own manifest declares', async () => {
+    // It reported 0.1.0 through two releases, because the number was written
+    // beside the manifest instead of read from it.
+    const declared = (JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')) as {
+      version: string;
+    }).version;
+    const { code, out } = await run(['--version']);
+    expect(code).toBe(0);
+    expect(out.trim()).toBe(`haic ${declared}`);
+  });
+
   it('reports usage when called with nothing', async () => {
     const { code, out } = await run([]);
     expect(code).toBe(2);
@@ -70,6 +81,10 @@ describe('the haic command', () => {
     const checked = await run(['check', 'src'], root);
     expect(checked.out).not.toContain('error[');
     expect(checked.code).toBe(0);
+
+    // What the compiler writes, the compiler must not want to rewrite.
+    const formatted = await run(['fmt', 'src', '--check'], root);
+    expect(formatted.code).toBe(0);
   });
 
   it('refuses to overwrite an existing directory', async () => {
@@ -82,6 +97,83 @@ describe('the haic command', () => {
     const { code, out } = await run(['build', 'examples/orders', '--target', 'typescript', '--out', join(scratch, 'out')]);
     expect(code).toBe(0);
     expect(out).toContain('src/domain/orders/model.ts');
+  });
+
+  it('compiles as the language asked for, whatever the source declared', async () => {
+    // The catalogue module declares `target: python`; --language replaces it.
+    const { code, out } = await run(['build', 'examples/orders', '--language', 'js', '--out', join(scratch, 'lang')]);
+    expect(code).toBe(0);
+    expect(out).toContain('src/domain/catalog/model.ts');
+    expect(out).not.toContain('.py');
+  });
+
+  it('accepts the short names people actually type', async () => {
+    const { code, out } = await run(['build', 'examples/crud', '--language', 'py', '--dry-run']);
+    expect(code).toBe(0);
+    expect(out).toContain('Python');
+  });
+
+  it('refuses a language it cannot emit rather than guessing', async () => {
+    const { code, err } = await run(['build', 'examples/crud', '--language', 'cobol', '--dry-run']);
+    expect(code).toBe(1);
+    expect(err).toContain('not a language this compiler can emit');
+  });
+
+  it('refuses to write a project with an operation it cannot lower', async () => {
+    // The matching engine is written in TypeScript and Python, and says so.
+    const { code, out } = await run(['build', 'examples/matching', '--language', 'go', '--out', join(scratch, 'nope')]);
+    expect(code).toBe(1);
+    expect(out).toContain('HADL3060');
+    expect(out).toContain('--language typescript');
+  });
+
+  it('takes the language as a bare flag, which is what people type', async () => {
+    const { code, out } = await run(['build', 'examples/crud', '--java', '--dry-run']);
+    expect(code).toBe(0);
+    expect(out).toContain('Java');
+    expect(out).not.toContain('TypeScript');
+  });
+
+  it('does not let a bare flag swallow the path after it', async () => {
+    const { code, out } = await run(['build', '--go', 'examples/crud', '--dry-run']);
+    expect(code).toBe(0);
+    expect(out).toContain('Go');
+  });
+
+  it('refuses an option it does not have instead of ignoring it', async () => {
+    // `--jav` used to be accepted, ignored, and answered with a TypeScript
+    // project, which is the worst of the three possible outcomes.
+    const { code, err } = await run(['build', 'examples/crud', '--jav', '--dry-run']);
+    expect(code).toBe(2);
+    expect(err).toContain('unknown option "--jav"');
+  });
+
+  it('leaves an already formatted example alone', async () => {
+    const { code, out } = await run(['fmt', 'examples', '--check']);
+    expect(code).toBe(0);
+    expect(out).toContain('already formatted');
+  });
+
+  it('reports what it would reformat without writing it', async () => {
+    const messy = join(scratch, 'messy.hadl');
+    const source = '---\nmodule:  probe\n---\n\n##  dto  Shape\n- x:text,required\n';
+    writeFileSync(messy, source, 'utf8');
+
+    const checked = await run(['fmt', messy, '--check']);
+    expect(checked.code).toBe(1);
+    expect(readFileSync(messy, 'utf8')).toBe(source);
+
+    // The same thing with the flag first. It used to parse as `--check=<path>`,
+    // which left no paths at all: the command then walked the current directory
+    // and, because `--check` was a string rather than true, wrote to it.
+    const flagFirst = await run(['fmt', '--check', messy]);
+    expect(flagFirst.code).toBe(1);
+    expect(flagFirst.out).toContain('messy.hadl');
+    expect(readFileSync(messy, 'utf8')).toBe(source);
+
+    const written = await run(['fmt', messy]);
+    expect(written.code).toBe(0);
+    expect(readFileSync(messy, 'utf8')).toBe('---\nmodule: probe\n---\n\n## dto Shape\n- x: text, required\n');
   });
 
   it('explains the reasoning behind a design rule', async () => {
@@ -109,6 +201,10 @@ describe('the architect command', () => {
     const checked = await run(['check', 'src'], out);
     expect(checked.out).not.toContain('error[');
     expect(checked.code).toBe(0);
+
+    // And they must already be in the layout `haic fmt` would give them.
+    const formatted = await run(['fmt', 'src', '--check'], out);
+    expect(formatted.code).toBe(0);
   });
 
   it('reports a missing requirements file rather than guessing', async () => {
@@ -150,6 +246,15 @@ describe('the test command', () => {
     const { code, err } = await run(['test', 'examples/crud', '--only', 'nothing-like-this']);
     expect(code).toBe(0);
     expect(err).toContain('no scenario matches');
+  });
+
+  it('prints what the interpreter did when asked', async () => {
+    const { code, out } = await run(['test', 'examples/ledger', '--trace']);
+    expect(code).toBe(0);
+    expect(out).toContain('→ post entry(');
+    expect(out).toContain('⇄ JournalRepository.find journal entry by id');
+    expect(out).toContain('? when: no');
+    expect(out).toContain('! EntryPosted');
   });
 
   it('says so rather than passing when a module declares no scenarios', async () => {

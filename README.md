@@ -1,9 +1,20 @@
 # HADL
 
-A programming language for AI to write software in.
+**H**uman-**AI** **D**esign **L**anguage — a programming language for AI to write
+software in.
 
 Not an IDE. Not an agent. A language — with its own syntax, its own type system,
 its own compiler, and its own opinions about what good software looks like.
+
+[![CI](https://github.com/dscanavall11/hadl/actions/workflows/ci.yml/badge.svg)](https://github.com/dscanavall11/hadl/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@haic/cli?label=%40haic%2Fcli)](https://www.npmjs.com/package/@haic/cli)
+[![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
+
+![The compiler catching a design mistake, running the scenarios, then compiling](docs/demo.svg)
+
+```bash
+npm install -g @haic/cli && haic new my-store
+```
 
 ```
 ## aggregate Order
@@ -23,8 +34,9 @@ operation compute total () -> Money:
   return Money with amount = sum of items by quantity times unitPrice.amount, currency = "EUR"
 ```
 
-That is the source. It compiles to Java, TypeScript, Python, Go or Rust, and to
-the Docker, Kubernetes, Terraform or AWS artifacts needed to run it.
+That is the source. It compiles to Java, TypeScript, Python or Go, and to the
+Docker, Kubernetes, Terraform or AWS artifacts needed to run it. A Rust backend
+exists but does not compile yet; the [status](#status) section says why.
 
 ---
 
@@ -100,21 +112,10 @@ haic build src --target typescript --out out
 
 Without installing, `npx @haic/cli new my-store` does the same thing.
 
-To work on the compiler itself, clone instead:
+Then generate the service and run it:
 
 ```bash
-git clone https://github.com/dscanavall11/hadl.git
-cd hadl
-npm install
-npm run build
-npm link --workspace @haic/cli
-```
-
-Either way, compile the worked CRUD and run it:
-
-```bash
-haic check examples/crud
-haic build examples/crud --target typescript --out out
+haic build src --target typescript --out out
 cd out/typescript && npm install && npm run dev
 ```
 
@@ -122,7 +123,8 @@ cd out/typescript && npm install && npm run dev
 listening on http://localhost:8080
 ```
 
-It serves for real, against an in-memory store:
+It serves for real, against an in-memory store. The worked CRUD example — which
+lives in the repository, not in the installed package — answers like this:
 
 ```bash
 curl -X POST localhost:8080/tasks -H 'content-type: application/json' \
@@ -137,10 +139,10 @@ curl -X POST localhost:8080/tasks -H 'content-type: application/json' \
 That 422 came from one modifier in the source:
 `- title: text, required, min length 1, max length 200`.
 
-Before generating anything, run the design:
+Generating is the last step, not the first. Before it, run the design:
 
 ```bash
-haic test examples/crud
+haic test src
 ```
 
 ```
@@ -157,18 +159,97 @@ That runs the operations against the IR itself — no code generated, no toolcha
 no tokens. A scenario the interpreter cannot execute is reported as **could not
 run**, never as a pass.
 
+When one fails, it says what it did on the way:
+
+```
+  ✗ posting a balanced entry announces the movement
+      this did not hold: 40 equals 41
+    → post entry(command = PostEntry with entryId = "3333…")
+      ⇄ JournalRepository.find journal entry by id
+      ? when: no
+      → total debited(journalEntry = JournalEntry with id = "3333…")
+        ← Money with amount = 40, currency = "EUR"
+      ! EntryPosted
+```
+
+`haic test --trace` prints that for the scenarios that pass, too. It is the
+whole debugger: no breakpoints, because a scenario runs in a millisecond and
+the sequence is the part worth reading.
+
 **→ [Build your own CRUD](docs/crud-tutorial.md)** — the whole path, step by step.
 
-`haic new <name>` scaffolds a complete slice — one aggregate with a real
-invariant, one port, one service, one endpoint — that compiles as written.
+---
+
+## When the design is not the whole story
+
+Some logic is not a design decision. A price-time matching loop, a great-circle
+distance, a sum that has to be exact in cents — each has one correct form, and
+restating it in design vocabulary produces a translation nobody can check
+against the original.
+
+So an operation body can be the fence Markdown already has:
+
+````
+operation match incoming (side: Side, limitPrice: decimal, quantity: integer, orderId: uuid) -> list of Trade:
+  ```typescript
+  const resting = side === Side.Buy ? this.asks : this.bids;
+  resting.sort((a, b) => (a.limitPrice === b.limitPrice ? +a.placedAt - +b.placedAt : a.limitPrice - b.limitPrice));
+  ...
+  ```
+````
+
+That code is copied into the generated project unchanged. Everything around it
+stays the compiler's: the signature, the checked errors, the invariant that says
+a book never crosses itself, the service that loads and saves, the endpoint, the
+status codes.
+
+Write statements beside the block and they become the reference implementation —
+`haic test` runs those, the block is what ships. Write no statements and the
+compiler says so:
+
+```
+warning[HADL2602]: nothing exercises OrderBook.match incoming: its only body is typescript, and no scenario reaches it
+```
+
+And the block does not go untested. A scenario over that operation is compiled
+into the generated project as an ordinary test — `node --test` for TypeScript,
+`unittest` for Python — so the code inside the fence runs against the same
+`given`, the same call and the same expectations the design wrote:
+
+```
+matching
+  → a crossing order takes the resting price
+      "match incoming" is written in typescript, python, so it runs in the generated project's tests
+
+2 passed, 1 deferred to the target language
+```
+
+```bash
+haic build src --ts --out out && cd out/typescript && npm test
+# ok 1 - a crossing order takes the resting price
+```
+
+Blocks can name more than one language, and `--language` decides which backend
+runs, whatever the source declared:
+
+```bash
+haic build src --language js       # the ```typescript block
+haic build src --language python   # the ```python block
+haic build src --language go       # error[HADL3060]: no body for go
+```
+
+Three systems in [`examples/`](examples) are built around this: an order book, a
+double-entry ledger, and courier dispatch. None of them is CRUD.
+
+---
 
 ## Why write this instead of prompting for the code
 
-The tasks example is **132 lines** of `.hadl`. It produces **420 lines of
-TypeScript** across 12 files, or **606 lines of Java** across 19 — before tests,
+The tasks example is **144 lines** of `.hadl`. It produces **411 lines of
+TypeScript** across 13 files, or **515 lines of Java** across 20 — before tests,
 build files, or the compose stack that come with them.
 
-You iterate on the 132 lines: small enough to hold in your head, and a mistake
+You iterate on the 144 lines: small enough to hold in your head, and a mistake
 there is a compiler error with a line number rather than a plausible-looking
 paragraph. Only then do you spend the tokens to expand it. And the expansion is
 deterministic — same source, same output, every time — so re-running it costs
@@ -183,11 +264,14 @@ nothing and reviewing it is a diff, not a re-read.
 | `haic new <name>` | Scaffold a project |
 | `haic check [paths]` | Parse, type-check and audit the design |
 | `haic test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
-| `haic build [paths] --target <lang>` | Generate the service |
+| `haic test [paths] --trace` | The same, printing what the interpreter did at each step |
+| `haic build [paths] --java` | Generate the service, in the language you name (`--language java` too) |
 | `haic deploy [paths] --target <platform>` | Generate the infrastructure |
 | `haic architect <requirements.md>` | Turn a requirements document into a reviewable spec and draft sources |
 | `haic ir [paths]` | Print the typed IR as JSON |
 | `haic explain <code>` | Explain the reasoning behind a diagnostic |
+| `haic fmt [paths]` | Rewrite sources in the canonical layout, or `--check` them |
+| `haic lsp` | Run the language server, for editors that speak LSP |
 | `haic targets` | List available targets |
 
 ---
@@ -215,9 +299,9 @@ difference between a language an AI can use and a prompt it can only follow.
 ## Editor support
 
 A Visual Studio Code extension lives in [`editors/vscode`](editors/vscode):
-highlighting, two-space indentation with guides, folding, and snippets for every
-declaration. It is not on the Marketplace yet — copy the folder into your
-extensions directory, or package it:
+highlighting, two-space indentation with guides, folding, snippets for every
+declaration, and a language-server client. It is not on the Marketplace yet —
+copy the folder into your extensions directory, or package it:
 
 ```bash
 npx @vscode/vsce package
@@ -228,9 +312,46 @@ curly-brace language: it is what separates a declaration from the prose beside
 it. The grammar uses standard TextMate scopes, so whatever theme you already run
 will colour it without knowing the language exists.
 
-No language server yet. The compiler already produces diagnostics with exact
-source spans, so that is the obvious next step — see
-[`editors/vscode/README.md`](editors/vscode/README.md).
+The extension does not implement the language. It launches `haic lsp`, which is
+this compiler — so the squiggle under a line and the error in CI are the same
+diagnostic from the same pass, and the editor cannot be a version behind the
+project it is editing. That gives you, in any LSP client:
+
+- **Diagnostics as you type**, codes and `help:` lines intact, across the whole
+  project — a change in one module fixes the warning it was causing in another.
+- **Format on save** (`haic fmt`), which rewrites layout and only layout.
+- **Go to definition** on any declared name, **hover** for what it declares, and
+  an **outline** of every declaration in the file.
+- **Completion** that follows the one rule the language follows: a heading takes
+  a declaration keyword, a clause line takes a clause, an indented line takes a
+  statement, and after `:` or `->` the answer is a type.
+
+Any other editor speaks the same protocol. For Neovim:
+
+```lua
+vim.lsp.start({ name = 'haic', cmd = { 'haic', 'lsp' }, root_dir = vim.fs.dirname('.') })
+```
+
+---
+
+## Formatting
+
+```bash
+haic fmt src           # rewrite
+haic fmt src --check   # report and exit non-zero, for CI
+```
+
+There are no options, because a formatter with options is a formatter you argue
+about. It normalises layout — indentation, blank lines, the space after a colon,
+the frontmatter — and touches nothing else: prose is never reflowed, expressions
+are left exactly as written, and the inside of a fenced block is moved as one
+piece and otherwise not edited.
+
+The guarantee that makes it safe to run on a whitespace-sensitive language is a
+test, not a promise: **formatting a file never changes the IR it parses to.** The
+suite checks that on every example, in both directions, along with the fact that
+the examples are already in canonical form — as is everything `haic new` and
+`haic architect` write.
 
 ---
 
@@ -243,8 +364,8 @@ source spans, so that is the obvious next step — see
    parser ──────────► AST            hand-written, line-oriented, no build step
       │
       ▼
-  analyzer ─────────► diagnostics    six passes: symbols, architecture, types,
-      │                              error flow, DDD, simplicity
+  analyzer ─────────► diagnostics    seven passes: symbols, architecture, types,
+      │                              error flow, DDD, simplicity, native bodies
       ▼
   typed IR (JSON)                    the single source of truth, diffable and reviewable
       │
@@ -268,10 +389,11 @@ writes a reviewable `.ai-spec/` directory rather than code.
 | --- | --- |
 | `packages/core` | IR schema, diagnostics, naming, emission primitives, registries |
 | `packages/parser` | Lexer, expression and statement parsers, declaration parsers |
-| `packages/analyzer` | The six semantic passes and the type checker |
+| `packages/analyzer` | The seven semantic passes and the type checker |
 | `packages/codegen` | One backend per target language |
 | `packages/iac` | One generator per deployment platform |
 | `packages/architect` | Requirements → bounded contexts → domain model → draft sources |
+| `packages/lsp` | The language server: diagnostics, formatting, symbols, hover, completion |
 | `packages/cli` | The `haic` command |
 | `editors/vscode` | Grammar, indentation and snippets for Visual Studio Code |
 
@@ -286,8 +408,9 @@ writes a reviewable `.ai-spec/` directory rather than code.
 
 Working end to end, and early.
 
-The worked examples compile to all five languages and all four platforms, and the
-compiler itself has 243 tests.
+Eight worked example modules compile to every backend and all four platforms,
+seventeen of their scenarios compile into the generated TypeScript and run there,
+and the compiler itself has 416 tests.
 
 Whether the emitted project then satisfies its own toolchain is a separate
 question, so CI builds every one of them with the real compiler on every push:
@@ -318,7 +441,9 @@ Known gaps, in the order they matter:
   requirement sentences. It flags them as open questions rather than hiding them.
 - Adapters generate real queries only for the four repository phrases they
   recognise. Everything else is left, explicitly, to the author.
-- No language server, so no diagnostics in the editor.
+- The language server re-analyses the whole project on every keystroke. That is
+  a few milliseconds today and the honest thing to do; a project ten times the
+  size of the examples will want an incremental analyzer.
 
 ## Licence
 

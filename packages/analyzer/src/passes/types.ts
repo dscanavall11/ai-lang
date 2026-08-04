@@ -11,8 +11,10 @@ import {
   isOrderable,
   typeToString,
   unwrap,
+  type IRConstraint,
   type IRDeclaration,
   type IRExpression,
+  type IRField,
   type IROperation,
   type IRStatement,
   type IRType,
@@ -43,6 +45,12 @@ export const typePass: SemanticPass = {
       }
       if (declaration.kind === 'entity' || declaration.kind === 'value-object') {
         checkInvariants(context, checker, declaration);
+      }
+      if (declaration.kind === 'scenario') {
+        checkScenario(context, checker, declaration);
+      }
+      if ('fields' in declaration) {
+        for (const field of declaration.fields) checkFieldConstraints(context, checker, declaration.name, field);
       }
       if (declaration.kind === 'query') {
         checkQuery(context, checker, declaration);
@@ -86,6 +94,178 @@ function checkOperation(
       { hint: 'add a "return" at the end, or make every branch return or fail' },
     );
   }
+}
+
+/** Failures the compiler raises itself, which no design declares. */
+const BUILT_IN_FAILURES: ReadonlySet<string> = new Set(['ConstraintViolation', 'InvariantViolation']);
+
+/**
+ * A scenario is a program too.
+ *
+ * Nothing checked one until now, so `at = GeoPoint with latitude = 1,
+ * longitude = 2, capacity = 3` — where the parser reads `capacity` as another
+ * argument to the GeoPoint — passed `haic check`, passed `haic test` because
+ * the interpreter shrugs at a field it does not know, and only failed once the
+ * scenario was compiled into a typed language. The same inference that checks
+ * an operation body checks this one.
+ */
+function checkScenario(context: AnalysisContext, checker: TypeChecker, scenario: Extract<IRDeclaration, { kind: 'scenario' }>): void {
+  checker.enterDeclaration(scenario);
+  const span = scenario.span ?? fallbackSpan(context);
+  const scope = new Scope();
+
+  for (const step of scenario.given) {
+    scope.define(step.binding, checker.infer(step.value, scope));
+  }
+
+  const outcome = checker.infer(scenario.when.call, scope);
+  scope.define(scenario.when.binding, outcome.kind === 'result' ? outcome.ok : outcome);
+
+  for (const expectation of scenario.expectations) {
+    if (expectation.kind === 'holds') {
+      const type = checker.infer(expectation.condition, scope);
+      if (type !== UNKNOWN && !checker.compatible(BOOLEAN, type)) {
+        context.diagnostics.error(
+          'type',
+          'HADL2157',
+          `a "then" must be a yes/no condition, but this is ${typeToString(type)}`,
+          expectation.span ?? span,
+          { hint: 'write "then result.total is 40", or "then it fails with <Error>"' },
+        );
+      }
+      continue;
+    }
+    // `ConstraintViolation` and `InvariantViolation` are raised by the language
+    // rather than declared in a design, and a scenario may expect either.
+    if (expectation.kind === 'fails' && !BUILT_IN_FAILURES.has(expectation.error) && checker.lookup(expectation.error)?.kind !== 'error') {
+      context.diagnostics.error('type', 'HADL2158', `"${expectation.error}" is not a declared error`, expectation.span ?? span, {
+        hint: withSuggestion('', expectation.error, checker.index.errors.map((e) => e.name)) ?? 'declare it with "## error <Name> (checked, status 4xx)"',
+      });
+    }
+    if (expectation.kind === 'publishes' && checker.lookup(expectation.event)?.kind !== 'event') {
+      context.diagnostics.error('type', 'HADL2159', `"${expectation.event}" is not a declared event`, expectation.span ?? span, {
+        hint: withSuggestion('', expectation.event, checker.index.events.map((e) => e.name)),
+      });
+    }
+  }
+}
+
+/**
+ * A constraint has to make sense for the type it constrains.
+ *
+ * Nothing checked this, so `- hits: integer, default false` was accepted in
+ * full and reached the backends, where it became `int hits = false` in Java and
+ * a TypeScript field whose declared type and initial value disagreed. The
+ * parser cannot catch it — `default Draft` is only meaningful once enums are
+ * resolved — so it belongs here, where the type is known.
+ */
+function checkFieldConstraints(context: AnalysisContext, checker: TypeChecker, owner: string, field: IRField): void {
+  const span = field.span ?? fallbackSpan(context);
+  const declared = unwrap(field.type);
+
+  for (const constraint of field.constraints) {
+    if (constraint.kind === 'default') {
+      const problem = defaultMismatch(checker, field, declared, constraint.value);
+      if (problem) {
+        context.diagnostics.error('type', 'HADL2155', `${owner}.${field.name} is ${typeToString(field.type)}, so ${problem.saw}`, span, {
+          hint: problem.hint,
+        });
+      }
+      continue;
+    }
+
+    const fits = constraintFits(constraint.kind, declared);
+    if (fits === null) continue;
+    context.diagnostics.error(
+      'type',
+      'HADL2156',
+      `${owner}.${field.name} is ${typeToString(field.type)}, so "${written(constraint.kind)}" does not apply to it`,
+      span,
+      { hint: fits },
+    );
+  }
+}
+
+/** What is wrong with this default, in the words the author used. */
+function defaultMismatch(
+  checker: TypeChecker,
+  field: IRField,
+  declared: IRType,
+  value: string | number | boolean | null,
+): { saw: string; hint: string } | null {
+  if (value === null) {
+    return field.required ? { saw: 'it cannot default to nothing', hint: 'mark the field optional, or give it a real default' } : null;
+  }
+
+  if (declared.kind === 'list' || declared.kind === 'set' || declared.kind === 'map') {
+    return { saw: `it cannot default to ${show(value)}`, hint: 'a collection starts empty; drop the default' };
+  }
+
+  if (declared.kind === 'named') {
+    const target = checker.lookup(declared.name);
+    if (target?.kind === 'enum') {
+      if (typeof value === 'string' && target.values.some((member) => member.name === value)) return null;
+      return {
+        saw: `${show(value)} is not one of its values`,
+        hint: `write one of: ${target.values.map((member) => member.name).join(', ')}`,
+      };
+    }
+    return {
+      saw: `it cannot default to ${show(value)}`,
+      hint: `${declared.name} is built from its fields, not from a literal; drop the default and construct it where the value is created`,
+    };
+  }
+
+  if (declared.kind !== 'primitive') return null;
+  switch (declared.name) {
+    case 'text':
+      return typeof value === 'string' ? null : { saw: `${show(value)} is not text`, hint: `quote it: default "${String(value)}"` };
+    case 'integer':
+      if (typeof value !== 'number') return { saw: `${show(value)} is not a number`, hint: 'write a whole number, such as "default 0"' };
+      return Number.isInteger(value) ? null : { saw: `${show(value)} is not whole`, hint: 'round it, or declare the field as decimal' };
+    case 'decimal':
+      return typeof value === 'number' ? null : { saw: `${show(value)} is not a number`, hint: 'write a number, such as "default 0"' };
+    case 'boolean':
+      return typeof value === 'boolean' ? null : { saw: `${show(value)} is not true or false`, hint: 'write "default true" or "default false"' };
+    case 'uuid':
+    case 'date':
+    case 'timestamp':
+    case 'duration':
+      return typeof value === 'string'
+        ? null
+        : { saw: `${show(value)} is not a ${declared.name}`, hint: `quote the value, or drop the default and set it where the ${declared.name} is known` };
+    default:
+      return null;
+  }
+}
+
+/** `null` when the constraint fits; otherwise the hint to print. */
+function constraintFits(kind: IRConstraint['kind'], declared: IRType): string | null {
+  const primitive = declared.kind === 'primitive' ? declared.name : null;
+  const collection = declared.kind === 'list' || declared.kind === 'set' || declared.kind === 'map';
+  const numeric = primitive === 'integer' || primitive === 'decimal';
+
+  switch (kind) {
+    case 'min-length':
+    case 'max-length':
+    case 'length':
+      return primitive === 'text' || primitive === 'bytes' || collection ? null : 'length constrains text and collections; use "min" and "max" for numbers';
+    case 'min':
+    case 'max':
+      return numeric ? null : 'min and max constrain numbers; use "min length" and "max length" for text';
+    case 'pattern':
+      return primitive === 'text' ? null : 'a pattern matches text';
+    default:
+      return null;
+  }
+}
+
+function written(kind: IRConstraint['kind']): string {
+  return kind.replace('-', ' ');
+}
+
+function show(value: string | number | boolean): string {
+  return typeof value === 'string' ? `"${value}"` : String(value);
 }
 
 function checkInvariants(

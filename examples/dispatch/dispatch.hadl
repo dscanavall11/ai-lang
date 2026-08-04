@@ -1,0 +1,236 @@
+---
+module: dispatch
+context: Dispatch
+target: typescript
+---
+
+# Courier Dispatch
+
+Jobs come in with a pickup point and a deadline. Couriers have a position and a
+capacity. Something has to decide who takes what, and that decision is worth
+more than the CRUD around it.
+
+Two things here cannot be said in a design language, and both are written in
+TypeScript because pretending otherwise would only obscure them:
+
+- the distance between two points on a sphere, which is a formula with a name
+  and no room for interpretation;
+- the assignment sweep, which is a greedy pass over a sorted work list with
+  capacity falling away as it goes.
+
+Everything else — what a round is, when it may be closed, which failures a
+caller must handle — is design, and stays in HADL where the compiler can hold
+it.
+
+## enum JobState
+- Waiting
+- Assigned
+- Dropped
+
+## value object GeoPoint
+
+Degrees, as they arrive from the client. Nothing here converts to radians; the
+one place that needs radians converts them itself.
+
+- latitude: decimal, required, min -90, max 90
+- longitude: decimal, required, min -180, max 180
+
+## value object Assignment
+
+One courier, one job, and the distance the courier will cover to reach it. The
+distance is carried, not recomputed: whoever reads this should see the number
+the decision was made on.
+
+- courierId: uuid, required
+- jobId: uuid, required
+- metres: decimal, required, min 0
+
+## entity Courier
+identified by id
+belongs to DispatchRound
+
+- id: uuid, required
+- at: GeoPoint, required
+- capacity: integer, required, min 0, max 20
+
+## entity Job
+identified by id
+belongs to DispatchRound
+
+- id: uuid, required
+- pickup: GeoPoint, required
+- state: JobState, required, default Waiting
+- dueBy: timestamp, required
+
+## aggregate DispatchRound
+identified by id
+contains Courier, Job
+emits RoundPlanned
+
+One planning window over one city. Everything the plan depends on is inside it,
+so planning never reads anything that could have changed underneath it.
+
+- id: uuid, required
+- city: text, required, min length 1
+- couriers: list of Courier, required
+- jobs: list of Job, required
+- plannedAt: timestamp, optional
+
+invariant "a round is only worth planning with couriers in it":
+  couriers is not empty
+
+invariant "a planned round assigned nothing it never held":
+  jobs is not empty or plannedAt is absent
+
+Great-circle distance. The formula is the formula; there is no version of it
+that reads better as design, and rewriting it in statements would only be a
+translation nobody could check against the original.
+
+operation metres between (from: GeoPoint, to: GeoPoint) -> decimal:
+  ```typescript
+  const EARTH_RADIUS_METRES = 6_371_000;
+  const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
+
+  const deltaLat = toRadians(to.latitude - from.latitude);
+  const deltaLon = toRadians(to.longitude - from.longitude);
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(toRadians(from.latitude)) * Math.cos(toRadians(to.latitude)) * Math.sin(deltaLon / 2) ** 2;
+
+  return Math.round(EARTH_RADIUS_METRES * 2 * Math.asin(Math.sqrt(a)));
+  ```
+
+A greedy sweep: the most urgent job first, taken by the nearest courier who
+still has room. It is not optimal and does not claim to be — it is explainable,
+which at three in the morning is worth more.
+
+operation plan () -> list of Assignment:
+  ```typescript
+  const remaining = new Map(this.couriers.map((courier) => [courier.id, courier.capacity]));
+  const urgentFirst = [...this.jobs]
+    .filter((job) => job.state === JobState.Waiting)
+    .sort((a, b) => a.dueBy.getTime() - b.dueBy.getTime());
+
+  const assignments: Assignment[] = [];
+  for (const job of urgentFirst) {
+    let best: { courier: Courier; metres: number } | null = null;
+    for (const courier of this.couriers) {
+      if ((remaining.get(courier.id) ?? 0) <= 0) continue;
+      const metres = this.metresBetween({ from: courier.at, to: job.pickup });
+      if (best === null || metres < best.metres) best = { courier, metres };
+    }
+    if (best === null) {
+      job.state = JobState.Dropped;
+      continue;
+    }
+    remaining.set(best.courier.id, (remaining.get(best.courier.id) ?? 0) - 1);
+    job.state = JobState.Assigned;
+    assignments.push(new Assignment({ courierId: best.courier.id, jobId: job.id, metres: best.metres }));
+  }
+
+  return assignments;
+  ```
+
+Closing the round is a state change with one rule, so it is written as one.
+
+operation close (at: timestamp) -> nothing:
+  set plannedAt to at
+
+Jobs nobody could take. A filter, and therefore HADL: `haic test` can run this,
+and the assignment sweep above is exactly what it checks the result of.
+
+operation dropped jobs () -> list of Job:
+  return only jobs where state is Dropped
+
+## command PlanRound targets DispatchRound
+- roundId: uuid, required
+
+## event RoundPlanned from DispatchRound
+topic round-planned
+
+- roundId: uuid, required
+- city: text, required
+- assigned: integer, required
+- dropped: integer, required
+- plannedAt: timestamp, required
+
+## dto RoundPlan projects DispatchRound
+
+What the dispatcher sees: the assignments, and how much was left over.
+
+- roundId: uuid, required
+- assignments: list of Assignment, required
+- dropped: integer, required
+
+## error RoundNotFound (checked, status 404)
+message: "no dispatch round exists with id {roundId}"
+
+- roundId: uuid, required
+
+## error RoundAlreadyPlanned (checked, status 409)
+message: "dispatch round {roundId} was already planned"
+
+- roundId: uuid, required
+
+## port DispatchRoundRepository (outbound)
+using in-memory
+
+- find dispatch round by id (id: uuid) -> DispatchRound or RoundNotFound
+- save dispatch round (dispatchRound: DispatchRound) -> nothing
+
+## port PlanRoundUseCase (inbound)
+
+- plan round (command: PlanRound) -> RoundPlan or RoundNotFound, RoundAlreadyPlanned
+
+## service DispatchService
+uses DispatchRoundRepository
+implements PlanRoundUseCase
+
+Plans a round once. The sweep decides who goes where; this decides whether the
+sweep is allowed to run at all, and what the rest of the system is told about it.
+
+operation plan round (command: PlanRound) -> RoundPlan or RoundNotFound, RoundAlreadyPlanned:
+  let round be find dispatch round by id with id = command.roundId
+  when round.plannedAt is present:
+    fail with RoundAlreadyPlanned using roundId = command.roundId
+  let assignments be plan with dispatchRound = round
+  let leftovers be dropped jobs with dispatchRound = round
+  let at be now
+  perform close with dispatchRound = round, at = at
+  perform save dispatch round with dispatchRound = round
+  publish RoundPlanned with roundId = round.id, city = round.city, assigned = count of assignments, dropped = count of leftovers, plannedAt = at
+  return RoundPlan with roundId = round.id, assignments = assignments, dropped = count of leftovers
+
+## endpoint POST /rounds/{roundId}/plan
+handled by DispatchService.plan round
+request PlanRound
+auth bearer
+responds 200 with RoundPlan
+responds 404 when RoundNotFound
+responds 409 when RoundAlreadyPlanned
+
+## scenario refusing to plan a round twice
+
+given base be GeoPoint with latitude = 41.39, longitude = 2.16
+and drop be GeoPoint with latitude = 41.4, longitude = 2.17
+and courier be Courier with id = "c-1", at = base, capacity = 2
+and job be Job with id = "j-1", pickup = drop, state = Waiting, dueBy = now
+and round be DispatchRound with id = "r-1", city = "Barcelona", couriers = [courier], jobs = [job], plannedAt = now
+when plan round with command = PlanRound with roundId = "r-1"
+then it fails with RoundAlreadyPlanned
+
+## scenario a round with nothing dropped
+
+given base be GeoPoint with latitude = 41.39, longitude = 2.16
+and drop be GeoPoint with latitude = 41.4, longitude = 2.17
+and courier be Courier with id = "c-1", at = base, capacity = 2
+and job be Job with id = "j-1", pickup = drop, state = Assigned, dueBy = now
+and round be DispatchRound with id = "r-1", city = "Barcelona", couriers = [courier], jobs = [job]
+when dropped jobs with dispatchRound = round
+then result is empty
+
+## infrastructure
+port 8083
+database dispatchdb using postgres version 16
+cache plans using redis
+deploy to docker, kubernetes

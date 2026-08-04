@@ -59,6 +59,8 @@ export interface JavaEmitterOptions {
 }
 
 export class JavaEmitter extends LanguageEmitter {
+  readonly target = 'java' as const;
+
   private readonly portFields: ReadonlyMap<string, string>;
   private readonly self: IRDeclaration | undefined;
   private readonly fieldAccess: 'this' | 'local';

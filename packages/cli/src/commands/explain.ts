@@ -105,6 +105,36 @@ const CATALOGUE: Record<string, Explanation> = {
     why: 'A stored field that no rule, projection or contract mentions still costs a column, a migration and a place for stale data to accumulate.',
     fix: 'Keep it only if something outside this module needs it.',
   },
+  HADL2602: {
+    title: 'An operation nothing exercises',
+    why: 'A fenced block is target-language source, so `haic test` has nothing to run against the IR: the design stops being executable exactly where the logic got interesting enough to write by hand. That is the code most worth exercising before it ships.',
+    fix: 'Write a scenario over it — the backend compiles that into a test in the block\'s own language, so the fenced code runs. Or write the HADL statements beside the block: they stay the reference implementation the scenarios run, and the block still wins for its own target.',
+  },
+  HADL2603: {
+    title: 'A body written for another language',
+    why: 'A design compiles to whatever target is asked for. An operation implemented only in TypeScript quietly makes that one target the real source, and the first build for another one finds a hole where a body should be.',
+    fix: 'Add HADL statements as the portable body, add a block for the other target, or say plainly that this module is single-target.',
+  },
+  HADL2155: {
+    title: 'A default that is not of the field\'s type',
+    why: 'A default is a value the field will actually hold, so it has to be one the field can hold. `- hits: integer, default false` reached the backends as `int hits = false` because nothing compared the two.',
+    fix: 'Write a value of the declared type, or change the type to the one the value belongs to.',
+  },
+  HADL2157: {
+    title: 'A scenario that is not checked is not a test',
+    why: 'A scenario is a program: it constructs values, calls an operation and asserts. The interpreter shrugs at a field it does not know, so an argument that landed on the wrong construction passed `haic test` and only failed once the scenario was compiled into a typed language.',
+    fix: 'Read the error as you would in an operation body — a missing field, a name that is not a field, a "then" that is not a yes or no.',
+  },
+  HADL2604: {
+    title: 'A block in an aggregate that names a port',
+    why: 'An aggregate that reaches a repository cannot be tested without one, cannot be reasoned about without knowing what the call does, and becomes the place transactions quietly begin. The compiler enforces that by reading the statements of an operation — and a fenced block has no statements to read, so the rule would stop applying exactly where the code gets interesting.',
+    fix: 'Pass what the block needs in as a parameter, or move the operation to the service that already holds the port. If the name is a coincidence, rename the local: the compiler cannot read the block, so a mention is all it has to go on.',
+  },
+  HADL3060: {
+    title: 'No body for the target being built',
+    why: 'The compiler will not invent an implementation, and will not emit a project with a method that silently does nothing. Every other file in that build would look finished.',
+    fix: 'Add a block for this target, add HADL statements, or build the language the operation was written for with "--language".',
+  },
 };
 
 export const explainCommand: Command = {

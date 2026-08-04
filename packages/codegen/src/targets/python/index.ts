@@ -30,9 +30,12 @@ import {
   type IROperation,
   type IROperationSignature,
   type IRStatement,
+  scenarioPlans,
   type IRType,
   type ModuleIndex,
 } from '@haic/core';
+import { declaredImplementation } from '../../shared/adapters.js';
+import { emitScenarioBody, skippedComments, type TestHooks } from '../../shared/scenario-tests.js';
 import { ProjectLayout, type Layer } from '../../shared/layout.js';
 import { PythonEmitter, attributeName, methodName, pythonName } from './emitter.js';
 
@@ -57,6 +60,7 @@ export const pythonGenerator: CodeGenerator = {
       adaptersFile(module, index),
       routesFile(module, index),
       handlersFile(module, index),
+      scenarioTestsFile(module, index),
     ].filter((f): f is GeneratedFile => f !== null);
 
     void context;
@@ -415,9 +419,9 @@ function emitAdapterBody(
   emitter: PythonEmitter,
   index: ModuleIndex,
 ): void {
-  const declared = adapter.operations.find((o) => normalisePhrase(o.phrase) === normalisePhrase(operation.phrase));
-  if (declared && declared.body.length > 0) {
-    writer.line(renderBody(emitter, declared.body, declared.parameters.map((p) => p.name)));
+  const declared = declaredImplementation(adapter, operation.phrase);
+  if (declared) {
+    writer.line(renderBody(emitter, declared, declared.parameters.map((p) => p.name)));
     return;
   }
 
@@ -602,7 +606,7 @@ function handlersFile(module: IRModule, index: ModuleIndex): GeneratedFile | nul
       writer.line(`async def handle(self, event: ${event}) -> None:`);
       writer.block(() => {
         docstring(writer, `Handles one ${handler.on} message.`);
-        writer.line(renderBody(emitter, handler.body, ['event']));
+        writer.line(renderStatements(emitter, handler.body, ['event']));
       });
     });
     return writer.toString();
@@ -868,7 +872,7 @@ function dotEnvExample(context: GenerationContext): GeneratedFile {
 // ---------------------------------------------------------------------------
 
 function emitOperation(writer: CodeWriter, emitter: PythonEmitter, operation: IROperation, asynchronous: boolean): void {
-  const body = renderBody(emitter, operation.body, operation.parameters.map((p) => p.name));
+  const body = renderBody(emitter, operation, operation.parameters.map((p) => p.name));
   // Ports are awaited, so an operation that reaches one has to be a coroutine.
   const prefix = asynchronous || body.includes('await ') ? 'async ' : '';
   writer.line(`${prefix}def ${methodName(operation.phrase)}(${parameterList(operation, emitter)}) -> ${emitter.typeName(operation.returns)}:`);
@@ -878,10 +882,18 @@ function emitOperation(writer: CodeWriter, emitter: PythonEmitter, operation: IR
   });
 }
 
-function renderBody(emitter: PythonEmitter, statements: readonly IRStatement[], parameters: readonly string[]): string {
+function renderBody(emitter: PythonEmitter, operation: IROperation, parameters: readonly string[]): string {
+  return render(emitter, parameters, (writer) => emitter.emitImplementation(writer, operation));
+}
+
+function renderStatements(emitter: PythonEmitter, statements: readonly IRStatement[], parameters: readonly string[]): string {
+  return render(emitter, parameters, (writer) => emitter.emitBlock(writer, statements));
+}
+
+function render(emitter: PythonEmitter, parameters: readonly string[], body: (writer: CodeWriter) => void): string {
   const writer = pyWriter();
   emitter.enterOperation(parameters);
-  emitter.emitBlock(writer, statements);
+  body(writer);
   return writer.toString().replace(/\n$/, '');
 }
 
@@ -1158,6 +1170,66 @@ function pythonFile(path: string, summary: string, candidates: readonly ImportCa
     header.lines_(group);
   }
   return file(path, `${header.toString()}\n\n${body}`);
+}
+
+/**
+ * The scenarios, as unittest cases.
+ *
+ * `unittest` rather than pytest because it is in the standard library: the
+ * generated project gains a test suite without gaining a dependency, and
+ * `python -m unittest discover` runs it.
+ */
+function scenarioTestsFile(module: IRModule, index: ModuleIndex): GeneratedFile | null {
+  const selected = scenarioPlans(index);
+  // Only aggregate scenarios so far: a service one needs an in-memory double
+  // per port and a publisher to watch, which the TypeScript backend builds and
+  // this one does not yet. Emitting it anyway would produce a file that fails
+  // for reasons the design never described.
+  const compiled = selected.compiled.filter((plan) => plan.kind === 'aggregate');
+  const skipped = [
+    ...selected.skipped,
+    ...selected.compiled
+      .filter((plan) => plan.kind === 'service')
+      .map((plan) => ({ title: plan.title, reason: 'the Python backend does not stand up port doubles yet' })),
+  ];
+  // No file at all when there is nothing to run: an empty test file reports
+  // itself as a passing test, and a green count that ran nothing is a lie.
+  if (compiled.length === 0) return null;
+
+  const hooks: TestHooks = {
+    name: snakeCase,
+    local: (name, value) => `${name} = ${value}`,
+    discard: (value) => value,
+    assertTrue: (condition, message) => [`self.assertTrue(${condition}, ${quoted(message)})`],
+    assertRaises: (call, error) => [`with self.assertRaises(${pascalCase(error)}):`, `    ${call}`],
+  };
+
+  const writer = pyWriter();
+  writer.line('class ScenarioTests(unittest.TestCase):');
+  writer.block(() => {
+    docstring(writer, `The scenarios declared in the ${module.name} module, run against this code.`);
+    if (compiled.length === 0) writer.line('pass');
+    for (const plan of compiled) {
+      writer.blank();
+      writer.line(`def test_${snakeCase(plan.title)}(self) -> None:`);
+      writer.block(() => {
+        docstring(writer, plan.scenario.description ?? plan.title);
+        emitScenarioBody(writer, new PythonEmitter(index), plan, hooks);
+      });
+    }
+  });
+
+  const body = [writer.toString(), ...skippedComments(skipped, '# ')].join('\n');
+  return pythonFile(
+    modulePath('domain', module, 'test_scenarios'),
+    `The scenarios of the ${module.name} module.`,
+    moduleImports(module, index, { enums: true, valueObjects: true, model: true, messages: true, errors: true }),
+    ['import unittest', body],
+  );
+}
+
+function quoted(text: string): string {
+  return JSON.stringify(text);
 }
 
 function packageFile(path: string, summary: string): GeneratedFile {

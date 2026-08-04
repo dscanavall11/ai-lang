@@ -464,6 +464,19 @@ reported as **inconclusive**, never as a pass:
 "0 failures" for work that never happened is the one thing a test runner must
 not do.
 
+**A scenario is checked like a body.** `given`, `when` and every `then` go
+through the same type checker as an operation body, because the interpreter
+compares values rather than checking them — it will shrug at a field that does
+not exist, and the mistake surfaces only once the scenario is compiled into a
+typed language. On top of every error the checker already reports:
+
+- `HADL2157` — a `then` that is not a yes/no condition;
+- `HADL2158` — `then it fails with X` where `X` is no declared error;
+- `HADL2159` — `then it publishes X` where `X` is no declared event.
+
+A literal standing where a `uuid` is declared is [converted rather than
+refused](#t-1-where-a-uuid-is-declared).
+
 ### 4.16 `glossary`
 
 ```
@@ -528,6 +541,167 @@ fail with Missing
 `when x is absent:` narrows the `otherwise` branch instead. Only a bare local is
 narrowed — narrowing `a.b.c` would need alias analysis to stay sound, and binding
 it with `let` first is one line.
+
+### 5.3 A body written in the target language
+
+An operation body may be a fenced block instead of statements — Markdown's own
+fence, with the language named on it:
+
+````
+operation median price () -> decimal:
+  ```typescript
+  const sorted = [...this.lines].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)]!;
+  ```
+````
+
+The fence and everything inside it are indented under the operation, exactly as
+they would be in Markdown. That indentation is what tells the parser the block
+is part of this body — a line at column zero ends the operation, and a `#` there
+opens a declaration.
+
+The block is emitted into the generated project verbatim, re-indented to sit
+where the body belongs and otherwise untouched. The compiler still owns
+everything around it: the signature, the parameter names, the checked errors,
+the invariants that run on the fields it writes, and the wiring that calls it.
+
+| Rule | Code |
+| --- | --- |
+| The fence must name a language | `HADL1420` |
+| The language must be one a backend emits | `HADL1421` |
+| The fence must be closed | `HADL1422` |
+| At most one block per target | `HADL1423` |
+| Only an operation body may hold one | `HADL1424` |
+| A block with nothing in it | `HADL2601` |
+| A block with no statements beside it | `HADL2602` |
+| The module's target has no body | `HADL2603` |
+| A block in an aggregate names a port | `HADL2604` |
+| The target being built has no body | `HADL3060` |
+
+Accepted names are the backend ids and their usual short forms: `typescript`,
+`ts`, `javascript`, `js`, `node`; `java`; `python`, `py`; `go`, `golang`;
+`rust`, `rs`. `haic targets` lists them. A `js` block is emitted into a `.ts`
+file, because the TypeScript backend is the one that generates Node.js.
+
+Several blocks may sit under one operation, at most one per target, and
+statements may sit beside them:
+
+````
+operation total debited () -> Money:
+  ```typescript
+  const cents = this.postings.reduce((sum, p) => sum + Math.round(p.amount.amount * 100), 0);
+  return new Money({ amount: cents / 100, currency: this.currency });
+  ```
+
+  return Money with amount = sum of postings by amount.amount, currency = currency
+````
+
+The statements are the **reference implementation**: `haic test` runs them, and
+they are what the design says the operation means. The block is what ships for
+the target it names. An operation with a block and no statements cannot be
+reached by any scenario, and `HADL2602` says so — the interpreter reports such a
+scenario as inconclusive rather than passing it.
+
+Nothing inside a fence is checked, inferred, or ported. That is the cost, and it
+is why the compiler is loud about who is paying it.
+
+### Watching a scenario run
+
+```bash
+haic test src --trace
+```
+
+The interpreter reports what it did: the call it made, the branch it took, what
+each name was bound to, which port it reached and what it published.
+
+```
+ledger
+  ✓ posting a balanced entry announces the movement
+    → post entry(command = PostEntry with entryId = "3333…")
+      ⇄ JournalRepository.find journal entry by id
+      · entry = JournalEntry with id = "3333…", reference = "INV-1"…
+      ? when: no
+      → total debited(journalEntry = JournalEntry with id = "3333…")
+        ← Money with amount = 40, currency = "EUR"
+      · total = Money with amount = 40, currency = "EUR"
+      ⇄ JournalRepository.save journal entry
+      ! EntryPosted
+      ← EntryPosted with entryId = "3333…"
+```
+
+A **failing** scenario prints its trace whether or not `--trace` was passed: the
+step before a failure is the question being asked. There is no breakpoint and no
+stepping — a scenario runs in about a millisecond, and what is worth reading is
+the sequence rather than a moment inside it.
+
+### Running what is inside a fence
+
+`haic test` runs scenarios against the IR, where a block cannot execute. So a
+scenario that reaches one is reported as **deferred** rather than failed, and
+`haic build` compiles it into a test in the target language:
+
+```
+matching
+  ✓ rejecting an order that names no price
+  → a crossing order takes the resting price
+      "match incoming" is written in typescript, python, so it runs in the generated project's tests
+
+2 passed, 1 deferred to the target language
+```
+
+The generated project carries that scenario as an ordinary test — `node --test`
+for TypeScript, `unittest` for Python, neither of which is a new dependency —
+built from the same `given`, the same call and the same expectations.
+
+Two shapes compile. A scenario over an **aggregate operation** needs nothing but
+the aggregate: construct it, call the method, check the result. A scenario over a
+**service** gets what the interpreter gives it — an in-memory double per port,
+seeded from `given` through the port that saves each aggregate, and a publisher
+that records what it was handed so `then it publishes X` has something to read.
+The doubles are written by the same emitter as the real in-memory adapter, so a
+test cannot pass against behaviour the project does not ship.
+
+What does not compile is named in the generated file rather than dropped. A port
+whose operations are not the repository phrases a double can answer — find one
+by id, save one, list them, delete one — would need a body nobody wrote, so that
+scenario stays with the interpreter and says why.
+
+One thing a compiled scenario must respect, because a generated test is checked
+where the interpreter is not: `then it publishes X` cannot be checked against an
+aggregate, which does not publish; only a service does.
+
+### `"t-1"` where a uuid is declared
+
+A scenario names the things it sets up, and the name is the point:
+
+```
+given task be Task with id = "t-1"
+```
+
+`Task.id` is a `uuid` and `"t-1"` is not one, so a text literal standing where a
+uuid is declared **becomes the UUID version 5 of that text**. `"t-1"` is one
+uuid, `"t-2"` is another, and both are the same uuid on every run — in the
+interpreter, in `haic ir`, in every backend and in every compiled test. The
+conversion happens during type inference and is written into the IR, so
+`haic ir` shows the value that will run.
+
+Nothing reads the digits of an identifier in a scenario; everything compares it
+to itself. Writing a real uuid still works and is left alone, which is what you
+want when the design pins a specific one.
+
+The rule is deliberately narrow: text to uuid, nothing else. `- hits: integer,
+default false` is still `HADL2155`.
+
+An operation reached by a compiled scenario is exercised, so `HADL2602` does not
+fire for it: the warning means *nothing* runs this, and something does.
+
+One rule survives the fence by guesswork rather than by reading: `HADL2213`
+keeps I/O out of the domain by inspecting statements, and a block has none. So
+an aggregate operation whose block names a declared port — in any of the casings
+a backend would write it, `OrderRepository`, `orderRepository`,
+`order_repository` — is `HADL2604`. It is a warning, not an error, because the
+compiler is matching words rather than reading code, and the message says what
+it saw rather than what it concluded.
 
 ---
 
@@ -665,28 +839,64 @@ The backend emits `order.computeTotal()`.
 
 | Range | Stage |
 | --- | --- |
-| `AIL10xx` | Section and field syntax |
-| `AIL12xx` | Type expressions |
-| `AIL13xx` | Expressions |
-| `AIL14xx` | Statements |
-| `AIL15xx` | Infrastructure block |
-| `AIL16xx` | Frontmatter and module structure |
-| `AIL20xx` | Symbol resolution |
-| `AIL21xx` | Type checking |
-| `AIL22xx` | Domain-driven design rules |
-| `AIL23xx` | Checked and unchecked error flow |
-| `AIL24xx` | Hexagonal architecture and SOLID |
-| `AIL25xx` | Simplicity (YAGNI) |
-| `AIL29xx` | Internal IR validation |
+| `HADL10xx` | Section and field syntax |
+| `HADL12xx` | Type expressions |
+| `HADL13xx` | Expressions |
+| `HADL14xx` | Statements |
+| `HADL15xx` | Infrastructure block |
+| `HADL16xx` | Frontmatter and module structure |
+| `HADL20xx` | Symbol resolution |
+| `HADL21xx` | Type checking |
+| `HADL22xx` | Domain-driven design rules |
+| `HADL23xx` | Checked and unchecked error flow |
+| `HADL24xx` | Hexagonal architecture and SOLID |
+| `HADL25xx` | Simplicity (YAGNI) |
+| `HADL26xx` | Bodies written in a target language |
+| `HADL29xx` | Internal IR validation |
+| `HADL30xx` | Code generation and deployment |
 
 `haic explain <code>` prints the reasoning behind the design rules.
 
-Everything in `AIL25xx` is a warning or a note, never an error: unused code is a
+Everything in `HADL25xx` is a warning or a note, never an error: unused code is a
 smell, not a contradiction. `haic check --strict` promotes them to errors.
 
 ---
 
-## 8. What the language deliberately does not have
+## 9. Canonical layout
+
+`haic fmt` writes the layout every example in this repository is written in.
+There are no options.
+
+| It normalises | It never touches |
+| --- | --- |
+| Indentation, to two spaces per level | The words of an expression |
+| Runs of blank lines, to one | Where a prose paragraph breaks |
+| One blank line before every `##` | The order of anything |
+| `key: value` in the frontmatter | A value in the frontmatter |
+| `- name: Type, constraint` spacing | An inline `// comment`, spacing included |
+| The indentation of a fenced block, as one piece | The code inside a fenced block |
+
+The rule it follows is the rule the language follows: position carries meaning,
+so a formatter may move a line only in ways that cannot change what the line
+means. The guarantee is a test rather than a promise — formatting a file never
+changes the IR it parses to, and the suite checks that on every example.
+
+A block whose contents cannot absorb an outdent — because a line inside it
+starts at column zero — is left exactly where it is. The formatter would rather
+leave one block unaligned than shift code it does not understand.
+
+```bash
+haic fmt src
+haic fmt src --check     # exit 1 and list what would change; nothing is written
+haic fmt --stdin         # format standard input, for editors and pipes
+```
+
+`haic lsp` serves the same formatter as `textDocument/formatting`, so
+format-on-save in an editor and `haic fmt` in CI cannot disagree.
+
+---
+
+## 10. What the language deliberately does not have
 
 - **No classes, no inheritance.** The declaration kinds are the vocabulary.
 - **No `try`/`catch`.** Checked errors propagate; unchecked errors are defects.
@@ -694,9 +904,16 @@ smell, not a contradiction. `haic check --strict` promotes them to errors.
 - **No free functions.** Behaviour belongs to an aggregate, a service or a handler.
 - **No generics.** `list`, `set`, `map` and `optional` are the only parameterised types.
 - **No imports inside a module body.** Dependencies are declared once, in the frontmatter.
-- **No inline SQL, no inline YAML, no target-language escape hatch.** If the
-  compiler cannot express something, that is a gap to close in the language, not
-  a hole to punch through it.
+- **No inline SQL, no inline YAML.** If the compiler cannot express something
+  about storage or deployment, that is a gap to close in the language, not a hole
+  to punch through it.
+- **One escape hatch, declared and bounded.** An operation body may be a fenced
+  block in a target language (§5.3). It is deliberately the only one: it names
+  its language, it lives inside a signature the compiler still owns, and every
+  consequence of using it — untestable by scenarios, unportable to another
+  target — is reported rather than assumed. Algorithms are not design decisions,
+  and a language that forces them into design vocabulary gets a worse
+  translation, not a better design.
 
 Each of these is a decision to make one obvious thing possible rather than many
 things expressible. A model with fewer ways to say something is a model an AI
