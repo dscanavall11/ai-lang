@@ -375,3 +375,127 @@ then result is 2
     expect(test).toContain('pricing through the service — run by "haic test"');
   });
 });
+
+/**
+ * A service scenario needs what the interpreter fakes: a store behind each
+ * port, and something watching what was published.
+ */
+describe('a scenario over a service', () => {
+  const source = `---
+module: billing
+context: Billing
+---
+
+# Billing
+
+## aggregate Invoice
+identified by id
+
+- id: uuid, required
+- total: decimal, required, min 0
+- settled: boolean, required, default false
+
+invariant "an invoice is worth something":
+  total is greater than 0
+
+operation settle () -> nothing:
+  set settled to true
+
+## event InvoiceSettled from Invoice
+topic invoice-settled
+
+- invoiceId: uuid, required
+
+## error InvoiceNotFound (checked, status 404)
+message: "no invoice {invoiceId}"
+
+- invoiceId: uuid, required
+
+## error AlreadySettled (checked, status 409)
+message: "invoice {invoiceId} is settled"
+
+- invoiceId: uuid, required
+
+## command SettleInvoice targets Invoice
+- invoiceId: uuid, required
+
+## port Invoices (outbound)
+using in-memory
+
+- find invoice by id (id: uuid) -> Invoice or InvoiceNotFound
+- save invoice (invoice: Invoice) -> nothing
+
+## port Settling (inbound)
+
+- settle invoice (command: SettleInvoice) -> Invoice or InvoiceNotFound, AlreadySettled
+
+## service SettlementService
+uses Invoices
+implements Settling
+
+operation settle invoice (command: SettleInvoice) -> Invoice or InvoiceNotFound, AlreadySettled:
+  let invoice be find invoice by id with id = command.invoiceId
+  when invoice.settled:
+    fail with AlreadySettled using invoiceId = command.invoiceId
+  perform settle with invoice = invoice
+  perform save invoice with invoice = invoice
+  publish InvoiceSettled with invoiceId = invoice.id
+  return invoice
+
+## endpoint POST /invoices/{invoiceId}/settle
+handled by SettlementService.settle invoice
+request SettleInvoice
+responds 200 with Invoice
+responds 404 when InvoiceNotFound
+responds 409 when AlreadySettled
+
+## scenario settling an invoice announces it
+
+given invoice be Invoice with id = "99999999-9999-4999-8999-999999999991", total = 40
+when settle invoice with command = SettleInvoice with invoiceId = "99999999-9999-4999-8999-999999999991"
+then result.settled is true
+and it publishes InvoiceSettled
+`;
+
+  const test = (text: string): string => {
+    const files = generateProject(codeGenerators.require('typescript'), {
+      project: projectOf(text),
+      outputDir: 'out/typescript',
+      options: {},
+    }).files;
+    return files.find((file) => file.path.endsWith('scenarios.test.ts'))?.contents ?? '';
+  };
+
+  const emitted = test(source);
+
+  it('stands up an in-memory double for every port the service holds', () => {
+    expect(emitted).toContain('class FakeInvoices implements Invoices {');
+    expect(emitted).toContain('const invoices = new FakeInvoices();');
+  });
+
+  it('seeds the store from `given`, through the port that saves it', () => {
+    expect(emitted).toContain('const invoice = new Invoice({');
+    expect(emitted).toContain('await invoices.saveInvoice({ invoice: invoice });');
+  });
+
+  it('calls the service, not the inbound port it implements', () => {
+    // The emitter resolves the phrase to the port inside the service; a test
+    // holds the service itself, so the call is spelled out rather than lowered.
+    expect(emitted).toContain('const settlementService = new SettlementService(invoices, eventPublisher);');
+    expect(emitted).toContain('await settlementService.settleInvoice({ command:');
+    expect(emitted).not.toContain('settling.settleInvoice');
+  });
+
+  it('watches what was published, because a `then` asked', () => {
+    expect(emitted).toContain('class RecordingEventPublisher implements EventPublisher {');
+    expect(emitted).toContain("assert.ok(eventPublisher.published.includes(\"InvoiceSettled\")");
+  });
+
+  it('leaves the scenario alone when a port asks for something a double cannot answer', () => {
+    const exotic = source.replace(
+      '- save invoice (invoice: Invoice) -> nothing',
+      '- save invoice (invoice: Invoice) -> nothing\n- reconcile with the bank (id: uuid) -> nothing',
+    );
+    expect(test(exotic)).toBe('');
+  });
+});

@@ -159,6 +159,23 @@ That runs the operations against the IR itself — no code generated, no toolcha
 no tokens. A scenario the interpreter cannot execute is reported as **could not
 run**, never as a pass.
 
+When one fails, it says what it did on the way:
+
+```
+  ✗ posting a balanced entry announces the movement
+      this did not hold: 40 equals 41
+    → post entry(command = PostEntry with entryId = "3333…")
+      ⇄ JournalRepository.find journal entry by id
+      ? when: no
+      → total debited(journalEntry = JournalEntry with id = "3333…")
+        ← Money with amount = 40, currency = "EUR"
+      ! EntryPosted
+```
+
+`haic test --trace` prints that for the scenarios that pass, too. It is the
+whole debugger: no breakpoints, because a scenario runs in a millisecond and
+the sequence is the part worth reading.
+
 **→ [Build your own CRUD](docs/crud-tutorial.md)** — the whole path, step by step.
 
 ---
@@ -247,6 +264,7 @@ nothing and reviewing it is a diff, not a re-read.
 | `haic new <name>` | Scaffold a project |
 | `haic check [paths]` | Parse, type-check and audit the design |
 | `haic test [paths]` | Run the declared scenarios against the IR — no code generated, no tokens spent |
+| `haic test [paths] --trace` | The same, printing what the interpreter did at each step |
 | `haic build [paths] --java` | Generate the service, in the language you name (`--language java` too) |
 | `haic deploy [paths] --target <platform>` | Generate the infrastructure |
 | `haic architect <requirements.md>` | Turn a requirements document into a reviewable spec and draft sources |

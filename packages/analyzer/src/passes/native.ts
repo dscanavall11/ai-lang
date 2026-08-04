@@ -24,7 +24,9 @@ export const nativePass: SemanticPass = {
     // of them reaches is exercised — in the target language, against the code
     // that ships — so saying nothing can reach it would be false.
     const compiled = new Set(
-      scenarioPlans(context.index).compiled.map((plan) => `${plan.aggregate.name}.${plan.operation.phrase}`),
+      scenarioPlans(context.index).compiled.map(
+        (plan) => `${plan.kind === 'aggregate' ? plan.aggregate.name : plan.service.name}.${plan.operation.phrase}`,
+      ),
     );
 
     for (const declaration of context.module.declarations) {

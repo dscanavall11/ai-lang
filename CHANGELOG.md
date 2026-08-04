@@ -5,6 +5,59 @@ while the major is `0`, the minor carries breaking changes.
 
 ## Unreleased
 
+### A scenario over a service compiles too
+
+The last PR compiled scenarios over aggregate operations and left service ones
+with the interpreter, because a service needs its ports wired and its events
+watched. It gets both now, built the way the interpreter builds them: an
+in-memory double per port, seeded from `given` through whichever port saves that
+aggregate, and a publisher that records what it was handed so `then it publishes
+X` has something to read.
+
+The doubles are emitted by the same function that writes the real in-memory
+adapter, so a test cannot pass against behaviour the project does not ship. A
+port asking for something a double cannot answer — anything that is not find one
+by id, save one, list them, delete one — leaves that scenario with the
+interpreter and says so in the generated file.
+
+Ten scenarios across the examples now compile and run against the generated
+TypeScript, up from two.
+
+### `haic test --trace`, which is the debugger
+
+```
+  ✗ posting a balanced entry announces the movement
+      this did not hold: 40 equals 41
+    → post entry(command = PostEntry with entryId = "3333…")
+      ⇄ JournalRepository.find journal entry by id
+      ? when: no
+      → total debited(journalEntry = JournalEntry with id = "3333…")
+        ← Money with amount = 40, currency = "EUR"
+      ! EntryPosted
+```
+
+The interpreter now reports what it did: the call, the branch it took, every
+binding, every port it reached, everything published. `--trace` prints it for
+scenarios that pass; a failing scenario prints it whether or not you asked,
+because the step before a failure is the question being asked.
+
+There is no breakpoint and no stepping, deliberately. A scenario runs in about a
+millisecond, so the sequence is what is worth reading, and a trace you scan
+afterwards beats a prompt you drive through it.
+
+### Found by running the tests it generates
+
+- the dispatch example wrote `at = GeoPoint with latitude = 41.39, longitude =
+  2.16, capacity = 2`, where the parser reads `capacity` as a third argument to
+  the **GeoPoint**. The interpreter shrugged at a field it did not know and the
+  scenario passed; the typed backend refused it. The example binds the point
+  first now, which is what `AGENTS.md` already tells everyone to do;
+- the ledger, dispatch and matching scenarios used short ids like `"e-1"` where
+  the design declares `uuid`. Real uuids now, which is what a generated test —
+  and any typed backend — actually accepts;
+- the in-memory query matcher is exported, because a test double answers a query
+  by calling it rather than by carrying a second copy of it.
+
 ### The scenarios run inside the fence too
 
 `haic test` runs scenarios against the IR, where a fenced block cannot execute.

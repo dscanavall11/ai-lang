@@ -7,26 +7,37 @@
  * scenario into the target language closes that gap: the same `given`, the same
  * call, the same expectations, run against the code that actually ships.
  *
- * The selection here is deliberately narrow. A scenario over an aggregate
- * operation needs nothing but the aggregate: construct it, call the method,
- * check the result. A scenario over a service needs its ports wired, its
- * adapters chosen and its publisher observed, and guessing at that would produce
- * a test that fails for reasons the design never described. Those stay with the
- * interpreter, which already knows how to fake them, and are reported here as
- * skipped rather than quietly dropped.
+ * Two shapes compile. An aggregate scenario needs nothing but the aggregate:
+ * construct it, call the method, check the result. A service scenario needs its
+ * ports standing in for a database and its publisher watched, which is exactly
+ * what the interpreter does — so the backend builds the same thing in the target
+ * language: an in-memory double per port, seeded from `given`, and a publisher
+ * that records what it was handed.
+ *
+ * What does not compile is reported, never dropped. A port whose operations are
+ * not the repository phrases a double can answer would need a body nobody wrote,
+ * and inventing one produces a test that fails for reasons the design never
+ * described. That scenario stays with the interpreter and says why.
  */
 import { camelCase } from '../naming.js';
 import type { ModuleIndex } from './index-module.js';
-import type { IRAggregateDecl, IRArgument, IRExpression, IROperation, IRScenarioDecl, IRType } from './schema.js';
+import type {
+  IRAggregateDecl,
+  IRArgument,
+  IRExpression,
+  IROperation,
+  IROperationSignature,
+  IRPortDecl,
+  IRScenarioDecl,
+  IRServiceDecl,
+  IRType,
+} from './schema.js';
 
-export interface ScenarioPlan {
+interface PlanBase {
   scenario: IRScenarioDecl;
   /** Title as written in the heading, which is what a reader recognises. */
   title: string;
-  aggregate: IRAggregateDecl;
   operation: IROperation;
-  /** `given` binding holding the receiver, e.g. `book`. */
-  receiver: string;
   /** Local the result is bound to, or null when the operation returns nothing. */
   binding: string | null;
   expectations: IRScenarioDecl['expectations'];
@@ -35,6 +46,28 @@ export interface ScenarioPlan {
   /** The `when` call, retyped the same way. */
   call: IRExpression;
 }
+
+/** A scenario over an aggregate: no wiring, because there is nothing to wire. */
+export interface AggregatePlan extends PlanBase {
+  kind: 'aggregate';
+  aggregate: IRAggregateDecl;
+  /** `given` binding holding the receiver, e.g. `book`. */
+  receiver: string;
+}
+
+/** A scenario over a service, with the doubles the test has to stand up first. */
+export interface ServicePlan extends PlanBase {
+  kind: 'service';
+  service: IRServiceDecl;
+  /** Outbound ports the service holds, in constructor order. */
+  ports: IRPortDecl[];
+  /** `given` aggregates, and the port operation that puts each one in the store. */
+  seeds: Array<{ binding: string; port: IRPortDecl; save: IROperationSignature }>;
+  /** Whether any expectation watches the publisher. */
+  observesEvents: boolean;
+}
+
+export type ScenarioPlan = AggregatePlan | ServicePlan;
 
 export interface SkippedScenario {
   title: string;
@@ -58,9 +91,18 @@ export function scenarioPlans(index: ModuleIndex): ScenarioSelection {
       continue;
     }
 
-    const owner = index.resolvePhrase(call.operation).find((entry) => entry.owner.kind === 'aggregate');
+    const resolved = index.resolvePhrase(call.operation);
+    const owner = resolved.find((entry) => entry.owner.kind === 'aggregate');
+    const serviceOwner = resolved.find((entry) => entry.owner.kind === 'service');
+
+    if (!owner && serviceOwner) {
+      const plan = servicePlan(index, scenario, title, serviceOwner.owner as IRServiceDecl, serviceOwner.operation.phrase);
+      if ('reason' in plan) skipped.push({ title, reason: plan.reason });
+      else compiled.push(plan);
+      continue;
+    }
     if (!owner) {
-      skipped.push({ title, reason: `"${call.operation}" is not an aggregate operation, so a test would have to wire its ports` });
+      skipped.push({ title, reason: `"${call.operation}" is not an operation this module declares a body for` });
       continue;
     }
 
@@ -90,6 +132,7 @@ export function scenarioPlans(index: ModuleIndex): ScenarioSelection {
     }
 
     compiled.push({
+      kind: 'aggregate',
       scenario,
       title,
       aggregate,
@@ -103,6 +146,94 @@ export function scenarioPlans(index: ModuleIndex): ScenarioSelection {
   }
 
   return { compiled, skipped };
+}
+
+/**
+ * A service scenario, or the reason it stays with the interpreter.
+ *
+ * The doubles a test needs are the ones the in-memory adapter already knows how
+ * to be: find one by id, save one, list them, delete one. A port asking for
+ * anything else has a body only its author can write, and a test built on a
+ * guess at it would fail for reasons the design never described.
+ */
+function servicePlan(
+  index: ModuleIndex,
+  scenario: IRScenarioDecl,
+  title: string,
+  service: IRServiceDecl,
+  phrase: string,
+): ServicePlan | { reason: string } {
+  const operation = service.operations.find((candidate) => candidate.phrase === phrase);
+  if (!operation) return { reason: `${service.name} declares no body for "${phrase}"` };
+
+  const ports: IRPortDecl[] = [];
+  for (const name of service.uses) {
+    const port = index.typed(name, 'port');
+    if (!port) return { reason: `${name} is not a port this module declares` };
+    const unfakeable = port.operations.find((candidate) => repositoryPhrase(candidate.phrase) === null);
+    if (unfakeable) {
+      return { reason: `${port.name}.${unfakeable.phrase} is not a repository phrase a test double can answer` };
+    }
+    ports.push(port);
+  }
+
+  // Every aggregate the scenario seeds has to reach the store the service reads
+  // from, which means some port has to be able to save it.
+  const seeds: ServicePlan['seeds'] = [];
+  for (const step of scenario.given) {
+    if (step.value.kind !== 'construct') continue;
+    const shape = index.get(step.value.type);
+    if (shape?.kind !== 'aggregate') continue;
+
+    const found = savesAggregate(ports, shape.name);
+    if (!found) return { reason: `no port saves a ${shape.name}, so "given ${step.binding}" could not be stored` };
+    seeds.push({ binding: step.binding, port: found.port, save: found.save });
+  }
+
+  const unusable = unusableValue(index, scenario, operation);
+  if (unusable) return { reason: unusable };
+
+  return {
+    kind: 'service',
+    scenario,
+    title,
+    service,
+    operation,
+    ports,
+    seeds,
+    observesEvents: scenario.expectations.some((expectation) => expectation.kind === 'publishes'),
+    binding: returnsNothing(operation) ? null : scenario.when.binding,
+    expectations: scenario.expectations,
+    given: scenario.given.map((step) => ({ ...step, value: retyped(index, step.value, undefined) })),
+    call: retypedCall(index, scenario.when.call, operation),
+  };
+}
+
+/** The port operation that stores `aggregate`, if one of them does. */
+function savesAggregate(ports: readonly IRPortDecl[], aggregate: string): { port: IRPortDecl; save: IROperationSignature } | null {
+  for (const port of ports) {
+    for (const operation of port.operations) {
+      if (repositoryPhrase(operation.phrase) !== 'save') continue;
+      const parameter = operation.parameters[0]?.type;
+      if (parameter?.kind === 'named' && parameter.name === aggregate) return { port, save: operation };
+    }
+  }
+  return null;
+}
+
+/**
+ * The four phrase families an in-memory double answers.
+ *
+ * The same four the in-memory adapter recognises, deliberately: a test double
+ * that behaved differently from the adapter would be testing something else.
+ */
+export function repositoryPhrase(phrase: string): 'find' | 'save' | 'list' | 'delete' | null {
+  const normalised = phrase.toLowerCase();
+  if (/^(find|get|read|load)\b.*\bby id$/.test(normalised)) return 'find';
+  if (/^(save|store|persist|upsert)\b/.test(normalised)) return 'save';
+  if (/^(list|find all|search)\b/.test(normalised)) return 'list';
+  if (/^(delete|remove)\b/.test(normalised)) return 'delete';
+  return null;
 }
 
 /**

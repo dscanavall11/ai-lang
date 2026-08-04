@@ -7,6 +7,7 @@
  */
 import { indexModule, type IRModule, type IRScenarioDecl, type SourceSpan } from '@haic/core';
 import { DeferredToTarget, DomainFailure, Interpreter, Unsupported } from './runtime.js';
+import { Trace, type TraceStep } from './trace.js';
 import { isRecord, show, type Value } from './values.js';
 
 export type Outcome = 'passed' | 'failed' | 'inconclusive' | 'deferred';
@@ -21,6 +22,8 @@ export interface ScenarioResult {
   span: SourceSpan | undefined;
   /** One line per expectation that did not hold, or the reason it could not run. */
   problems: string[];
+  /** What the interpreter did, when a trace was asked for or the run failed. */
+  trace: TraceStep[];
 }
 
 export interface TestReport {
@@ -33,12 +36,17 @@ export interface TestReport {
   get ok(): boolean;
 }
 
-export function runScenarios(modules: readonly IRModule[]): TestReport {
+export interface RunOptions {
+  /** Keep the trace of every scenario, not only the ones that go wrong. */
+  trace?: boolean;
+}
+
+export function runScenarios(modules: readonly IRModule[], options: RunOptions = {}): TestReport {
   const results: ScenarioResult[] = [];
   for (const module of modules) {
     const index = indexModule(module);
     for (const scenario of index.scenarios) {
-      results.push(runScenario(module, scenario));
+      results.push(runScenario(module, scenario, options));
     }
   }
 
@@ -61,15 +69,20 @@ export function runScenarios(modules: readonly IRModule[]): TestReport {
   };
 }
 
-function runScenario(module: IRModule, scenario: IRScenarioDecl): ScenarioResult {
-  const interpreter = new Interpreter(indexModule(module));
+function runScenario(module: IRModule, scenario: IRScenarioDecl, options: RunOptions = {}): ScenarioResult {
+  // Always traced. It costs a few array pushes on a run measured in
+  // milliseconds, and the trace of a failure is worth more than the failure.
+  const trace = new Trace();
+  const interpreter = new Interpreter(indexModule(module), trace);
   const scope = new Map<string, Value>();
-  const base: Omit<ScenarioResult, 'outcome' | 'problems'> = {
+  const base: Omit<ScenarioResult, 'outcome' | 'problems' | 'trace'> = {
     module: module.name,
     name: scenario.name,
     title: scenario.description?.split('\n')[0] ?? scenario.name,
     span: scenario.span,
   };
+  /** Kept when asked for, or when the reader is about to need it. */
+  const traced = (outcome: Outcome): TraceStep[] => (options.trace || outcome === 'failed' ? trace.steps : []);
 
   // -- given ---------------------------------------------------------------
   for (const step of scenario.given) {
@@ -78,7 +91,8 @@ function runScenario(module: IRModule, scenario: IRScenarioDecl): ScenarioResult
       scope.set(step.binding, value);
       if (isRecord(value)) interpreter.seed(value);
     } catch (thrown) {
-      return { ...base, outcome: inconclusiveOr(thrown), problems: [`given ${step.binding}: ${reason(thrown)}`] };
+      const outcome = inconclusiveOr(thrown);
+      return { ...base, outcome, problems: [`given ${step.binding}: ${reason(thrown)}`], trace: traced(outcome) };
     }
   }
 
@@ -88,8 +102,8 @@ function runScenario(module: IRModule, scenario: IRScenarioDecl): ScenarioResult
     scope.set(scenario.when.binding, interpreter.evaluate(scenario.when.call, scope));
   } catch (thrown) {
     if (thrown instanceof DomainFailure) raised = thrown;
-    else if (thrown instanceof DeferredToTarget) return { ...base, outcome: 'deferred', problems: [thrown.message] };
-    else return { ...base, outcome: 'inconclusive', problems: [reason(thrown)] };
+    else if (thrown instanceof DeferredToTarget) return { ...base, outcome: 'deferred', problems: [thrown.message], trace: [] };
+    else return { ...base, outcome: 'inconclusive', problems: [reason(thrown)], trace: traced('inconclusive') };
   }
 
   // -- then ----------------------------------------------------------------
@@ -123,7 +137,7 @@ function runScenario(module: IRModule, scenario: IRScenarioDecl): ScenarioResult
             problems.push(`this did not hold: ${explain(interpreter, expectation.condition, scope)}`);
           }
         } catch (thrown) {
-          return { ...base, outcome: 'inconclusive', problems: [reason(thrown)] };
+          return { ...base, outcome: 'inconclusive', problems: [reason(thrown)], trace: traced('inconclusive') };
         }
         break;
       }
@@ -135,7 +149,8 @@ function runScenario(module: IRModule, scenario: IRScenarioDecl): ScenarioResult
     problems.push(`it failed unexpectedly with ${describe(raised)}`);
   }
 
-  return { ...base, outcome: problems.length === 0 ? 'passed' : 'failed', problems };
+  const outcome: Outcome = problems.length === 0 ? 'passed' : 'failed';
+  return { ...base, outcome, problems, trace: traced(outcome) };
 }
 
 /** Renders a failed comparison with both sides evaluated, which is the useful part. */

@@ -160,20 +160,20 @@ responds 409 when EntryAlreadyPosted
 
 ## scenario posting a balanced entry announces the movement
 
-given debit be Posting with id = "p-1", accountId = "a-cash", side = Debit, amount = Money with amount = 40, currency = "EUR"
-and credit be Posting with id = "p-2", accountId = "a-sales", side = Credit, amount = Money with amount = 40, currency = "EUR"
-and entry be JournalEntry with id = "e-1", reference = "INV-1", currency = "EUR", postings = [debit, credit]
-when post entry with command = PostEntry with entryId = "e-1"
+given debit be Posting with id = "44444444-4444-4444-8444-444444444441", accountId = "55555555-5555-4555-8555-555555555551", side = Debit, amount = Money with amount = 40, currency = "EUR"
+and credit be Posting with id = "44444444-4444-4444-8444-444444444442", accountId = "55555555-5555-4555-8555-555555555552", side = Credit, amount = Money with amount = 40, currency = "EUR"
+and entry be JournalEntry with id = "33333333-3333-4333-8333-333333333331", reference = "INV-1", currency = "EUR", postings = [debit, credit]
+when post entry with command = PostEntry with entryId = "33333333-3333-4333-8333-333333333331"
 then it publishes EntryPosted
 and result.total.amount is 40
 and count of result.accounts is 2
 
 ## scenario posting the same entry twice
 
-given debit be Posting with id = "p-1", accountId = "a-cash", side = Debit, amount = Money with amount = 40, currency = "EUR"
-and credit be Posting with id = "p-2", accountId = "a-sales", side = Credit, amount = Money with amount = 40, currency = "EUR"
-and entry be JournalEntry with id = "e-1", reference = "INV-1", currency = "EUR", postings = [debit, credit], postedAt = now
-when post entry with command = PostEntry with entryId = "e-1"
+given debit be Posting with id = "44444444-4444-4444-8444-444444444441", accountId = "55555555-5555-4555-8555-555555555551", side = Debit, amount = Money with amount = 40, currency = "EUR"
+and credit be Posting with id = "44444444-4444-4444-8444-444444444442", accountId = "55555555-5555-4555-8555-555555555552", side = Credit, amount = Money with amount = 40, currency = "EUR"
+and entry be JournalEntry with id = "33333333-3333-4333-8333-333333333331", reference = "INV-1", currency = "EUR", postings = [debit, credit], postedAt = now
+when post entry with command = PostEntry with entryId = "33333333-3333-4333-8333-333333333331"
 then it fails with EntryAlreadyPosted
 
 ## infrastructure

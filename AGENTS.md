@@ -47,6 +47,15 @@ declaration, a port with one implementation and one caller, a service that only
 forwards. They are advice, not errors. Take them seriously anyway; they exist to
 stop you rebuilding the ceremony this language was written to remove.
 
+When a scenario fails and the message is not enough, ask what it did:
+
+```bash
+haic test . --trace
+```
+
+That prints the call, the branch taken, every binding, every port reached and
+everything published. A failing scenario prints it without being asked.
+
 Iterate until `haic check` is silent and `haic test` is green. Only then compile.
 
 If you are working through an editor rather than a terminal, `haic lsp` is the
