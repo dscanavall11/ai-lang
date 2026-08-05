@@ -400,6 +400,7 @@ writes a reviewable `.ai-spec/` directory rather than code.
 - [CRUD tutorial](docs/crud-tutorial.md)
 - [Branching](docs/branching.md)
 - [Language reference](docs/language-reference.md)
+- [Backlog](docs/backlog.md)
 - [Worked example](examples/orders/orders.hadl)
 
 ---
