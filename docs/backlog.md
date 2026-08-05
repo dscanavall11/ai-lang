@@ -12,7 +12,7 @@ decided, and into the changelog when it ships.
 
 ## Now
 
-### 1. The build says what it did not generate
+### 1. The build says what it did not generate — **shipped**
 
 An adapter operation whose phrase is not one the compiler recognises — find one
 by id, save one, list them, delete one, or a declared query — is emitted as a

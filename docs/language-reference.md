@@ -342,8 +342,14 @@ Technologies: `rest`, `graphql`, `grpc`, `sql`, `nosql`, `kafka`, `rabbitmq`,
 `sqs`, `http-client`, `in-memory`, `s3`, `redis`, `cron`.
 
 Backends generate real implementations for the repository phrases they
-recognise — `find … by id`, `save …`, `list …`, `delete … by id` — and say
-plainly, in the generated code, where they could not.
+recognise — `find … by id`, `save …`, `list …`, `delete … by id`, and any
+operation taking a declared query. Anything else is emitted as a placeholder
+that throws when called, and the build says so: `HADL3061` warns per
+placeholder method, and the build summary counts them, because "build
+succeeded" and "project complete" are different statements. The fix the
+warning names: write the operation inside the `## adapter` declaration — HADL
+statements or a fenced block in the target's language, which is copied into
+the generated method verbatim.
 
 More than one adapter may implement the same port — an in-memory pair for tests
 is the usual reason — but the generated composition root wires the first, and
@@ -577,6 +583,7 @@ the invariants that run on the fields it writes, and the wiring that calls it.
 | The module's target has no body | `HADL2603` |
 | A block in an aggregate names a port | `HADL2604` |
 | The target being built has no body | `HADL3060` |
+| An adapter method emitted as a placeholder | `HADL3061` |
 
 Accepted names are the backend ids and their usual short forms: `typescript`,
 `ts`, `javascript`, `js`, `node`; `java`; `python`, `py`; `go`, `golang`;

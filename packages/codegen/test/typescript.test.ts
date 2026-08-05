@@ -77,7 +77,9 @@ describe('the TypeScript backend', () => {
 
   it('says so plainly when it cannot implement an adapter operation', () => {
     const adapters = fileNamed(result.files, 'src/infrastructure/orders/adapters.ts').contents;
-    expect(adapters).toContain('has no generated implementation for a http-client adapter; write it here.');
+    expect(adapters).toContain('has no generated http-client implementation; write it in the ## adapter declaration');
+    // And not only in the generated code: the build itself warns.
+    expect(result.diagnostics.some((d) => d.code === 'HADL3061')).toBe(true);
   });
 
   it('maps every declared response to a route', () => {

@@ -18,6 +18,7 @@ import {
   tableName,
   typeToString,
   type CodeGenerator,
+  type Diagnostic,
   type GeneratedFile,
   type GenerationContext,
   type GenerationResult,
@@ -37,7 +38,7 @@ import {
   type ScenarioPlan,
   type ServicePlan,
 } from '@haic/core';
-import { declaredImplementation } from '../../shared/adapters.js';
+import { declaredImplementation, placeholderDiagnostic, placeholderMessage } from '../../shared/adapters.js';
 import { emitScenarioBody, skippedComments, type TestHooks } from '../../shared/scenario-tests.js';
 import { prefixReferences } from '../../shared/emitter.js';
 import { ProjectLayout, relativeImport } from '../../shared/layout.js';
@@ -54,6 +55,7 @@ export const typescriptGenerator: CodeGenerator = {
 
   generate(module, context) {
     const index = indexModule(module);
+    const diagnostics: Diagnostic[] = [];
     const files = [
       enumsFile(module, index),
       valueObjectsFile(module, index),
@@ -62,14 +64,14 @@ export const typescriptGenerator: CodeGenerator = {
       messagesFile(module, index),
       portsFile(module, index),
       servicesFile(module, index),
-      adaptersFile(module, index),
+      adaptersFile(module, index, diagnostics),
       routesFile(module, index),
       handlersFile(module, index),
       scenarioTestsFile(module, index),
     ].filter((f): f is NonNullable<typeof f> => f !== null);
 
     void context;
-    return { files, diagnostics: [] };
+    return { files, diagnostics };
   },
 
   generateProject(context) {
@@ -350,7 +352,7 @@ function servicesFile(module: IRModule, index: ModuleIndex) {
 // Infrastructure layer
 // ---------------------------------------------------------------------------
 
-function adaptersFile(module: IRModule, index: ModuleIndex) {
+function adaptersFile(module: IRModule, index: ModuleIndex, diagnostics: Diagnostic[]) {
   if (index.adapters.length === 0) return null;
   const self = layout.path('infrastructure', module, 'adapters');
   const writer = new CodeWriter();
@@ -380,7 +382,9 @@ function adaptersFile(module: IRModule, index: ModuleIndex) {
           // backend would have generated for the phrase.
           const declared = declaredImplementation(adapter, operation.phrase);
           if (declared) emitter.emitImplementation(writer, declared);
-          else emitAdapterBody(writer, adapter.technology, operation, emitter, index);
+          else if (!emitAdapterBody(writer, adapter.technology, operation, emitter, index)) {
+            diagnostics.push(placeholderDiagnostic(adapter, operation.phrase, 'typescript'));
+          }
         });
         writer.line('}');
       }
@@ -407,7 +411,7 @@ function emitAdapterBody(
   operation: IROperationSignature,
   emitter: TypeScriptEmitter,
   index: ModuleIndex,
-): void {
+): boolean {
   const phrase = operation.phrase.toLowerCase();
   const returnType = emitter.typeName(operation.returns);
   const errorName = operation.throws[0];
@@ -417,7 +421,7 @@ function emitAdapterBody(
   if (queryParameter && (technology === 'sql' || technology === 'in-memory')) {
     const query = index.typed((queryParameter.type as { name: string }).name, 'query')!;
     emitQueryBody(writer, technology, query, camelCase(queryParameter.name), returnType, index);
-    return;
+    return true;
   }
 
   if (technology === 'sql') {
@@ -432,7 +436,7 @@ function emitAdapterBody(
         writer.line('if (!row) return null;');
       }
       writer.line(`return new ${stripOptional(returnType)}(row as never);`);
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       const parameter = operation.parameters[0]?.name ?? 'entity';
@@ -443,7 +447,7 @@ function emitAdapterBody(
         writer.line(`[JSON.stringify(${camelCase(parameter)}), ${identityAccess(index, operation, camelCase(parameter))}],`);
       });
       writer.line(');');
-      return;
+      return true;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
       const filter = operation.parameters[0];
@@ -456,11 +460,11 @@ function emitAdapterBody(
       );
       writer.line(');');
       writer.line(`return result.rows.map((row) => new ${elementClass(returnType)}(row as never));`);
-      return;
+      return true;
     }
     if (/^(delete|remove)\b/.test(phrase)) {
       writer.line('await this.db.query(`DELETE FROM ${this.table} WHERE id = $1`, [id]);');
-      return;
+      return true;
     }
   }
 
@@ -470,26 +474,25 @@ function emitAdapterBody(
       if (errorName) writer.line(`if (!row) throw new ${pascalCase(errorName)}({ ${firstErrorField(index, errorName)}: id });`);
       else writer.line('if (!row) return null;');
       writer.line(`return row as ${stripOptional(returnType)};`);
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       const parameter = camelCase(operation.parameters[0]?.name ?? 'entity');
       writer.line(`this.rows.set(String(${identityAccess(index, operation, parameter)}), ${parameter});`);
-      return;
+      return true;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
       writer.line(`return [...this.rows.values()] as ${returnType};`);
-      return;
+      return true;
     }
     if (/^(delete|remove)\b/.test(phrase)) {
       writer.line('this.rows.delete(String(id));');
-      return;
+      return true;
     }
   }
 
-  writer.line(
-    `throw new Error('${operation.phrase} has no generated implementation for a ${technology} adapter; write it here.');`,
-  );
+  writer.line(`throw new Error('${placeholderMessage(operation.phrase, technology)}');`);
+  return false;
 }
 
 /**

@@ -86,6 +86,12 @@ export const buildCommand: Command = {
         }
       }
       info(listFiles(result.files));
+      // "Build succeeded" and "project complete" are different statements, and
+      // the gap between them is exactly the methods listed above.
+      const placeholders = result.diagnostics.filter((d: Diagnostic) => d.code === 'HADL3061').length;
+      if (placeholders > 0) {
+        info(dim(`  ${placeholders} ${placeholders === 1 ? 'method needs' : 'methods need'} a hand-written body — see the warnings above`));
+      }
       if (!dryRun) {
         const report = writeFiles(result.files, context.outputDir, cwd);
         success(`${report.written} files → ${dim(report.root)}`);

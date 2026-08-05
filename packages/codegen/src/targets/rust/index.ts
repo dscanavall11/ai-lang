@@ -20,6 +20,7 @@ import {
   snakeCase,
   tableName,
   type CodeGenerator,
+  type Diagnostic,
   type GenerationContext,
   type GeneratedFile,
   type GenerationResult,
@@ -35,7 +36,7 @@ import {
   type IRType,
   type ModuleIndex,
 } from '@haic/core';
-import { declaredImplementation } from '../../shared/adapters.js';
+import { declaredImplementation, placeholderDiagnostic, placeholderMessage } from '../../shared/adapters.js';
 import { ProjectLayout } from '../../shared/layout.js';
 import { RustEmitter } from './emitter.js';
 
@@ -55,6 +56,7 @@ export const rustGenerator: CodeGenerator = {
 
   generate(module, context) {
     const index = indexModule(module);
+    const diagnostics: Diagnostic[] = [];
     const files = [
       enumsFile(module, index),
       valueObjectsFile(module, index),
@@ -63,13 +65,13 @@ export const rustGenerator: CodeGenerator = {
       messagesFile(module, index),
       portsFile(module, index),
       servicesFile(module, index),
-      adaptersFile(module, index),
+      adaptersFile(module, index, diagnostics),
       routesFile(module, index),
       handlersFile(module, index),
     ].filter((f): f is GeneratedFile => f !== null);
 
     void context;
-    return { files: [...files, ...moduleMods(module, files)], diagnostics: [] };
+    return { files: [...files, ...moduleMods(module, files)], diagnostics };
   },
 
   generateProject(context) {
@@ -429,7 +431,7 @@ function servicesFile(module: IRModule, index: ModuleIndex): GeneratedFile | nul
 // Infrastructure layer
 // ---------------------------------------------------------------------------
 
-function adaptersFile(module: IRModule, index: ModuleIndex): GeneratedFile | null {
+function adaptersFile(module: IRModule, index: ModuleIndex, diagnostics: Diagnostic[]): GeneratedFile | null {
   if (index.adapters.length === 0) return null;
   const writer = banner();
   writeUses(writer, module, index, {
@@ -466,7 +468,9 @@ function adaptersFile(module: IRModule, index: ModuleIndex): GeneratedFile | nul
         writer.block(() => {
           const declared = declaredImplementation(adapter, operation.phrase);
           if (declared) emitter.emitOperationImplementation(writer, declared, true);
-          else writeAdapterBody(writer, adapter, operation, index, emitter);
+          else if (!writeAdapterBody(writer, adapter, operation, index, emitter)) {
+            diagnostics.push(placeholderDiagnostic(adapter, operation.phrase, 'rust'));
+          }
         });
         writer.line('}');
       });
@@ -532,7 +536,7 @@ function writeAdapterBody(
   operation: IROperationSignature,
   index: ModuleIndex,
   emitter: RustEmitter,
-): void {
+): boolean {
   const phrase = normalisePhrase(operation.phrase);
   const first = operation.parameters[0];
   const argument = first ? emitter.identifier(first.name) : 'id';
@@ -548,7 +552,7 @@ function writeAdapterBody(
       writer.line('};');
       writer.line('let data: serde_json::Value = row.try_get("data").map_err(Self::failed)?;');
       writer.line(`serde_json::from_value(data).map_err(|error| ${emitter.errorEnum}::Unexpected(error.to_string()))`);
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       writer.line(`let data = serde_json::to_value(&${argument}).map_err(|error| ${emitter.errorEnum}::Unexpected(error.to_string()))?;`);
@@ -560,7 +564,7 @@ function writeAdapterBody(
       writer.line(');');
       writer.line(`sqlx::query(&sql).bind(${argument}.${identityOf(operation, index, emitter)}).bind(data).execute(&self.pool).await.map_err(Self::failed)?;`);
       writer.line('Ok(())');
-      return;
+      return true;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
       if (first) {
@@ -578,13 +582,13 @@ function writeAdapterBody(
       });
       writer.line('}');
       writer.line('Ok(found)');
-      return;
+      return true;
     }
     if (/^(delete|remove)\b.*\bby id$/.test(phrase)) {
       writer.line('let sql = format!("DELETE FROM {} WHERE id = $1", Self::TABLE);');
       writer.line(`sqlx::query(&sql).bind(${argument}).execute(&self.pool).await.map_err(Self::failed)?;`);
       writer.line('Ok(())');
-      return;
+      return true;
     }
   }
 
@@ -597,28 +601,29 @@ function writeAdapterBody(
         writer.line(`None => ${failure},`);
       });
       writer.line('}');
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       writer.line('let mut rows = self.rows.write().await;');
       writer.line(`rows.insert(${argument}.${identityOf(operation, index, emitter)}.to_string(), ${argument});`);
       writer.line('Ok(())');
-      return;
+      return true;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
       writer.line('let rows = self.rows.read().await;');
       writer.line('Ok(rows.values().cloned().collect())');
-      return;
+      return true;
     }
     if (/^(delete|remove)\b.*\bby id$/.test(phrase)) {
       writer.line('let mut rows = self.rows.write().await;');
       writer.line(`rows.remove(&${argument}.to_string());`);
       writer.line('Ok(())');
-      return;
+      return true;
     }
   }
 
-  writer.line(`unimplemented!("${operation.phrase} has no generated implementation; write it here")`);
+  writer.line(`unimplemented!("${placeholderMessage(operation.phrase, adapter.technology)}")`);
+  return false;
 }
 
 // ---------------------------------------------------------------------------

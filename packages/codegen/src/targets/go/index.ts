@@ -23,6 +23,7 @@ import {
   typeToString,
   unwrap,
   type CodeGenerator,
+  type Diagnostic,
   type GenerationContext,
   type IRAggregateDecl,
   type IREndpointDecl,
@@ -38,7 +39,7 @@ import {
   type IRValueObjectDecl,
   type ModuleIndex,
 } from '@haic/core';
-import { declaredImplementation } from '../../shared/adapters.js';
+import { declaredImplementation, placeholderDiagnostic, placeholderMessage } from '../../shared/adapters.js';
 import { ProjectLayout } from '../../shared/layout.js';
 import { GoEmitter, goExported, goPackage, goString, goUnexported } from './emitter.js';
 
@@ -52,6 +53,7 @@ export const goGenerator: CodeGenerator = {
 
   generate(module, context) {
     const index = indexModule(module);
+    const diagnostics: Diagnostic[] = [];
     const files = [
       enumsFile(module, index),
       valuesFile(module, index, context),
@@ -60,12 +62,12 @@ export const goGenerator: CodeGenerator = {
       messagesFile(module, index),
       portsFile(module, index, context),
       servicesFile(module, index, context),
-      adaptersFile(module, index, context),
+      adaptersFile(module, index, context, diagnostics),
       routesFile(module, index, context),
       handlersFile(module, index, context),
     ].filter((f): f is NonNullable<typeof f> => f !== null);
 
-    return { files, diagnostics: [] };
+    return { files, diagnostics };
   },
 
   generateProject(context) {
@@ -285,7 +287,7 @@ function servicesFile(module: IRModule, index: ModuleIndex, context: GenerationC
 // Infrastructure layer
 // ---------------------------------------------------------------------------
 
-function adaptersFile(module: IRModule, index: ModuleIndex, context: GenerationContext) {
+function adaptersFile(module: IRModule, index: ModuleIndex, context: GenerationContext, diagnostics: Diagnostic[]) {
   if (index.adapters.length === 0) return null;
   const writer = goWriter();
   const emitter = new GoEmitter(index, { domainPrefix: 'domain.' });
@@ -338,7 +340,9 @@ function adaptersFile(module: IRModule, index: ModuleIndex, context: GenerationC
       writer.block(() => {
         const declared = declaredImplementation(adapter, operation.phrase);
         if (declared) writeBody(writer, emitter, declared, operation.returns, true);
-        else adapterBody(writer, adapter.technology, operation, emitter, index, stored);
+        else if (!adapterBody(writer, adapter.technology, operation, emitter, index, stored)) {
+          diagnostics.push(placeholderDiagnostic(adapter, operation.phrase, 'go'));
+        }
       });
       writer.line('}');
     }
@@ -355,7 +359,7 @@ function adapterBody(
   emitter: GoEmitter,
   index: ModuleIndex,
   stored: IREntityDecl | IRAggregateDecl | null,
-): void {
+): boolean {
   const phrase = normalisePhrase(operation.phrase);
   const zero = emitter.zeroValue(operation.returns);
   const fail = (expression: string): string => (zero === '' ? `return ${expression}` : `return ${zero}, ${expression}`);
@@ -384,7 +388,7 @@ function adapterBody(
       writer.block(() => writer.line(fail('err')));
       writer.line('}');
       writer.line(ok('record'));
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       writer.line(`payload, err := json.Marshal(${argument})`);
@@ -396,7 +400,7 @@ function adapterBody(
       writer.block(() => writer.line(fail('err')));
       writer.line('}');
       writer.line(ok('nil'));
-      return;
+      return true;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
       const column = first ? snakeCase(first.name) : null;
@@ -424,7 +428,7 @@ function adapterBody(
       writer.block(() => writer.line(fail('err')));
       writer.line('}');
       writer.line(ok('records'));
-      return;
+      return true;
     }
     if (/^(delete|remove)\b/.test(phrase)) {
       writer.line(`query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", a.table)`);
@@ -432,7 +436,7 @@ function adapterBody(
       writer.block(() => writer.line(fail('err')));
       writer.line('}');
       writer.line(ok('nil'));
-      return;
+      return true;
     }
   }
 
@@ -445,14 +449,14 @@ function adapterBody(
       writer.block(() => writer.line(fail(missing)));
       writer.line('}');
       writer.line(ok('record'));
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       writer.line('a.mu.Lock()');
       writer.line('defer a.mu.Unlock()');
       writer.line(`a.rows[${argument}.${identity}] = ${argument}`);
       writer.line(ok('nil'));
-      return;
+      return true;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
       writer.line('a.mu.RLock()');
@@ -462,18 +466,19 @@ function adapterBody(
       writer.block(() => writer.line('records = append(records, record)'));
       writer.line('}');
       writer.line(ok('records'));
-      return;
+      return true;
     }
     if (/^(delete|remove)\b/.test(phrase)) {
       writer.line('a.mu.Lock()');
       writer.line('defer a.mu.Unlock()');
       writer.line(`delete(a.rows, ${argument})`);
       writer.line(ok('nil'));
-      return;
+      return true;
     }
   }
 
-  writer.line(fail(`fmt.Errorf(${goString(`${operation.phrase} has no generated implementation; write it here`)})`));
+  writer.line(fail(`fmt.Errorf(${goString(placeholderMessage(operation.phrase, technology))})`));
+  return false;
 }
 
 // ---------------------------------------------------------------------------
