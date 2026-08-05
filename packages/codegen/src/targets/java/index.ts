@@ -24,6 +24,7 @@ import {
   toYaml,
   unwrap,
   type CodeGenerator,
+  type Diagnostic,
   type GeneratedFile,
   type GenerationContext,
   type IRAdapterDecl,
@@ -40,7 +41,7 @@ import {
   type IRType,
   type ModuleIndex,
 } from '@haic/core';
-import { declaredImplementation } from '../../shared/adapters.js';
+import { declaredImplementation, placeholderDiagnostic, placeholderMessage } from '../../shared/adapters.js';
 import { ProjectLayout, type Layer } from '../../shared/layout.js';
 import { JavaEmitter, fieldsOf, enumConstant, type JavaEmitterOptions } from './emitter.js';
 
@@ -69,6 +70,7 @@ export const javaGenerator: CodeGenerator = {
   generate(module, context) {
     const index = indexModule(module);
     const layout = layoutFor(context);
+    const diagnostics: Diagnostic[] = [];
     return {
       files: [
         ...enumFiles(module, index, layout),
@@ -78,11 +80,11 @@ export const javaGenerator: CodeGenerator = {
         ...messageFiles(module, index, layout),
         ...portFiles(module, index, layout),
         ...serviceFiles(module, index, layout),
-        ...adapterFiles(module, index, layout),
+        ...adapterFiles(module, index, layout, diagnostics),
         ...controllerFiles(module, index, layout),
         ...handlerFiles(module, index, layout),
       ],
-      diagnostics: [],
+      diagnostics,
     };
   },
 
@@ -430,7 +432,7 @@ function serviceFiles(module: IRModule, index: ModuleIndex, layout: JavaLayout):
 // Infrastructure layer
 // ---------------------------------------------------------------------------
 
-function adapterFiles(module: IRModule, index: ModuleIndex, layout: JavaLayout): GeneratedFile[] {
+function adapterFiles(module: IRModule, index: ModuleIndex, layout: JavaLayout, diagnostics: Diagnostic[]): GeneratedFile[] {
   const files: GeneratedFile[] = [];
   for (const adapter of index.adapters) {
     const port = index.typed(adapter.implements, 'port');
@@ -485,7 +487,9 @@ function adapterFiles(module: IRModule, index: ModuleIndex, layout: JavaLayout):
             operationEmitter(index, declared, {}).emitImplementation(writer, declared);
             return;
           }
-          emitAdapterBody(writer, adapter, operation, index, entity);
+          if (!emitAdapterBody(writer, adapter, operation, index, entity)) {
+            diagnostics.push(placeholderDiagnostic(adapter, operation.phrase, 'java'));
+          }
         });
         writer.line('}');
       }
@@ -527,7 +531,7 @@ function emitAdapterBody(
   operation: IROperationSignature,
   index: ModuleIndex,
   entity: string | null,
-): void {
+): boolean {
   const phrase = operation.phrase.toLowerCase();
   const first = operation.parameters[0];
   const error = operation.throws.find((name) => index.typed(name, 'error')?.checked);
@@ -542,7 +546,7 @@ function emitAdapterBody(
       writer.block(() => writer.line(error ? `throw ${errorConstruction(index, error, key)};` : 'return null;'));
       writer.line('}');
       writer.line('return readRow(rows.get(0));');
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       writer.line('this.jdbcTemplate.update(');
@@ -551,19 +555,19 @@ function emitAdapterBody(
         writer.line('    + " ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data",');
         writer.line(`${identity()}, writeRow(${key}));`);
       });
-      return;
+      return true;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
       const filter = first ? `" WHERE ${snakeCase(first.name)} = ?", ${key}` : '""';
       writer.line(`var rows = this.jdbcTemplate.queryForList("SELECT * FROM " + TABLE + ${filter});`);
       writer.line('return rows.stream().map(this::readRow).toList();');
-      return;
+      return true;
     }
   }
 
   if (adapter.technology === 'sql' && /^(delete|remove)\b/.test(phrase)) {
     writer.line(`this.jdbcTemplate.update("DELETE FROM " + TABLE + " WHERE id = ?", ${key});`);
-    return;
+    return true;
   }
 
   if (adapter.technology === 'in-memory' && entity) {
@@ -573,11 +577,11 @@ function emitAdapterBody(
       writer.block(() => writer.line(error ? `throw ${errorConstruction(index, error, key)};` : 'return null;'));
       writer.line('}');
       writer.line('return found;');
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       writer.line(`this.rows.put(String.valueOf(${identity()}), ${key});`);
-      return;
+      return true;
     }
     if (/^(list|find all|search)\b/.test(phrase)) {
       const field = first ? fieldsOf(index.get(entity)).find((f) => camelCase(f.name) === camelCase(first.name)) : undefined;
@@ -587,15 +591,16 @@ function emitAdapterBody(
       } else {
         writer.line('return java.util.List.copyOf(this.rows.values());');
       }
-      return;
+      return true;
     }
     if (/^(delete|remove)\b/.test(phrase)) {
       writer.line(`this.rows.remove(String.valueOf(${key}));`);
-      return;
+      return true;
     }
   }
 
-  writer.line(`throw new UnsupportedOperationException("${operation.phrase} has no generated implementation; write it here.");`);
+  writer.line(`throw new UnsupportedOperationException("${placeholderMessage(operation.phrase, adapter.technology)}");`);
+  return false;
 }
 
 // ---------------------------------------------------------------------------

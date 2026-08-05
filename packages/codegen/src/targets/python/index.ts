@@ -20,6 +20,7 @@ import {
   titleCase,
   unwrap,
   type CodeGenerator,
+  type Diagnostic,
   type GeneratedFile,
   type GenerationContext,
   type IRAdapterDecl,
@@ -34,7 +35,7 @@ import {
   type IRType,
   type ModuleIndex,
 } from '@haic/core';
-import { declaredImplementation } from '../../shared/adapters.js';
+import { declaredImplementation, placeholderDiagnostic, placeholderMessage } from '../../shared/adapters.js';
 import { emitScenarioBody, skippedComments, type TestHooks } from '../../shared/scenario-tests.js';
 import { ProjectLayout, type Layer } from '../../shared/layout.js';
 import { PythonEmitter, attributeName, methodName, pythonName } from './emitter.js';
@@ -49,6 +50,7 @@ export const pythonGenerator: CodeGenerator = {
 
   generate(module, context) {
     const index = indexModule(module);
+    const diagnostics: Diagnostic[] = [];
     const files = [
       enumsFile(module, index),
       valueObjectsFile(module, index),
@@ -57,14 +59,14 @@ export const pythonGenerator: CodeGenerator = {
       messagesFile(module, index),
       portsFile(module, index),
       servicesFile(module, index),
-      adaptersFile(module, index),
+      adaptersFile(module, index, diagnostics),
       routesFile(module, index),
       handlersFile(module, index),
       scenarioTestsFile(module, index),
     ].filter((f): f is GeneratedFile => f !== null);
 
     void context;
-    return { files: [...files, ...packageMarkers(files)], diagnostics: [] };
+    return { files: [...files, ...packageMarkers(files)], diagnostics };
   },
 
   generateProject(context) {
@@ -347,7 +349,7 @@ function servicesFile(module: IRModule, index: ModuleIndex): GeneratedFile | nul
 // Infrastructure layer
 // ---------------------------------------------------------------------------
 
-function adaptersFile(module: IRModule, index: ModuleIndex): GeneratedFile | null {
+function adaptersFile(module: IRModule, index: ModuleIndex, diagnostics: Diagnostic[]): GeneratedFile | null {
   if (index.adapters.length === 0) return null;
 
   const emitter = new PythonEmitter(index);
@@ -378,7 +380,9 @@ function adaptersFile(module: IRModule, index: ModuleIndex): GeneratedFile | nul
         writer.line(`async def ${methodName(operation.phrase)}(${parameterList(operation, emitter)}) -> ${emitter.typeName(operation.returns)}:`);
         writer.block(() => {
           docstring(writer, signatureDoc(operation));
-          emitAdapterBody(writer, adapter, operation, emitter, index);
+          if (!emitAdapterBody(writer, adapter, operation, emitter, index)) {
+            diagnostics.push(placeholderDiagnostic(adapter, operation.phrase, 'python'));
+          }
         });
       }
     });
@@ -418,11 +422,11 @@ function emitAdapterBody(
   operation: IROperationSignature,
   emitter: PythonEmitter,
   index: ModuleIndex,
-): void {
+): boolean {
   const declared = declaredImplementation(adapter, operation.phrase);
   if (declared) {
     writer.line(renderBody(emitter, declared, declared.parameters.map((p) => p.name)));
-    return;
+    return true;
   }
 
   const phrase = operation.phrase.toLowerCase();
@@ -437,7 +441,7 @@ function emitAdapterBody(
       writer.line(`row = await self._client.fetchrow(f"SELECT data FROM {self._table} WHERE ${column} = $1", ${argument})`);
       emitMissingRow(writer, 'row', missing, argument, index);
       writer.line(`return ${model}.model_validate_json(row["data"])`);
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       writer.line('await self._client.execute(');
@@ -448,16 +452,16 @@ function emitAdapterBody(
         writer.line(`${argument}.model_dump_json(),`);
       });
       writer.line(')');
-      return;
+      return true;
     }
     if (model && /^(list|find all|search)\b/.test(phrase)) {
       writer.line(`rows = await self._client.fetch(f"SELECT data FROM {self._table} WHERE ${column} = $1", ${argument})`);
       writer.line(`return [${model}.model_validate_json(row["data"]) for row in rows]`);
-      return;
+      return true;
     }
     if (/^(delete|remove)\b/.test(phrase)) {
       writer.line(`await self._client.execute(f"DELETE FROM {self._table} WHERE ${column} = $1", ${argument})`);
-      return;
+      return true;
     }
   }
 
@@ -466,23 +470,24 @@ function emitAdapterBody(
       writer.line(`row = self._rows.get(str(${argument}))`);
       emitMissingRow(writer, 'row', missing, argument, index);
       writer.line('return row');
-      return;
+      return true;
     }
     if (/^(save|store|persist|upsert)\b/.test(phrase)) {
       writer.line(`self._rows[str(${argument}.${identityAttribute(index, first!.type)})] = ${argument}`);
-      return;
+      return true;
     }
     if (/^(delete|remove)\b/.test(phrase)) {
       writer.line(`self._rows.pop(str(${argument}), None)`);
-      return;
+      return true;
     }
   }
   if (adapter.technology === 'in-memory' && /^(list|find all|search)\b/.test(phrase)) {
     writer.line('return list(self._rows.values())');
-    return;
+    return true;
   }
 
-  writer.line(`raise NotImplementedError("${operation.phrase} has no generated implementation; write it here.")`);
+  writer.line(`raise NotImplementedError("${placeholderMessage(operation.phrase, adapter.technology)}")`);
+  return false;
 }
 
 function emitMissingRow(writer: CodeWriter, variable: string, error: string | undefined, argument: string, index: ModuleIndex): void {

@@ -3,6 +3,41 @@
 Notable changes, newest first. Versions follow [semver](https://semver.org);
 while the major is `0`, the minor carries breaking changes.
 
+## Unreleased
+
+### The build says what it did not generate
+
+An adapter operation whose phrase no backend recognises — anything that is not
+find one by id, save one, list them, delete one, or a declared query — is
+emitted as a placeholder that throws. The placeholder was always correct:
+failing loudly beats a method that silently does nothing. What was wrong is
+that the build was silent about it — `✓ 19 files` with two of them time bombs
+reads as finished, and "build succeeded" and "project complete" are different
+statements.
+
+`HADL3061` now warns per placeholder method, from all five backends:
+
+```
+warning[HADL3061]: StripePaymentGateway.charge card is a placeholder: nothing is
+generated for that phrase on a http-client adapter, so calling it throws
+  help: write the operation inside "## adapter StripePaymentGateway" — HADL
+  statements or a fenced typescript block — or keep the technology "in-memory"
+  until the real one matters
+
+  2 methods need a hand-written body — see the warnings above
+✓ 19 files → out/typescript
+```
+
+The warning is emitted by the code that just wrote the placeholder, never
+predicted in advance, so the report and the emission cannot disagree. The
+placeholder message itself now names the way out too — the `## adapter`
+declaration takes HADL statements or a fenced block, which is copied into the
+generated method verbatim — because the person reading it is six weeks away in
+a stack trace, not at the build log.
+
+It is a warning, not an error: an early skeleton is a legitimate state for a
+project to be in. The failure being fixed is invisibility.
+
 ## 0.3.0 — 2026-08-04
 
 ### The release would have shipped a cli nobody could install

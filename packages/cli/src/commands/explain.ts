@@ -135,6 +135,11 @@ const CATALOGUE: Record<string, Explanation> = {
     why: 'The compiler will not invent an implementation, and will not emit a project with a method that silently does nothing. Every other file in that build would look finished.',
     fix: 'Add a block for this target, add HADL statements, or build the language the operation was written for with "--language".',
   },
+  HADL3061: {
+    title: 'An adapter method the build did not fill in',
+    why: 'A backend generates real code for the phrases it recognises — find one by id, save one, list them, delete one, a declared query — and emits a throwing placeholder for the rest. The placeholder is correct: failing loudly beats a method that silently does nothing. What would be wrong is a build that stays quiet about it, because "build succeeded" and "project complete" would read as the same statement when they are not.',
+    fix: 'Write the operation inside the "## adapter" declaration, as HADL statements or a fenced block in the target\'s language. Or keep the technology "in-memory" until the real one matters.',
+  },
 };
 
 export const explainCommand: Command = {

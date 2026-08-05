@@ -185,7 +185,126 @@ responds 200 with Doc
 
     expect(emitted).toContain(snippet);
     // And the placeholder it replaces must be gone, not sitting beside it.
-    expect(emitted).not.toContain('has no generated implementation');
+    expect(emitted).not.toContain('has no generated');
+  });
+
+  it.each(cases)('is a filled method to the $target backend, so nothing warns', ({ target }) => {
+    const result = generateProject(codeGenerators.require(target), {
+      project: withAdapter,
+      outputDir: `out/${target}`,
+      options: {},
+    });
+    expect(result.diagnostics.filter((d) => d.code === 'HADL3061')).toEqual([]);
+  });
+});
+
+describe('an adapter method the build did not fill in', () => {
+  const withPlaceholder = projectOf(`---
+module: search
+context: Search
+---
+
+# Search
+
+## aggregate Doc
+identified by id
+
+- id: uuid, required
+- title: text, required
+
+invariant "a doc is titled":
+  title is not empty
+
+## port DocSearch (outbound)
+
+- search docs (term: text) -> list of Doc
+- find doc by id (id: uuid) -> Doc
+
+## adapter ElasticDocSearch implements DocSearch using http-client
+
+## port DocReader (inbound)
+
+- read docs (term: text) -> list of Doc
+
+## service DocService
+uses DocSearch
+implements DocReader
+
+operation read docs (term: text) -> list of Doc:
+  let found be search docs with term = term
+  return found
+
+## endpoint GET /docs
+handled by DocService.read docs
+responds 200 with Doc
+`);
+
+  it.each(['typescript', 'python', 'go', 'java', 'rust'])('is reported by the %s backend, once per method', (target) => {
+    const emitted = generateProject(codeGenerators.require(target), {
+      project: withPlaceholder,
+      outputDir: `out/${target}`,
+      options: {},
+    });
+
+    const warnings = emitted.diagnostics.filter((d) => d.code === 'HADL3061');
+    // `find doc by id` is a phrase nothing recognises on http-client either:
+    // both operations are placeholders, and each gets its own warning.
+    expect(warnings).toHaveLength(2);
+    expect(warnings.every((d) => d.severity === 'warning')).toBe(true);
+    expect(warnings[0]!.message).toContain('ElasticDocSearch.search docs');
+    expect(warnings[0]!.message).toContain('http-client');
+    expect(warnings[0]!.hint).toContain('## adapter ElasticDocSearch');
+
+    // The warning describes what was actually emitted: the placeholder line
+    // carries the same explanation, so a stack trace names the fix too.
+    const contents = emitted.files.map((file) => file.contents).join('\n');
+    expect(contents).toContain('has no generated http-client implementation');
+    expect(contents).toContain('## adapter declaration');
+  });
+
+  it.each(['typescript', 'python', 'go', 'java', 'rust'])('is not reported by the %s backend for a recognised phrase', (target) => {
+    const stored = projectOf(`---
+module: files
+context: Files
+---
+
+# Files
+
+## aggregate Doc
+identified by id
+
+- id: uuid, required
+- title: text, required
+
+invariant "a doc is titled":
+  title is not empty
+
+## port DocRepository (outbound)
+
+- find doc by id (id: uuid) -> Doc
+- save doc (doc: Doc) -> nothing
+
+## adapter InMemoryDocRepository implements DocRepository using in-memory
+
+## port DocReader (inbound)
+
+- read doc (id: uuid) -> Doc
+
+## service DocService
+uses DocRepository
+implements DocReader
+
+operation read doc (id: uuid) -> Doc:
+  let doc be find doc by id with id = id
+  return doc
+
+## endpoint GET /docs/{id}
+handled by DocService.read doc
+responds 200 with Doc
+`);
+
+    const emitted = generateProject(codeGenerators.require(target), { project: stored, outputDir: `out/${target}`, options: {} });
+    expect(emitted.diagnostics.filter((d) => d.code === 'HADL3061')).toEqual([]);
   });
 });
 
