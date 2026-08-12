@@ -20,6 +20,14 @@ import {
   type IRType,
   type SourceSpan,
 } from '@haic/core';
+import {
+  comparisonVerdict,
+  contradiction,
+  describeConstraint,
+  describeRange,
+  numericRange,
+  violatedConstraint,
+} from '../domains.js';
 import type { AnalysisContext, SemanticPass } from '../context.js';
 import { Scope, withSuggestion } from '../context.js';
 import { BOOLEAN, TypeChecker, UNKNOWN } from '../type-checker.js';
@@ -42,9 +50,11 @@ export const typePass: SemanticPass = {
           checkOperation(context, checker, declaration, operation, checker.scopeForAggregate(declaration));
         }
         checkInvariants(context, checker, declaration);
+        checkDecidedComparisons(context, declaration);
       }
       if (declaration.kind === 'entity' || declaration.kind === 'value-object') {
         checkInvariants(context, checker, declaration);
+        checkDecidedComparisons(context, declaration);
       }
       if (declaration.kind === 'scenario') {
         checkScenario(context, checker, declaration);
@@ -116,6 +126,8 @@ function checkScenario(context: AnalysisContext, checker: TypeChecker, scenario:
 
   for (const step of scenario.given) {
     scope.define(step.binding, checker.infer(step.value, scope));
+    // After inference, so a "t-1" standing for a uuid is already converted.
+    checkSeededLiterals(context, checker, step.value, step.span ?? span);
   }
 
   const outcome = checker.infer(scenario.when.call, scope);
@@ -151,6 +163,43 @@ function checkScenario(context: AnalysisContext, checker: TypeChecker, scenario:
 }
 
 /**
+ * A `given` that could never have been stored.
+ *
+ * The seed stands for state the system already holds, and the store enforces
+ * the field constraints on the way in — so `given task be Task with hits = 0`
+ * where hits is declared `at least 1` describes a row that cannot exist. The
+ * interpreter would fail the scenario at seed time; a compiled test would
+ * throw in the constructor. Saying it here, with the literal as the witness,
+ * is the same verdict three steps earlier.
+ *
+ * Only literals are judged, and only in `given` — a `when` is allowed to carry
+ * an invalid value on purpose, because "rejects it" is a scenario worth
+ * writing. The check calls the same `satisfiesConstraint` the interpreter
+ * runs, so the two cannot disagree.
+ */
+function checkSeededLiterals(context: AnalysisContext, checker: TypeChecker, expression: IRExpression, fallback: SourceSpan): void {
+  if (expression.kind !== 'construct') return;
+  const target = checker.lookup(expression.type);
+  const fields: readonly IRField[] = target && 'fields' in target ? target.fields : [];
+
+  for (const argument of expression.arguments) {
+    checkSeededLiterals(context, checker, argument.value, argument.value.span ?? fallback);
+    if (argument.value.kind !== 'literal') continue;
+    const field = fields.find((candidate) => candidate.name === argument.name);
+    if (!field) continue;
+    const broken = violatedConstraint(field, argument.value.value);
+    if (!broken) continue;
+    context.diagnostics.error(
+      'type',
+      'HADL2163',
+      `this given seeds ${expression.type}.${argument.name} with a value the field refuses: ${broken.witness}`,
+      argument.value.span ?? fallback,
+      { hint: 'a given stands for state the store already accepted, so it must satisfy the constraints; to test rejection, put the value in the "when"' },
+    );
+  }
+}
+
+/**
  * A constraint has to make sense for the type it constrains.
  *
  * Nothing checked this, so `- hits: integer, default false` was accepted in
@@ -163,6 +212,15 @@ function checkFieldConstraints(context: AnalysisContext, checker: TypeChecker, o
   const span = field.span ?? fallbackSpan(context);
   const declared = unwrap(field.type);
 
+  // Constraints that no value can satisfy together. The message is the
+  // witness: every construction of this type would fail, everywhere.
+  const impossible = contradiction(field);
+  if (impossible) {
+    context.diagnostics.error('type', 'HADL2160', `${owner}.${field.name} is impossible: ${impossible}`, span, {
+      hint: 'no value can ever be constructed; loosen one of the constraints',
+    });
+  }
+
   for (const constraint of field.constraints) {
     if (constraint.kind === 'default') {
       const problem = defaultMismatch(checker, field, declared, constraint.value);
@@ -170,6 +228,19 @@ function checkFieldConstraints(context: AnalysisContext, checker: TypeChecker, o
         context.diagnostics.error('type', 'HADL2155', `${owner}.${field.name} is ${typeToString(field.type)}, so ${problem.saw}`, span, {
           hint: problem.hint,
         });
+        continue;
+      }
+      // The type fits; does the value? `at least 1, default 0` is a
+      // constructor that throws on the very value it supplies itself.
+      const broken = impossible ? null : violatedConstraint(field, constraint.value);
+      if (broken) {
+        context.diagnostics.error(
+          'type',
+          'HADL2161',
+          `${owner}.${field.name} defaults to a value its own constraints refuse: ${broken.witness}`,
+          span,
+          { hint: `every construction that relies on the default would fail; change the default, or loosen "${describeConstraint(broken.constraint)}"` },
+        );
       }
       continue;
     }
@@ -305,6 +376,136 @@ function checkInvariants(
  * A query's criteria are checked against two things at once: the aggregate it
  * selects from, bound to its own name, and the parameters the caller supplies.
  */
+const DECIDED_OPERATORS = ['greater-than', 'greater-or-equal', 'less-than', 'less-or-equal'] as const;
+type DecidedOperator = (typeof DECIDED_OPERATORS)[number];
+
+/** `quantity > 5` read as `5 < quantity`: the operator, seen from the other side. */
+const FLIPPED: Record<DecidedOperator, DecidedOperator> = {
+  'greater-than': 'less-than',
+  'greater-or-equal': 'less-or-equal',
+  'less-than': 'greater-than',
+  'less-or-equal': 'greater-or-equal',
+};
+
+/**
+ * A comparison the declaration already decided.
+ *
+ * `hits is at least 0` on the field and `when hits is less than 0:` in a body:
+ * the branch cannot be taken, on any run, and the witness is the declared
+ * bound. The check is deliberately narrow — ADR-014 — and stays silent the
+ * moment it cannot prove its claim:
+ *
+ * - only bare references to the declaring type's own fields, whose declared
+ *   range is the whole truth about them;
+ * - and only in operations that never `set` that field, because after
+ *   `set hits to hits - 1` the declared range no longer describes the value
+ *   in hand. An invariant runs against constructed state, so it never has
+ *   that problem.
+ */
+function checkDecidedComparisons(
+  context: AnalysisContext,
+  declaration: Extract<IRDeclaration, { kind: 'aggregate' | 'entity' | 'value-object' }>,
+): void {
+  const ranges = new Map(
+    declaration.fields
+      .map((field) => [field.name, numericRange(field.constraints)] as const)
+      .filter(([, range]) => range.min !== -Infinity || range.max !== Infinity),
+  );
+  if (ranges.size === 0) return;
+
+  const report = (field: string, verdict: 'always' | 'never', span: SourceSpan): void => {
+    const range = ranges.get(field)!;
+    context.diagnostics.warn(
+      'type',
+      'HADL2162',
+      `this condition is ${verdict === 'always' ? 'always' : 'never'} true: ${declaration.name}.${field} is declared ${describeRange(range)}`,
+      span,
+      {
+        hint:
+          verdict === 'never'
+            ? 'the branch cannot be taken; remove it, or loosen the constraint it contradicts'
+            : 'the condition adds nothing; remove it, or tighten the constraint that decides it',
+      },
+    );
+  };
+
+  const walk = (expression: IRExpression, fallback: SourceSpan): void => {
+    if (expression.kind === 'binary') {
+      const span = expression.span ?? fallback;
+      const operator = expression.operator as DecidedOperator;
+      if ((DECIDED_OPERATORS as readonly string[]).includes(expression.operator)) {
+        const left = expression.left;
+        const right = expression.right;
+        if (left.kind === 'reference' && left.path.length === 1 && right.kind === 'literal' && typeof right.value === 'number') {
+          const range = ranges.get(left.path[0]!);
+          const verdict = range ? comparisonVerdict(range, operator, right.value) : null;
+          if (verdict) report(left.path[0]!, verdict, span);
+        } else if (right.kind === 'reference' && right.path.length === 1 && left.kind === 'literal' && typeof left.value === 'number') {
+          const range = ranges.get(right.path[0]!);
+          const verdict = range ? comparisonVerdict(range, FLIPPED[operator], left.value) : null;
+          if (verdict) report(right.path[0]!, verdict, span);
+        }
+      }
+      walk(expression.left, span);
+      walk(expression.right, span);
+      return;
+    }
+    if (expression.kind === 'unary') walk(expression.operand, expression.span ?? fallback);
+    if (expression.kind === 'call' || expression.kind === 'construct') {
+      for (const argument of expression.arguments) walk(argument.value, expression.span ?? fallback);
+    }
+    if (expression.kind === 'aggregate') walk(expression.collection, expression.span ?? fallback);
+    if (expression.kind === 'project') {
+      walk(expression.collection, expression.span ?? fallback);
+      walk(expression.of, expression.span ?? fallback);
+    }
+  };
+
+  const fallback = declaration.span ?? fallbackSpan(context);
+  for (const invariant of declaration.invariants) walk(invariant.condition, invariant.span ?? fallback);
+
+  for (const operation of declaration.kind === 'aggregate' ? declaration.operations : []) {
+    const mutated = new Set<string>();
+    const collectSets = (statements: readonly IRStatement[]): void => {
+      for (const statement of statements) {
+        if (statement.kind === 'set' && statement.target.length === 1) mutated.add(statement.target[0]!);
+        if (statement.kind === 'when') {
+          collectSets(statement.then);
+          collectSets(statement.otherwise);
+        }
+        if (statement.kind === 'for-each') collectSets(statement.body);
+      }
+    };
+    collectSets(operation.body);
+
+    const walkGuarded = (expression: IRExpression, span: SourceSpan): void => {
+      // A field this body reassigns escapes its declared range; say nothing.
+      const touches = (e: IRExpression): boolean => {
+        if (e.kind === 'reference') return e.path.length === 1 && mutated.has(e.path[0]!);
+        if (e.kind === 'binary') return touches(e.left) || touches(e.right);
+        if (e.kind === 'unary') return touches(e.operand);
+        return false;
+      };
+      if (!touches(expression)) walk(expression, span);
+    };
+
+    const walkStatements = (statements: readonly IRStatement[]): void => {
+      for (const statement of statements) {
+        const span = statement.span ?? fallback;
+        if (statement.kind === 'when') {
+          walkGuarded(statement.condition, span);
+          walkStatements(statement.then);
+          walkStatements(statement.otherwise);
+        }
+        if (statement.kind === 'let' || statement.kind === 'perform') walkGuarded(statement.value, span);
+        if (statement.kind === 'return' && statement.value) walkGuarded(statement.value, span);
+        if (statement.kind === 'for-each') walkStatements(statement.body);
+      }
+    };
+    walkStatements(operation.body);
+  }
+}
+
 function checkQuery(context: AnalysisContext, checker: TypeChecker, query: Extract<IRDeclaration, { kind: 'query' }>): void {
   const span = query.span ?? fallbackSpan(context);
   const subject = checker.lookup(query.over);

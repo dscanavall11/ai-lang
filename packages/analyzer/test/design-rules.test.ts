@@ -978,3 +978,145 @@ then it fails with InvariantViolation
     ).toEqual([]);
   });
 });
+
+describe('what the constraints already decide', () => {
+  const counter = (field: string): string => `## aggregate Counter
+identified by id
+
+- id: uuid, required
+${field}
+
+invariant "a counter counts":
+  id is present
+`;
+
+  it('rejects constraints no value can satisfy together', () => {
+    const findings = check(counter('- hits: integer, min 5, max 3'));
+    expect(errorCodes(findings)).toContain('HADL2160');
+    const found = findings.find((d) => d.code === 'HADL2160')!;
+    // The witness: the two bounds, in the message, verifiable by hand.
+    expect(found.message).toContain('at least 5');
+    expect(found.message).toContain('at most 3');
+  });
+
+  it('rejects length constraints that leave no length', () => {
+    expect(errorCodes(check(counter('- code: text, min length 5, max length 3')))).toContain('HADL2160');
+  });
+
+  it('rejects a pattern that does not compile', () => {
+    expect(errorCodes(check(counter('- code: text, pattern "["')))).toContain('HADL2160');
+  });
+
+  it('accepts a range that admits values', () => {
+    expect(errorCodes(check(counter('- hits: integer, min 1, max 10')))).toEqual([]);
+  });
+
+  it('rejects a default outside the constraints beside it', () => {
+    const findings = check(counter('- hits: integer, min 1, default 0'));
+    expect(errorCodes(findings)).toContain('HADL2161');
+    expect(findings.find((d) => d.code === 'HADL2161')!.message).toContain('0 breaks "at least 1"');
+  });
+
+  it('rejects a default longer than the field allows', () => {
+    expect(errorCodes(check(counter('- code: text, max length 3, default "abcd"')))).toContain('HADL2161');
+  });
+
+  it('accepts a default the constraints admit', () => {
+    expect(errorCodes(check(counter('- hits: integer, min 1, default 1')))).toEqual([]);
+  });
+
+  it('does not judge the default value when its type is already wrong', () => {
+    // `default false` on an integer is HADL2155; piling HADL2161 on top would
+    // report one mistake twice.
+    const findings = check(counter('- hits: integer, min 1, default false'));
+    expect(errorCodes(findings)).toContain('HADL2155');
+    expect(errorCodes(findings)).not.toContain('HADL2161');
+  });
+});
+
+describe('a comparison the declaration already decided', () => {
+  const stock = (body: string): string => `## aggregate Stock
+identified by id
+
+- id: uuid, required
+- units: integer, min 0, required
+
+invariant "stock is counted":
+  id is present
+
+${body}
+`;
+
+  const warningCodes = (diagnostics: readonly { severity: string; code: string }[]): string[] =>
+    diagnostics.filter((d) => d.severity === 'warning').map((d) => d.code);
+
+  it('warns when a branch can never be taken', () => {
+    const findings = check(stock(`operation audit () -> boolean:
+  when units is less than 0:
+    return no
+  return yes
+`));
+    expect(warningCodes(findings)).toContain('HADL2162');
+    const found = findings.find((d) => d.code === 'HADL2162')!;
+    expect(found.message).toContain('never true');
+    expect(found.message).toContain('at least 0');
+  });
+
+  it('warns when an invariant restates a field constraint', () => {
+    const findings = check(stock('invariant "units are counted":\n  units is at least 0\n'));
+    expect(warningCodes(findings)).toContain('HADL2162');
+    expect(findings.find((d) => d.code === 'HADL2162')!.message).toContain('always true');
+  });
+
+  it('says nothing about a comparison the range does not decide', () => {
+    const findings = check(stock(`operation low () -> boolean:
+  when units is less than 10:
+    return yes
+  return no
+`));
+    expect(warningCodes(findings)).not.toContain('HADL2162');
+  });
+
+  it('says nothing about a field the body reassigns', () => {
+    // After \`set units to units - 1\` the declared range no longer describes
+    // the value in hand, so the compiler has no witness and stays silent.
+    const findings = check(stock(`operation take () -> boolean:
+  set units to units - 1
+  when units is less than 0:
+    return no
+  return yes
+`));
+    expect(warningCodes(findings)).not.toContain('HADL2162');
+  });
+});
+
+describe('a given that could never have been stored', () => {
+  const module = (given: string): string => `## aggregate Task
+identified by id
+
+- id: uuid, required
+- title: text, min length 1, required
+- hits: integer, min 1, required
+
+invariant "a task is titled":
+  title is not empty
+
+operation touch (task: Task) -> integer:
+  return task.hits
+
+## scenario Touching
+given task be Task with id = "t-1", title = "Ship", hits = ${given}
+when touched be touch with task = task
+then touched is at least 1
+`;
+
+  it('rejects a literal the field refuses, with the literal as witness', () => {
+    const findings = check(module('0'));
+    expect(errorCodes(findings)).toContain('HADL2163');
+    expect(findings.find((d) => d.code === 'HADL2163')!.message).toContain('0 breaks "at least 1"');
+  });
+
+  it('accepts a literal the constraints admit', () => {
+    expect(errorCodes(check(module('3')))).toEqual([]);
+  });
+});

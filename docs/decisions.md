@@ -298,3 +298,48 @@ literal appears, which would break the one property being bought.
 
 **Revisit if** a design needs the uuid to match one a system outside HADL
 already assigned. It can: write that uuid, and it is passed through untouched.
+
+---
+
+## ADR-014 — Symbolic checking is bounded by witnesses
+
+**Decision.** The compiler reasons about values with interval arithmetic over
+declared constraints — ranges for numbers, length ranges for text — and nothing
+stronger. Every finding this analysis reports carries a **concrete witness** in
+its message: the literal that breaks the constraint, or the pair of bounds no
+value can sit between. An analysis that cannot construct its witness stays
+silent. Where the same question is asked at run time, the answer comes from the
+same function — `satisfiesConstraint` is shared between the checker and the
+interpreter — so the two can never disagree.
+
+The checks built on this: `HADL2160` (constraints no value satisfies),
+`HADL2161` (a default the field's own constraints refuse), `HADL2162` (a
+comparison the declaration already decided), `HADL2163` (a scenario `given`
+seeding a value the store could never have accepted).
+
+**Why.** The defects this closes were each found once, downstream, in generated
+code: `capacity` swallowed by a GeoPoint, `default false` on an integer,
+`default 0` beside `min 1`. All were provable from the declarations alone. The
+question was never whether to reason about values — it was how far.
+
+The trap is the general inference engine: SMT, abstract interpretation with
+widening, anything undecidable or slow or approximate. Its failure mode is a
+warning the author cannot argue with — no value in hand, no way to check the
+compiler's claim, and the first false positive teaches everyone to ignore the
+category. The witness rule is the fence: if the analysis cannot say *which
+value* or *which bounds*, it has not earned the right to interrupt.
+
+The rule also bounds soundness the honest way. A field reassigned inside an
+operation body escapes its declared range, so `HADL2162` says nothing about
+any expression touching a field the body `set`s. Silence over speculation.
+
+**Rules out.** Cross-field reasoning (`total = price * quantity`), symbolic
+execution of operation bodies, any check whose message would need "might" or
+"could". Also rules out evaluating full invariants against scenario givens at
+check time — the interpreter already does that at run time with the same
+shared semantics, which is the DRY answer.
+
+**Revisit if** a class of real defects keeps reaching generated code that a
+richer domain (sets, cross-field linear relations) would catch — and then the
+witness rule still holds: extend the domain only as far as witnesses can
+follow.

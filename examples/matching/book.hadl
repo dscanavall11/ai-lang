@@ -41,9 +41,6 @@ belongs to OrderBook
 - quantity: integer, required, min 1
 - placedAt: timestamp, required
 
-invariant "a resting order still has something left to fill":
-  quantity is greater than 0
-
 ## aggregate OrderBook
 identified by symbol
 contains RestingOrder

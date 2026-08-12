@@ -35,7 +35,7 @@ statement and are not.
 state for a project to be in. The failure being fixed is invisibility, not the
 placeholder itself.
 
-### 2. Symbolic checking, bounded by witnesses
+### 2. Symbolic checking, bounded by witnesses — **shipped** (ADR-014)
 
 `- hits: integer, at least 1, default 0` passes today: `HADL2155` compares the
 default's *type*, and nothing compares its *value* against the constraints

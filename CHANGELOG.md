@@ -5,6 +5,40 @@ while the major is `0`, the minor carries breaking changes.
 
 ## Unreleased
 
+### The constraints are read as a domain, and the domain decides
+
+`- hits: integer, min 1, default 0` passed every check this compiler had: the
+default's *type* was compared (`HADL2155`), its *value* never was. The same
+blindness accepted `min 5, max 3` — a field no value can inhabit — and let an
+operation branch on `when units is less than 0` beside a field declared
+`min 0`, a branch no run can take.
+
+The checker now folds each field's constraints into an interval and reports
+what the interval already decides:
+
+- `HADL2160` — constraints no value satisfies together, naming the bounds;
+- `HADL2161` — a default the field's own constraints refuse;
+- `HADL2162` — a comparison the declaration already decided (a warning: the
+  code is legal, the branch is dead);
+- `HADL2163` — a scenario `given` seeding a value the store could never have
+  accepted. Only `given` is judged: a `when` may carry an invalid value on
+  purpose, because "rejects it" is a scenario worth writing.
+
+Every finding carries a concrete witness — the literal, or the pair of bounds —
+and an analysis that cannot construct its witness stays silent. That rule, and
+why this is interval arithmetic rather than an inference engine, is ADR-014.
+The verdict function is shared with the interpreter (`satisfiesConstraint`), so
+what the checker refuses and what a running scenario refuses cannot drift.
+
+Two soundness edges worth naming: `HADL2162` says nothing about a field the
+operation body reassigns, because after `set hits to hits - 1` the declared
+range no longer describes the value in hand; and `HADL2161` stays quiet when
+the default's type is already wrong, so one mistake is not reported twice.
+
+Running the new checks over the examples found two redundant invariants —
+`quantity is greater than 0` written beside `quantity: integer, min 1` in both
+the matching and orders modules. They are gone, which is the check working.
+
 ### The build says what it did not generate
 
 An adapter operation whose phrase no backend recognises — anything that is not

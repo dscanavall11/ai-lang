@@ -195,6 +195,26 @@ Rules the compiler enforces:
 | `one of A \| B \| C` | Restricted set |
 | `default V` | Value used when absent |
 
+The compiler reads the constraints as a domain, not a list, and reports what
+they already decide — always with a concrete witness in the message (ADR-014):
+
+- `min 5, max 3` admits nothing, so every construction would fail:
+  `HADL2160`, and the message names the two bounds;
+- `min 1, default 0` is a constructor that throws on the very value it
+  supplies itself: `HADL2161` (the default's *type* is `HADL2155`'s question;
+  this is its *value*);
+- `min 0` on a field and `when field is less than 0:` in a body is a branch no
+  run can take — the declaration decided it: `HADL2162`, a warning. The check
+  stays silent about any field the operation reassigns, because after `set`
+  the declared range no longer describes the value in hand;
+- a scenario `given` seeding a value the field refuses describes a row the
+  store could never have held: `HADL2163`. A `when` may carry an invalid value
+  on purpose — rejection is a scenario worth writing — so only `given` is
+  judged.
+
+The verdicts come from the same function the interpreter runs when a scenario
+constructs a value, so check time and run time cannot disagree.
+
 ### 4.6 `command`, `event`, `dto`
 
 ```

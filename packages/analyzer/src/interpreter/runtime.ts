@@ -21,6 +21,7 @@ import {
   type IRStatement,
   type ModuleIndex,
 } from '@haic/core';
+import { describeConstraint, satisfiesConstraint } from '../domains.js';
 import { Trace, brief } from './trace.js';
 import { compare, emptyFor, equals, isRecord, record, show, type RecordValue, type Value } from './values.js';
 
@@ -279,7 +280,7 @@ export class Interpreter {
     for (const field of declaration.fields) {
       const held = value.fields.get(field.name) ?? null;
       for (const constraint of field.constraints) {
-        if (!satisfies(held, constraint)) {
+        if (!satisfiesConstraint(held, constraint)) {
           throw new DomainFailure(
             'ConstraintViolation',
             new Map<string, Value>([
@@ -584,41 +585,5 @@ function subjectOf(returns: Parameters<typeof elementType>[0] | null, index: Mod
   return index.get(resolved.name) ? resolved.name : null;
 }
 
-function satisfies(value: Value, constraint: IRField['constraints'][number]): boolean {
-  switch (constraint.kind) {
-    case 'min':
-      return typeof value !== 'number' || value >= constraint.value;
-    case 'max':
-      return typeof value !== 'number' || value <= constraint.value;
-    case 'min-length':
-      return length(value) >= constraint.value;
-    case 'max-length':
-      return length(value) <= constraint.value;
-    case 'length':
-      return length(value) === constraint.value;
-    case 'pattern':
-      return typeof value !== 'string' || new RegExp(constraint.value).test(value);
-    default:
-      return true;
-  }
-}
-
-function describeConstraint(constraint: IRField['constraints'][number]): string {
-  switch (constraint.kind) {
-    case 'min':
-    case 'max':
-      return `${constraint.kind} ${constraint.value}`;
-    case 'min-length':
-      return `min length ${constraint.value}`;
-    case 'max-length':
-      return `max length ${constraint.value}`;
-    case 'length':
-      return `length ${constraint.value}`;
-    case 'pattern':
-      return 'pattern';
-    default:
-      return constraint.kind;
-  }
-}
 
 export { show, isRecord, type Value, type RecordValue, type IRAggregateDecl, type IRDeclaration };

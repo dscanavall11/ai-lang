@@ -125,6 +125,26 @@ const CATALOGUE: Record<string, Explanation> = {
     why: 'A scenario is a program: it constructs values, calls an operation and asserts. The interpreter shrugs at a field it does not know, so an argument that landed on the wrong construction passed `haic test` and only failed once the scenario was compiled into a typed language.',
     fix: 'Read the error as you would in an operation body — a missing field, a name that is not a field, a "then" that is not a yes or no.',
   },
+  HADL2160: {
+    title: 'Constraints no value can satisfy',
+    why: 'A field declared "min 5, max 3" admits nothing: every construction of the type would fail, in the interpreter and in every backend, on the first value anyone writes. The message names the bounds so the claim can be checked by hand.',
+    fix: 'Loosen one of the constraints. If both are real requirements from different places, the field is two fields.',
+  },
+  HADL2161: {
+    title: 'A default the field itself refuses',
+    why: 'A default is the value the constructor supplies when nobody else does — so "min 1, default 0" is a constructor that throws on the very value it chose. Nothing would catch it until the first construction that relies on the default, at run time, in production.',
+    fix: 'Change the default to a value the constraints admit, or loosen the constraint it breaks.',
+  },
+  HADL2162: {
+    title: 'A comparison the declaration already decided',
+    why: 'When a field is declared "min 0", the branch under "when field is less than 0" cannot be taken on any run — the declaration decided it, not the logic. Code like that is either a leftover from before the constraint existed, or a sign the author believes the field can hold values the type says it cannot. Both are worth a look. The check stays silent about any field the operation reassigns, because after "set" the declared range no longer describes the value in hand.',
+    fix: 'Remove the branch, or loosen the constraint it contradicts. If the check should exist because the constraint might go away, the constraint is the thing to reconsider.',
+  },
+  HADL2163: {
+    title: 'A given the store could never have held',
+    why: 'A scenario\'s "given" stands for state the system already accepted, and the store enforces field constraints on the way in. Seeding "hits = 0" where the field says "min 1" describes a row that cannot exist — the scenario would fail at seed time in the interpreter and in every compiled test, with a worse message.',
+    fix: 'Seed a value the constraints admit. To test that an invalid value is rejected, put it in the "when": rejection is the operation\'s job, and that scenario is worth writing.',
+  },
   HADL2604: {
     title: 'A block in an aggregate that names a port',
     why: 'An aggregate that reaches a repository cannot be tested without one, cannot be reasoned about without knowing what the call does, and becomes the place transactions quietly begin. The compiler enforces that by reading the statements of an operation — and a fenced block has no statements to read, so the rule would stop applying exactly where the code gets interesting.',
