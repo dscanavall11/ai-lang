@@ -37,9 +37,6 @@ belongs to Order
 - quantity: integer, required, min 1
 - unitPrice: Money, required
 
-invariant "an item always has a positive quantity":
-  quantity is greater than 0
-
 ## aggregate Order
 identified by id
 contains OrderItem
